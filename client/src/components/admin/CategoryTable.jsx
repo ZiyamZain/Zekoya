@@ -1,4 +1,4 @@
-// client/src/features/adminSide/categories/components/CategoryTable.jsx
+
 import React, { useState, useEffect } from "react";
 import { FaEdit } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,15 +23,15 @@ const CategoryTable = ({ isLoading, onEdit }) => {
         isListed: !category.isListed,
       };
 
-      // Dispatch the action and wait for the response
+    
       await dispatch(toggleCategoryListing(updatedCategory)).unwrap();
 
-      // Show success toast
+    
       toast.success(
         `Category ${updatedCategory.isListed ? "listed" : "unlisted"} successfully`
       );
     } catch (error) {
-      // Show error toast
+      
       toast.error(error.message || "Failed to update category status");
     }
   };

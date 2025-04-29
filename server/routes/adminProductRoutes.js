@@ -14,14 +14,13 @@ import upload, { handleUploadError } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Get all categories
+
 router.get("/categories", protectAdmin, getCategories);
 
-// Get featured products
+
 router.get("/featured", getFeaturedProducts);
 
 
-// Get all products
 router.get("/", protectAdmin, getProducts);
 
 // Add new product
@@ -42,13 +41,13 @@ router.put(
   updateProduct
 );
 
-// Delete product (soft delete)
+
 router.patch("/delete/:id", protectAdmin, deleteProduct);
 
-// Toggle product listing status
+
 router.patch("/:id/toggle-listing", protectAdmin, toggleProductListing);
 
-// Toggle product featured status
+
 router.patch("/:id/toggle-featured", protectAdmin, toggleProductFeatured);
 
 export default router;

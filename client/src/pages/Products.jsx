@@ -31,19 +31,19 @@ const Products = () => {
 
   const productsGridRef = useRef(null);
 
-  // PAGINATION STATE
+
   const [page, setPage] = useState(1);
   const [limit] = useState(12);
   const total = productsState?.total || 0;
   const totalPages = Math.ceil(total / limit);
 
   useEffect(() => {
-    // Always fetch categories for the filter dropdown
+ 
     dispatch(getCategories());
   }, [dispatch]);
 
   useEffect(() => {
-    // If there's a category in the URL, fetch by that category
+  
     if (categoryName) {
       dispatch(getProductsByCategory({ category: categoryName, page, limit }));
       setFilters((prev) => ({ ...prev, selectedCategory: categoryName }));
@@ -53,7 +53,7 @@ const Products = () => {
     }
   }, [dispatch, categoryName, page, limit]);
 
-  // When the category filter changes (from dropdown), update the URL and fetch products
+
   useEffect(() => {
     if (
       filters.selectedCategory &&
@@ -64,7 +64,7 @@ const Products = () => {
         '',
         `/products/category/${encodeURIComponent(filters.selectedCategory)}`
       );
-      setPage(1); // Reset to first page on filter change
+      setPage(1); 
       dispatch(getProductsByCategory({ category: filters.selectedCategory, page: 1, limit }));
     }
   }, [filters.selectedCategory, categoryName, dispatch, limit]);
@@ -112,7 +112,7 @@ const Products = () => {
     setSortOption(e.target.value);
   };
 
-  // PAGINATION HANDLERS
+
   const handlePrevPage = () => {
     if (page > 1) setPage(page - 1);
   };
@@ -135,14 +135,14 @@ const Products = () => {
       const matchesSizes =
         filters.selectedSizes.length === 0 ||
         filters.selectedSizes.some((selectedSize) => {
-          // Handle case where sizes is an array of objects with size and stock properties
+
           if (product.sizes && Array.isArray(product.sizes)) {
             return product.sizes.some(sizeObj => {
-              // Check if the size object has a 'size' property (new structure)
+            
               if (typeof sizeObj === 'object' && sizeObj !== null && 'size' in sizeObj) {
                 return sizeObj.size === selectedSize && sizeObj.stock > 0;
               }
-              // Handle legacy format where sizes might be strings
+
               return sizeObj === selectedSize;
             });
           }
@@ -182,7 +182,7 @@ const Products = () => {
     }
   };
 
-  // Use correct products array for filtering (API now returns {products, total})
+
   const productsArray = Array.isArray(products) ? products : (products.products || []);
 
   const filteredProducts = filterProducts(productsArray);

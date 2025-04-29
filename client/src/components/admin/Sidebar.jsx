@@ -18,7 +18,6 @@ const Sidebar = () => {
 
   return (
     <aside className="h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white flex flex-col justify-between border-r border-gray-700 shadow-xl">
-      {/* Logo Section */}
       <div className="p-6 border-b border-gray-700 flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="flex items-center space-x-2">
@@ -34,12 +33,12 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Navigation Links */}
+
       <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
         <SidebarMenu links={menuConfig} />
       </div>
 
-      {/* Logout Section */}
+
       <div className="p-4 border-t border-gray-700">
         <button
           onClick={handleClick}

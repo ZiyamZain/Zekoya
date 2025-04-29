@@ -17,7 +17,7 @@ router.get("/category/:categoryName", getProductsByCategory);
 // Get products by brand
 router.get("/brand/:brandName", getProductsByBrand);
 
-// Get product by ID - this must be last to avoid catching other routes
+
 router.get("/:id", getProductById);
 
 export default router;

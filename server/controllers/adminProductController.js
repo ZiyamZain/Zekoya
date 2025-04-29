@@ -3,9 +3,7 @@ import Category from "../models/categoryModel.js";
 import asyncHandler from "express-async-handler";
 import path from "path";
 
-// @desc    Get all categories
-// @route   GET /api/admin/categories
-// @access  Private/Admin
+
 export const getCategories = asyncHandler(async (req, res) => {
   const categories = await Category.find({ isListed: true })
     .select('name _id')
@@ -14,9 +12,7 @@ export const getCategories = asyncHandler(async (req, res) => {
 });
 
 
-// @desc    Add new product
-// @route   POST /api/admin/products/add
-// @access  Private/Admin
+
 export const addProduct = asyncHandler(async (req, res) => {
   try {
     console.log("Request body:", req.body);
@@ -29,13 +25,12 @@ export const addProduct = asyncHandler(async (req, res) => {
     const sizes = req.body.sizes;
     
 
-    // Validate required fields
+ 
     if (!name || !description || !price || !category || !sizes) {
       res.status(400);
       throw new Error("Please fill in all required fields");
     }
 
-    // Validate category exists
     const categoryExists = await Category.findById(category);
 
     if (!categoryExists) {
@@ -45,26 +40,20 @@ export const addProduct = asyncHandler(async (req, res) => {
 
     // Handle image paths from multer
     const images = req.files ? req.files.map(file => {
-      // Get just the filename
+  
       const filename = path.basename(file.path);
       return `/uploads/${filename}`;
     }) : [];
-
-    // Parse sizes and specifications from JSON strings
     let parsedSizes;
-    
-
+  
     try {
       parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes;
-      console.log("Parsed sizes:", parsedSizes);
-      console.log("Images array:", images);
     } catch (error) {
       console.error("Error parsing JSON:", error);
       res.status(400);
       throw new Error("Invalid sizes or specifications format");
     }
 
-    // Create product
     const product = await Product.create({
       name,
       description,
@@ -97,9 +86,6 @@ export const addProduct = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get all products
-// @route   GET /api/admin/products
-// @access  Private/Admin
 export const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 10;
   const page = Number(req.query.page) || 1;
@@ -134,10 +120,6 @@ export const getProducts = asyncHandler(async (req, res) => {
     });
   }
 });
-
-// @desc    Update product
-// @route   PUT /api/admin/products/:id
-// @access  Private/Admin
 export const updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -155,7 +137,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
     specifications,
   } = req.body;
 
-  // Update basic fields
   product.name = name || product.name;
   product.description = description || product.description;
   product.price = price || product.price;
@@ -165,7 +146,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     ? JSON.parse(specifications)
     : product.specifications;
 
-  // Handle image updates
+
   if (req.files && req.files.length > 0) {
     const newImageUrls = req.files.map(file => {
       const filename = path.basename(file.path);
@@ -178,9 +159,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   res.json(updatedProduct);
 });
 
-// @desc    Delete product
-// @route   PATCH /api/admin/products/delete/:id
-// @access  Private/Admin
+
 export const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -189,16 +168,13 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
-  // Soft delete by setting isListed to false
   product.isListed = false;
   await product.save();
 
   res.json({ message: "Product deleted successfully" });
 });
 
-// @desc    Toggle product listing status
-// @route   PATCH /api/admin/products/:id/toggle-listing
-// @access  Private/Admin
+
 export const toggleProductListing = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -213,9 +189,6 @@ export const toggleProductListing = asyncHandler(async (req, res) => {
   res.json(product);
 });
 
-// @desc    Toggle product featured status
-// @route   PATCH /api/admin/products/:id/toggle-featured
-// @access  Private/Admin
 export const toggleProductFeatured = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
@@ -230,9 +203,7 @@ export const toggleProductFeatured = asyncHandler(async (req, res) => {
   res.json(product);
 });
 
-// @desc    Get featured products
-// @route   GET /api/admin/products/featured
-// @access  Public
+
 export const getFeaturedProducts = asyncHandler(async (req, res) => {
   console.log('Fetching featured products...');
   

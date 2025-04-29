@@ -10,7 +10,7 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import adminProductRoutes from "./routes/adminProductRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import passport from "passport";
-import { passportConfig } from "./config/passport.js"; // Correctly import named export
+import { passportConfig } from "./config/passport.js"; 
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -19,13 +19,13 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
-// Connect to MongoDB
+
 connectDB();
 
-// Initialize Express app
+
 const app = express();
 
-// CORS configuration
+
 const corsOptions = {
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -33,7 +33,7 @@ const corsOptions = {
   credentials: true
 };
 
-// Middleware
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -42,17 +42,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 passportConfig(); // Apply the passport configuration (use the passport strategies)
 
-// Serve static files from the uploads directory
+
 const uploadsPath = path.join(__dirname, 'uploads');
 console.log('Serving uploads from:', uploadsPath);
 app.use('/uploads', express.static(uploadsPath));
 
-// Sample route
+
 app.get("/", (req, res) => {
   res.send("API is working!");
 });
 
-// API Routes
+
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userAuthRoutes);
 app.use("/api/admin/users", adminUserRoutes);
@@ -70,7 +70,7 @@ app.use((err, req, res, next) => {
   console.error("Request Files:", req.files);
   console.error("Request Headers:", req.headers);
   
-  // If it's a validation error, send a 400 status
+
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       message: "Validation Error",
@@ -78,7 +78,7 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // If it's a custom error with status code, use that
+
   if (err.statusCode) {
     return res.status(err.statusCode).json({
       message: err.message,
@@ -86,14 +86,14 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Default to 500 for other errors
+
   res.status(500).json({ 
     message: err.message || "Something went wrong!",
     error: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// Server Port
+
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {

@@ -10,7 +10,6 @@ const initialState = {
   message: '',
 };
 
-// Get all products
 export const getProducts = createAsyncThunk(
   'products/getAll',
   async (_, thunkAPI) => {
@@ -26,7 +25,6 @@ export const getProducts = createAsyncThunk(
   }
 );
 
-// Get product by ID
 export const getProductById = createAsyncThunk(
   'products/getById',
   async (id, thunkAPI) => {
@@ -42,7 +40,6 @@ export const getProductById = createAsyncThunk(
   }
 );
 
-// Get products by category (paginated)
 export const getProductsByCategory = createAsyncThunk(
   'products/getByCategory',
   async ({ category, page = 1, limit = 10 }, thunkAPI) => {
@@ -73,7 +70,6 @@ export const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get all products
       .addCase(getProducts.pending, (state) => {
         state.isLoading = true;
       })
@@ -87,7 +83,7 @@ export const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Get product by ID
+
       .addCase(getProductById.pending, (state) => {
         state.isLoading = true;
         state.isError = false;
@@ -103,7 +99,7 @@ export const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Get products by category
+
       .addCase(getProductsByCategory.pending, (state) => {
         state.isLoading = true;
       })

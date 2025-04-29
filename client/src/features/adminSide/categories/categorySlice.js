@@ -1,4 +1,3 @@
-// client/src/features/adminSide/categories/categorySlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import categoryService from "./categoryService";
 
@@ -10,17 +9,15 @@ const initialState = {
   message: "",
 };
 
-// Get categories
+
 export const getCategories = createAsyncThunk(
   "categories/getAll",
   async (params, thunkAPI) => {
     try {
       const data = await categoryService.getCategories(params);
-      // If response is paginated, extract categories and total
       if (data && data.categories && typeof data.total === 'number') {
         return data;
       }
-      // If response is array (legacy), wrap in object
       return { categories: Array.isArray(data) ? data : [], total: Array.isArray(data) ? data.length : 0 };
     } catch (error) {
       const message =
@@ -34,7 +31,7 @@ export const getCategories = createAsyncThunk(
   }
 );
 
-// Add category
+
 export const addCategory = createAsyncThunk(
   "categories/add",
   async (formData, thunkAPI) => {
@@ -53,7 +50,7 @@ export const addCategory = createAsyncThunk(
   }
 );
 
-// Update category
+
 export const updateCategory = createAsyncThunk(
   "categories/update",
   async ({ id, formData }, thunkAPI) => {
@@ -72,7 +69,7 @@ export const updateCategory = createAsyncThunk(
   }
 );
 
-// Delete category
+
 export const deleteCategory = createAsyncThunk(
   "categories/delete",
   async (id, thunkAPI) => {
@@ -91,7 +88,7 @@ export const deleteCategory = createAsyncThunk(
   }
 );
 
-// Toggle category listing status
+
 export const toggleCategoryListing = createAsyncThunk(
   "categories/toggleListing",
   async (id, thunkAPI) => {
@@ -110,7 +107,7 @@ export const toggleCategoryListing = createAsyncThunk(
   }
 );
 
-// Update category status
+
 export const updateCategoryStatus = createAsyncThunk(
   "categories/updateStatus",
   async (updatedCategory, thunkAPI) => {
@@ -141,7 +138,6 @@ const categorySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get categories
       .addCase(getCategories.pending, (state) => {
         state.isLoading = true;
       })
@@ -155,7 +151,6 @@ const categorySlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Add category
       .addCase(addCategory.pending, (state) => {
         state.isLoading = true;
       })
@@ -168,7 +163,6 @@ const categorySlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Update category
       .addCase(updateCategory.pending, (state) => {
         state.isLoading = true;
       })
@@ -183,7 +177,6 @@ const categorySlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Delete category
       .addCase(deleteCategory.pending, (state) => {
         state.isLoading = true;
       })
@@ -198,7 +191,6 @@ const categorySlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Toggle category listing status
       .addCase(toggleCategoryListing.pending, (state) => {
         state.isLoading = true;
       })

@@ -4,14 +4,14 @@ const sizeSchema = new mongoose.Schema({
   size: {
     type: String,
     required: true,
-    enum: ['S', 'M', 'L', 'XL', 'XXL', '3XL'], // Standard jersey sizes
+    enum: ['S', 'M', 'L', 'XL', 'XXL', '3XL'],
   },
   stock: {
     type: Number,
     required: true,
     min: [0, "Stock cannot be negative"],
   }
-}, { _id: false }); // _id: false prevents creation of ids for each size object
+}, { _id: false }); 
 
 const productSchema = new mongoose.Schema(
   {

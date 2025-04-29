@@ -46,7 +46,7 @@ const AddCategoryModal = ({ onClose }) => {
       setIsSubmitting(true);
       console.log('Form data:', formData);
 
-      // Validate required fields
+   
       if (!formData.name.trim() || !formData.description.trim() || !formData.image) {
         toast.error('Please fill in all fields and upload an image');
         return;

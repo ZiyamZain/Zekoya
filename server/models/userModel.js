@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String },
     isBlocked: { type: Boolean, default: false },
     profileImage: { type: String, default: "" },
-    isVerified: { type: Boolean, default: false }, // Added isVerified
+    isVerified: { type: Boolean, default: false }, 
     otp: {
       code: String,
       expiry: Date,

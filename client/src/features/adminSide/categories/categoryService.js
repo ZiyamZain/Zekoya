@@ -2,15 +2,12 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5001/api/admin/categories";
 
-// Get categories
 const getCategories = async (params) => {
-  // Ensure default limit if not provided
   const queryParams = { ...params, limit: params.limit || 5 };
   const response = await axios.get(API_URL, { params: queryParams });
   return response.data;
 };
 
-// Add category
 const addCategory = async (formData, token) => {
   const config = {
     headers: {
@@ -23,7 +20,7 @@ const addCategory = async (formData, token) => {
   return response.data;
 };
 
-// Update category
+
 const updateCategory = async (id, formData, token) => {
   const config = {
     headers: {
@@ -36,7 +33,7 @@ const updateCategory = async (id, formData, token) => {
   return response.data;
 };
 
-// Delete category
+
 const deleteCategory = async (id, token) => {
   const config = {
     headers: {
@@ -48,7 +45,7 @@ const deleteCategory = async (id, token) => {
   return response.data;
 };
 
-// Toggle category listing status
+
 const toggleCategoryListing = async (id, token) => {
   const config = {
     headers: {

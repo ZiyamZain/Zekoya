@@ -8,7 +8,7 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { MdAdd } from "react-icons/md";
-import { getCategories, toggleCategoryListing } from "../../features/adminSide/categories/categorySlice";
+import { getCategories, toggleCategoryListing, deleteCategory } from "../../features/adminSide/categories/categorySlice";
 import CategoryModal from "../../components/admin/CategoryModal";
 import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
@@ -331,9 +331,16 @@ const CategoriesPage = () => {
               </button>
               <button
                 onClick={() => {
-                  // Handle delete here
+                  dispatch(deleteCategory(confirmDelete))
+                    .unwrap()
+                    .then(() => {
+                      toast.success("Category deleted successfully");
+                      dispatch(getCategories({ page, search, limit }));
+                    })
+                    .catch((error) => {
+                      toast.error(error?.message || "Failed to delete category");
+                    });
                   setConfirmDelete(null);
-                  toast.success("Category deleted successfully");
                 }}
                 className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
               >

@@ -2,7 +2,6 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5001/api/admin/products";
 
-// Get all products (admin, with token)
 const getProducts = async (params, token) => {
   const queryParams = { ...params, limit: params.limit || 10 };
   const config = token ? { headers: { Authorization: `Bearer ${token}` }, params: queryParams } : { params: queryParams };
@@ -10,13 +9,11 @@ const getProducts = async (params, token) => {
   return response.data;
 };
 
-// Get featured products
 const getFeaturedProducts = async () => {
   const response = await axios.get(`${API_URL}/featured`);
   return response.data;
 };
 
-// Add new product
 const addProduct = async (formData, token) => {
   try {
     const config = {
@@ -26,16 +23,6 @@ const addProduct = async (formData, token) => {
       },
     };
 
-    console.log("Sending form data:", {
-      name: formData.get("name"),
-      description: formData.get("description"),
-      price: formData.get("price"),
-      category: formData.get("category"),
-      sizes: formData.get("sizes"),
-      specifications: formData.get("specifications"),
-      images: formData.getAll("images").length,
-    });
-
     const response = await axios.post(`${API_URL}/add`, formData, config);
     return response.data;
   } catch (error) {
@@ -44,7 +31,7 @@ const addProduct = async (formData, token) => {
   }
 };
 
-// Edit product
+
 const editProduct = async (id, productData, token) => {
   const config = {
     headers: {
@@ -56,7 +43,6 @@ const editProduct = async (id, productData, token) => {
   return response.data;
 };
 
-// Delete product
 const deleteProduct = async (id, token) => {
   const config = {
     headers: {
@@ -68,7 +54,7 @@ const deleteProduct = async (id, token) => {
   return response.data;
 };
 
-// Toggle product listing status
+
 const toggleProductListing = async (id, token) => {
   const config = {
     headers: {
@@ -80,7 +66,7 @@ const toggleProductListing = async (id, token) => {
   return response.data;
 };
 
-// Toggle product featured status
+
 const toggleProductFeatured = async (productId, token) => {
   const config = {
     headers: {

@@ -15,7 +15,7 @@ const initialState ={
 };
 
 
-//get all usrs
+
 
 export const getAllUsers = createAsyncThunk("adminUsers/getAll",
 
@@ -34,7 +34,7 @@ export const getAllUsers = createAsyncThunk("adminUsers/getAll",
 );
 
 
-//block user
+
 
 export const blockUser = createAsyncThunk("adminUsers/block",
     async(userId,thunkAPI) =>{
@@ -51,7 +51,7 @@ export const blockUser = createAsyncThunk("adminUsers/block",
     }
 );
 
-//unblock user
+
 export const unblockUser = createAsyncThunk("adminUsers/unblock",
     async(userId,thunkAPI) =>{
         try{
@@ -68,7 +68,6 @@ export const unblockUser = createAsyncThunk("adminUsers/unblock",
 );
 
 
-//block user
 export const usersSlice = createSlice({
     name:"adminUsers",
     initialState,
@@ -91,7 +90,6 @@ export const usersSlice = createSlice({
             state.users =action.payload.users;
             state.total = action.payload.total;
 
-            
         })
         .addCase(getAllUsers.rejected,(state,action)=>{
             state.isLoading = false;

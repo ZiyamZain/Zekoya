@@ -6,7 +6,6 @@ import { toast } from 'react-toastify';
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
   if (imagePath.startsWith('http')) return imagePath;
-  // Remove trailing slash from VITE_API_URL and leading slash from imagePath
   const base = import.meta.env.VITE_API_URL.replace(/\/$/, '');
   const path = imagePath.replace(/^\/+/, '');
   return `${base}/${path}`;
@@ -32,7 +31,6 @@ const ProductCard = ({ product }) => {
     maximumFractionDigits: 0,
   }).format(price);
 
-  // Defensive: ensure brand and category are strings
   let displayBrand = brand;
   if (typeof displayBrand === 'object' && displayBrand !== null) {
     displayBrand = displayBrand.name || JSON.stringify(displayBrand);
@@ -43,14 +41,14 @@ const ProductCard = ({ product }) => {
   }
 
   const handleAddToCart = (e) => {
-    e.preventDefault(); // Prevent navigation
-    e.stopPropagation(); // Prevent event bubbling
+    e.preventDefault(); 
+    e.stopPropagation();
     toast.success(`${name} added to cart!`);
   };
 
   const handleAddToFavorite = (e) => {
-    e.preventDefault(); // Prevent navigation
-    e.stopPropagation(); // Prevent event bubbling
+    e.preventDefault();
+    e.stopPropagation();
     toast.info("Added to favorites!");
   };
 
@@ -58,36 +56,21 @@ const ProductCard = ({ product }) => {
 
   return (
     <Link to={`/products/${_id}`} className="flex flex-col h-full group">
-      {/* Product Image */}
       <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-square">
         <img
           src={getImageUrl(mainImage)}
           alt={name}
           className="w-full h-full object-cover transition-transform group-hover:scale-105"
         />
-        {isOutOfStock && (
-          <div className="absolute top-4 left-4">
-            <span className="bg-red-500 text-white px-3 py-1 text-sm font-medium">
-              Sold Out
-            </span>
-          </div>
-        )}
-        {isFeatured && !isOutOfStock && (
-          <div className="absolute top-4 left-4">
-            <span className="bg-yellow-500 text-white px-3 py-1 text-sm font-medium">
-              Bestseller
-            </span>
-          </div>
-        )}
+      
+    
       </div>
 
-      {/* Product Info */}
       <div className="mt-4 flex flex-col flex-grow">
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{name}</h3>
             <p className="text-sm text-gray-500">{displayCategory}</p>
-            <p className="text-sm text-gray-500">1 Colour</p>
           </div>
           <span className="font-medium">{formattedPrice}</span>
         </div>

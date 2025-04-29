@@ -11,7 +11,7 @@ import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-// Public routes
+
 router.get("/", getCategories);
 
 // Admin routes

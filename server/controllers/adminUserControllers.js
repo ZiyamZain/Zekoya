@@ -1,11 +1,9 @@
-import User from "../models/userModel.js";///please be careful here
+import User from "../models/userModel.js";
 
-// @desc Get all users (with pagination, search & sort)
+
 export const getAllUsers = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "" } = req.query;
-    
-    // Build search query
     const searchQuery = search
       ? {
           $or: [
@@ -21,7 +19,6 @@ export const getAllUsers = async (req, res) => {
       .limit(parseInt(limit));
 
     
-    console.log(users)
     const total = await User.countDocuments(searchQuery);
 
     res.json({ users, total });
@@ -30,7 +27,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// @desc Search users
+
 export const searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
@@ -47,7 +44,7 @@ export const searchUsers = async (req, res) => {
   }
 };
 
-// @desc Block a user
+
 export const blockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
@@ -61,7 +58,7 @@ export const blockUser = async (req, res) => {
   }
 };
 
-// @desc Unblock a user
+
 export const unblockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(

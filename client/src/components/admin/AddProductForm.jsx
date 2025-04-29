@@ -29,9 +29,9 @@ const AddProductForm = ({ onCancel }) => {
     images: [],
   });
 
-  const [imagePreviews, setImagePreviews] = useState([]); // Changed to array for multiple previews
+  const [imagePreviews, setImagePreviews] = useState([]); 
   const [isLoading, setIsLoading] = useState(false);
-  const [imageSrc, setImageSrc] = useState(null); // Define imageSrc state
+  const [imageSrc, setImageSrc] = useState(null);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -121,7 +121,6 @@ const AddProductForm = ({ onCancel }) => {
       formDataToSend.append("sizes", JSON.stringify(formData.sizes));
 
       formData.images.forEach((image) => {
-        // Append the Blob to FormData with a proper filename
         formDataToSend.append("images", image, image.name || "image.jpg");
       });
 
@@ -129,10 +128,9 @@ const AddProductForm = ({ onCancel }) => {
 
       const { error } = await dispatch(addProduct(formDataToSend)).unwrap();
 
-      console.log("Dispatch result:", { error }); // Debugging log
       if (!error) {
         toast.success("Product added successfully");
-        navigate("/admin/products"); // Redirect to products listed page
+        navigate("/admin/products"); 
       } else {
         toast.error("Failed to add product");
       }
@@ -172,15 +170,15 @@ const AddProductForm = ({ onCancel }) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const showCroppedImage = useCallback(async () => {
-    try {
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
-      setCroppedImage(croppedImage);
-      setImagePreviews([croppedImage]); // Update preview with cropped image
-    } catch (e) {
-      console.error(e);
-    }
-  }, [imageSrc, croppedAreaPixels]);
+  // const showCroppedImage = useCallback(async () => {
+  //   try {
+  //     const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+  //     setCroppedImage(croppedImage);
+  //     setImagePreviews([croppedImage]); 
+  //   } catch (e) {
+  //     console.error(e);
+  //   }
+  // }, [imageSrc, croppedAreaPixels]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
@@ -189,7 +187,6 @@ const AddProductForm = ({ onCancel }) => {
           <h2 className="text-2xl font-bold tracking-wider text-center w-full">Add New Product</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium mb-2">Product Name</label>
@@ -335,7 +332,6 @@ const AddProductForm = ({ onCancel }) => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <div className="flex justify-end gap-2 mt-6">
             <button
               type="button"

@@ -12,24 +12,24 @@ const Featured = () => {
     dispatch(getFeaturedProducts());
   }, [dispatch]);
 
-  // Helper function to get the full image URL
+
   const getImageUrl = (imagePath) => {
     if (!imagePath) {
       return '';
     }
     
-    // If it's already a full URL
+  
     if (imagePath.startsWith('http')) {
       return imagePath;
     }
     
-    // If it's an absolute file system path, extract just the filename
+
     if (imagePath.includes('/server/uploads/')) {
       const filename = imagePath.split('/server/uploads/').pop();
       return `http://localhost:5001/uploads/${filename}`;
     }
     
-    // If it's already in the correct format (/uploads/filename)
+
     return `http://localhost:5001${imagePath}`;
   };
 
@@ -67,18 +67,15 @@ const Featured = () => {
               <Link
                 key={product._id}
                 to={`/product/${product._id}`}
-                className="group block"
+                className="group block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:-translate-y-2 hover:shadow-2xl duration-300"
               >
-                <div
-                  className="group relative w-[350px] h-[440px] bg-white border-2 border-amber-900/20 hover:border-amber-900/40 transition-all duration-300 overflow-hidden shadow-lg"
-                >
+                <div>
                   {/* Sale Badge */}
                   {product.onSale && (
                     <div className="absolute top-0 right-0 z-30 bg-red-600 text-white transform rotate-[15deg] origin-top-right shadow-md">
                       <div className="py-1 px-8 text-sm font-['Bebas_Neue'] tracking-wider">SALE</div>
                     </div>
                   )}
-                  
                   {/* Image Container */}
                   <div className="relative h-56 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30 z-10"></div>
@@ -91,10 +88,8 @@ const Featured = () => {
                         e.target.src = 'https://via.placeholder.com/400x500?text=Image+Not+Found';
                       }}
                     />
-                    
                     {/* Vintage Overlay */}
                     <div className="absolute inset-0 bg-[radial-gradient(#000_0.5px,transparent_1px)] [background-size:12px_12px] opacity-10 mix-blend-multiply pointer-events-none"></div>
-                    
                     {/* Shop Now Button */}
                     <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <span className="bg-black text-white px-6 py-2 font-['Bebas_Neue'] tracking-wider text-lg flex items-center border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -102,7 +97,6 @@ const Featured = () => {
                       </span>
                     </div>
                   </div>
-
                   {/* Content */}
                   <div className="p-3 space-y-1.5">
                     {/* Category Tag */}
@@ -111,10 +105,8 @@ const Featured = () => {
                         {product.category?.name || 'PRODUCT'}
                       </span>
                     </div>
-                    
                     {/* Product Name */}
                     <h3 className="text-md font-semibold text-amber-900 line-clamp-1">{product.name}</h3>
-                    
                     {/* Price & Stock */}
                     <div className="flex justify-between items-center pt-2">
                       {product.onSale ? (
@@ -131,26 +123,6 @@ const Featured = () => {
                           {product.sizes.some(size => size.stock > 0) ? 'In Stock' : 'Sold Out'}
                         </span>
                       </div>
-                    </div>
-                    
-                    {/* Available Sizes */}
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {product.sizes
-                        .filter(size => size.stock > 0)
-                        .slice(0, 5)
-                        .map(size => (
-                          <span
-                            key={size.size}
-                            className="text-xs border border-black px-2 py-1 font-['Bebas_Neue'] bg-white"
-                          >
-                            {size.size}
-                          </span>
-                        ))}
-                      {product.sizes.filter(size => size.stock > 0).length > 5 && (
-                        <span className="text-xs border border-black px-2 py-1 font-['Bebas_Neue'] bg-white">
-                          +{product.sizes.filter(size => size.stock > 0).length - 5}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>

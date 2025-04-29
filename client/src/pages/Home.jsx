@@ -16,7 +16,7 @@ const Home = () => {
 
   return (
     <main className="relative min-h-screen">
-      {/* Minimal Auth Button */}
+
       <div className="absolute top-6 right-8 z-20">
         {userInfo ? (
           <button

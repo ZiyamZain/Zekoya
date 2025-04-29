@@ -15,7 +15,6 @@ const store = configureStore({
         userAuth:userAuthReducer,
         adminUsers:adminUsersReducer,
         adminCategories:adminCategoriesReducer,
-    
         adminProducts:adminProductsReducer,
         products: productsReducer,
         categories: categoriesReducer,

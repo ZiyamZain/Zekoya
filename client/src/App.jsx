@@ -35,7 +35,6 @@ import AdminLayout from "./layouts/AdminLayout";
 import UserLayout from './layouts/UserLayout';
 import AuthLayout from './layouts/AuthLayout';
 import ProtectedRoute from "./components/admin/ProtectedRoute";
-import ProtectedRouteUser from "./components/user/ProtectedRouteUser";
 
 function App() {
   return (

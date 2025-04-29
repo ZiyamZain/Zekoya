@@ -6,13 +6,12 @@ import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure storage
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
@@ -26,7 +25,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter
+
 const fileFilter = (req, file, cb) => {
   // Accept images only
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -35,7 +34,7 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// Configure multer
+
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,

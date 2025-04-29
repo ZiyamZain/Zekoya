@@ -1,4 +1,4 @@
-// src/components/admin/Navbar.jsx
+
 const Navbar = () => {
   return (
     <div className="h-16 bg-white shadow flex items-center justify-end pr-6 fixed top-0 left-64 right-0 z-10">

@@ -9,14 +9,19 @@ const initialState = {
   message: '',
 };
 
-// Get all categories
 export const getCategories = createAsyncThunk(
   'categories/getAll',
   async (_, thunkAPI) => {
     try {
       const data = await categoryService.getAllCategories();
-      console.log('Fetched categories:', data); // Debug log
-      return data;
+      // Always return the array of categories for state.categories
+      if (Array.isArray(data.categories)) {
+        return data.categories;
+      }
+      if (Array.isArray(data)) {
+        return data;
+      }
+      return [];
     } catch (error) {
       const message =
         (error.response && error.response.data && error.response.data.message) ||
@@ -44,13 +49,11 @@ export const categorySlice = createSlice({
         state.isLoading = true;
       })
       .addCase(getCategories.fulfilled, (state, action) => {
-        console.log('Reducer received categories:', action.payload); // Debug log
         state.isLoading = false;
         state.isSuccess = true;
         state.categories = action.payload;
       })
       .addCase(getCategories.rejected, (state, action) => {
-        console.error('Failed to fetch categories:', action.payload); // Debug log
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
@@ -59,4 +62,4 @@ export const categorySlice = createSlice({
 });
 
 export const { reset } = categorySlice.actions;
-export default categorySlice.reducer; 
+export default categorySlice.reducer;

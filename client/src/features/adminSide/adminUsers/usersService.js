@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_URL = "/api/admin/users";
 
-// Get all users
+
 const getAllUsers = async (token, page = 1, search = "") => {
     const config = {
         headers: {
@@ -18,7 +18,7 @@ const getAllUsers = async (token, page = 1, search = "") => {
     return response.data;
 };
 
-// Block user
+
 const blockUser = async (token, userId) => {
     const config = {
         headers: {
@@ -34,7 +34,6 @@ const blockUser = async (token, userId) => {
     return response.data;
 };
 
-// Unblock user
 const unblockUser = async (token, userId) => {
     const config = {
         headers: {

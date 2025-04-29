@@ -10,7 +10,6 @@ const initialState = {
   featuredProducts: [],
 };
 
-// Get products
 export const getProducts = createAsyncThunk(
   "adminProducts/getProducts",
   async ({ page = 1, search = "", limit = 10 }, thunkAPI) => {
@@ -29,7 +28,6 @@ export const getProducts = createAsyncThunk(
   }
 );
 
-// Get featured products
 export const getFeaturedProducts = createAsyncThunk(
   "products/getFeatured",
   async (_, thunkAPI) => {
@@ -47,7 +45,6 @@ export const getFeaturedProducts = createAsyncThunk(
   }
 );
 
-// Add product
 export const addProduct = createAsyncThunk(
   "adminProducts/addProduct",
   async (formData, thunkAPI) => {
@@ -69,7 +66,6 @@ export const addProduct = createAsyncThunk(
   }
 );
 
-// Edit product
 export const editProduct = createAsyncThunk(
   "adminProducts/editProduct",
   async ({ id, productData }, thunkAPI) => {
@@ -88,7 +84,6 @@ export const editProduct = createAsyncThunk(
   }
 );
 
-// Delete product
 export const deleteProduct = createAsyncThunk(
   "adminProducts/deleteProduct",
   async (id, thunkAPI) => {
@@ -107,7 +102,6 @@ export const deleteProduct = createAsyncThunk(
   }
 );
 
-// Toggle product listing
 export const toggleProductListing = createAsyncThunk(
   "adminProducts/toggleProductListing",
   async (id, thunkAPI) => {
@@ -126,7 +120,6 @@ export const toggleProductListing = createAsyncThunk(
   }
 );
 
-// Toggle product featured status
 export const toggleProductFeatured = createAsyncThunk(
   "adminProducts/toggleProductFeatured",
   async (id, thunkAPI) => {
@@ -157,7 +150,6 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get products
       .addCase(getProducts.pending, (state) => {
         state.isLoading = true;
       })
@@ -171,7 +163,6 @@ const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Get featured products
       .addCase(getFeaturedProducts.pending, (state) => {
         state.isLoading = true;
       })
@@ -197,7 +188,6 @@ const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Edit product
       .addCase(editProduct.pending, (state) => {
         state.isLoading = true;
       })
@@ -215,7 +205,7 @@ const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Delete product
+
       .addCase(deleteProduct.pending, (state) => {
         state.isLoading = true;
       })
@@ -230,7 +220,6 @@ const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Toggle product listing
       .addCase(toggleProductListing.pending, (state) => {
         state.isLoading = true;
       })
@@ -248,7 +237,6 @@ const productSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Toggle product featured
       .addCase(toggleProductFeatured.pending, (state) => {
         state.isLoading = true;
       })

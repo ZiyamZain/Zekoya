@@ -25,14 +25,11 @@ const AddCategoryForm = ({ onClose }) => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
-
-      // Update form data
       setFormData(prev => ({
         ...prev,
         image: file
@@ -83,7 +80,7 @@ const AddCategoryForm = ({ onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Input */}
+         
           <div>
             <label className="block text-sm font-medium mb-2">Category Name</label>
             <input
@@ -96,7 +93,7 @@ const AddCategoryForm = ({ onClose }) => {
             />
           </div>
 
-          {/* Description Input */}
+      
           <div>
             <label className="block text-sm font-medium mb-2">Description</label>
             <textarea

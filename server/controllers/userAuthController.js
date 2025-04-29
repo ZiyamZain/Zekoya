@@ -2,17 +2,17 @@ import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
-import generateToken from "../utils/generateToken.js"; // No role field here
+import generateToken from "../utils/generateToken.js"; 
 import { OAuth2Client } from "google-auth-library";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Generate 6-digit OTP
+
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Register user with OTP email verification
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -25,7 +25,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
 
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
     console.log(otp)
 
     const user = await User.create({
@@ -36,7 +36,7 @@ export const registerUser = async (req, res) => {
         code: otp,
         expiry: otpExpiry,
       },
-      isVerified: false, // Set isVerified to false
+      isVerified: false, 
     });
 
     await sendEmail(email, "Your OTP", `Your OTP is ${otp}`);
@@ -45,7 +45,7 @@ export const registerUser = async (req, res) => {
       message: "OTP sent to email",
       userId: user._id,
       otpSent: true,
-      otp, // DEV ONLY: Remove in production!
+      otp, 
     });
   } catch (error) {
     console.error("Register Error:", error);
@@ -53,7 +53,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Verify OTP
+
 export const verifyOTP = async (req, res) => {
   const { userId, otp } = req.body;
 
@@ -71,7 +71,7 @@ export const verifyOTP = async (req, res) => {
     if (!isOtpMatch) return res.status(400).json({ message: "Invalid OTP" });
 
     user.otp = undefined;
-    user.isVerified = true; // Set isVerified to true
+    user.isVerified = true; 
     await user.save();
 
     const token = generateToken(user._id);
@@ -91,7 +91,7 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
-// Login with email/password
+
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -132,7 +132,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Google Login
+
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -166,11 +166,11 @@ export const googleLogin = async (req, res) => {
         email,
         isGoogle: true,
         profileImage,
-        isVerified: true, // Set isVerified to true for Google users
+        isVerified: true,
       });
     }
 
-    const jwtToken = generateToken(user._id); // Only passing user._id now
+    const jwtToken = generateToken(user._id); 
 
     res.status(200).json({
       _id: user._id,
@@ -178,7 +178,7 @@ export const googleLogin = async (req, res) => {
       email: user.email,
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
-      isVerified: user.isVerified, // Include isVerified in response
+      isVerified: user.isVerified, 
       token: jwtToken,
     });
   } catch (error) {
@@ -187,7 +187,7 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-// Forgot Password: Send OTP
+
 export const sendForgotPasswordOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -199,7 +199,6 @@ export const sendForgotPasswordOtp = async (req, res) => {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
     user.otp = { code: otp, expiry: otpExpiry };
     await user.save();
-    // DEV: Log OTP to backend console
     console.log(`DEV FORGOT PASSWORD OTP for ${email}:`, otp);
     await sendEmail(email, "Your Password Reset OTP", `Your OTP is ${otp}`);
     res.status(200).json({ message: "OTP sent to email", userId: user._id, otp }); // DEV: include otp
@@ -209,7 +208,7 @@ export const sendForgotPasswordOtp = async (req, res) => {
   }
 };
 
-// Forgot Password: Verify OTP
+
 export const verifyForgotPasswordOtp = async (req, res) => {
   try {
     const { userId, otp } = req.body;
@@ -230,7 +229,7 @@ export const verifyForgotPasswordOtp = async (req, res) => {
   }
 };
 
-// Forgot Password: Change Password
+
 export const changePassword = async (req, res) => {
   try {
     const { userId, password } = req.body;
@@ -238,7 +237,6 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "UserId and password are required" });
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-    // Only allow if OTP is not set (OTP verified)
     if (user.otp && user.otp.code)
       return res.status(400).json({ message: "OTP verification required" });
     user.password = password;

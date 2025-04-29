@@ -7,7 +7,7 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "../../utils/cropImage";
 import { useNavigate } from "react-router-dom";
 
-const SERVER_URL = "http://localhost:5001/"; // Updated to match backend port
+const SERVER_URL = "http://localhost:5001/";
 
 const getPreviewUrl = (preview) => {
   if (typeof preview === "string") {
@@ -40,7 +40,7 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
       { size: "XXL", stock: 0 },
       { size: "3XL", stock: 0 },
     ],
-    images: product.images || [], // URLs or base64
+    images: product.images || [], 
   });
   const [loading, setLoading] = useState(false);
   const [imagePreviews, setImagePreviews] = useState(product.images || []);

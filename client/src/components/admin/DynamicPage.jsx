@@ -21,7 +21,6 @@ const DynamicPage = ({
 }) => {
   return (
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-black">
@@ -30,11 +29,8 @@ const DynamicPage = ({
           <p className="text-sm text-gray-500 mt-1">{description}</p>
         </div>
       </div>
-
-      {/* Actions Bar */}
       <div className="bg-white rounded-xl shadow-md p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Search */}
           <div className="relative flex-1 max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className="text-gray-400" />
@@ -56,7 +52,6 @@ const DynamicPage = ({
             )}
           </div>
 
-          {/* Add Button */}
           {onAdd && (
             <button
               onClick={onAdd}
@@ -69,7 +64,6 @@ const DynamicPage = ({
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -99,15 +93,12 @@ const DynamicPage = ({
           </div>
         )}
 
-        {/* Pagination */}
         {pagination && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
             {pagination}
           </div>
         )}
       </div>
-
-      {/* Additional Actions */}
       {actions && <div>{actions}</div>}
     </div>
   );

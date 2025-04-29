@@ -8,7 +8,7 @@ import { getProductById } from '../features/products/productSlice';
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
   if (imagePath.startsWith('http')) return imagePath;
-  // Remove trailing slash from VITE_API_URL and leading slash from imagePath
+
   const base = import.meta.env.VITE_API_URL.replace(/\/$/, '');
   const path = imagePath.replace(/^\/+/, '');
   return `${base}/${path}`;
@@ -59,29 +59,29 @@ const ProductDetail = () => {
     );
   }
 
-  // Format price with currency
+
   const formattedPrice = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 2,
   }).format(product.price);
 
-  // Check if product is out of stock
+
   const isOutOfStock = product.totalStock <= 0;
 
-  // Get category name
+
   const displayCategory = 
     typeof product.category === 'object' && product.category !== null
       ? product.category.name
       : product.category;
 
-  // Get product description or default text
+
   const productDescription = product.description || 
     `Carve a new lane for yourself with the ${product.name}—your go-to for complexity, depth and easy styling. The richly layered design includes premium materials and accents that come together to make one of the coolest products of the season.`;
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumb */}
+  
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center text-sm text-gray-500">
           <Link to="/" className="hover:underline">Home</Link>
@@ -101,10 +101,10 @@ const ProductDetail = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left Column - Image Gallery */}
+          
           <div className="w-full lg:w-2/3">
             <div className="flex flex-col md:flex-row gap-4">
-              {/* Thumbnail Column */}
+           
               <div className="flex md:flex-col gap-2 order-2 md:order-1">
                 {product.images && product.images.map((image, index) => (
                   <button 
@@ -121,7 +121,7 @@ const ProductDetail = () => {
                 ))}
               </div>
 
-              {/* Main Image */}
+     
               <div className="flex-1 bg-gray-100 order-1 md:order-2">
                 <img
                   src={getImageUrl(product.images?.[selectedImage] || '')}

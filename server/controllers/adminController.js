@@ -29,18 +29,18 @@ export const adminLogin = async(req,res)=>{
 
 }
 
-// TEMPORARY: Enable admin creation endpoint for debugging
-export const createAdmin = async (req,res)=>{
-    const {email , password} = req.body;
-    const adminExists = await Admin.findOne({email});
-    if(adminExists) return res.status(400).json({message:'Admin already exists'});
 
-    const hashed = await bcrypt.hash(password,10);
-    const admin = await Admin.create({email , password:hashed})
+// export const createAdmin = async (req,res)=>{
+//     const {email , password} = req.body;
+//     const adminExists = await Admin.findOne({email});
+//     if(adminExists) return res.status(400).json({message:'Admin already exists'});
 
-    res.status(201).json({
-    _id:admin._id,
-    email:admin.email,
-    token:generateToken(admin._id)
-    })
-}
+//     const hashed = await bcrypt.hash(password,10);
+//     const admin = await Admin.create({email , password:hashed})
+
+//     res.status(201).json({
+//     _id:admin._id,
+//     email:admin.email,
+//     token:generateToken(admin._id)
+//     })
+// }

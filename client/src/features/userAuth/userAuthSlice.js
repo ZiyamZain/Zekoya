@@ -89,7 +89,6 @@ export const userLogout = createAsyncThunk("userAuth/logout", async () => {
   userAuthService.logout();
 });
 
-// Forgot password OTP flow
 export const sendForgotPasswordOtp = createAsyncThunk(
   "userAuth/sendForgotPasswordOtp",
   async ({ email }, thunkAPI) => {
@@ -140,7 +139,6 @@ const userAuthSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // Register
       .addCase(userRegister.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -154,7 +152,7 @@ const userAuthSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Verify OTP
+
       .addCase(verifyOTP.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -169,14 +167,14 @@ const userAuthSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Reset OTP
+
       .addCase(resetOTP.fulfilled, (state) => {
         state.otpSent = false;
         state.userId = null;
         state.error = null;
         state.loading = false;
       })
-      // Login
+
       .addCase(userLogin.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -189,7 +187,6 @@ const userAuthSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Google Login
       .addCase(googleLogin.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -202,7 +199,7 @@ const userAuthSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Google Sign In
+
       .addCase(googleSignIn.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -215,13 +212,13 @@ const userAuthSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Logout
+    
       .addCase(userLogout.fulfilled, (state) => {
         state.userInfo = null;
         state.otpSent = false;
         state.userId = null;
       })
-      // Forgot password OTP flow
+
       .addCase(sendForgotPasswordOtp.pending, (state) => {
         state.loading = true;
         state.error = null;
