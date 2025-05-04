@@ -15,8 +15,6 @@ export const getCategories = asyncHandler(async (req, res) => {
 
 export const addProduct = asyncHandler(async (req, res) => {
   try {
-    console.log("Request body:", req.body);
-    console.log("Request files:", req.files);
 
     const name = req.body.name;
     const description = req.body.description;
@@ -165,13 +163,16 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   if (!product) {
     res.status(404);
-    throw new Error("Product not found");
+    return res.json({ message: "Product not found" });
   }
 
-  product.isListed = false;
-  await product.save();
-
-  res.json({ message: "Product deleted successfully" });
+  try {
+    await product.deleteOne();
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ message: "Failed to delete product", error: error.message });
+  }
 });
 
 
@@ -205,14 +206,13 @@ export const toggleProductFeatured = asyncHandler(async (req, res) => {
 
 
 export const getFeaturedProducts = asyncHandler(async (req, res) => {
-  console.log('Fetching featured products...');
+
   
   const products = await Product.find({ isFeatured: true, isListed: true })
     .populate("category", "name")
     .sort({ createdAt: -1 });
 
-  console.log('Found featured products:', products.length);
-  console.log('Sample product data:', products[0]);
+
 
   res.json(products);
 });

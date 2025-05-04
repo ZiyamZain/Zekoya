@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Google Auth Success</title>
+</head>
+<body>
+  <script>
+    // Parse query params for token and user info
+    function getQueryParams() {
+      const params = {};
+      window.location.search.replace(/\??([^=&]+)=([^&]*)/g, function(_, key, value) {
+        params[decodeURIComponent(key)] = decodeURIComponent(value);
+      });
+      return params;
+    }
+    const params = getQueryParams();
+    if (window.opener) {
+      window.opener.postMessage({
+        token: params.token,
+        user: params.user ? JSON.parse(params.user) : undefined
+      }, 'http://localhost:5173'); // <-- Change to your frontend URL if needed
+    }
+    window.close();
+  </script>
+  <p>Signing you in...</p>
+</body>
+</html>

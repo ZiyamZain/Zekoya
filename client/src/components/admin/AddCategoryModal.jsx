@@ -44,7 +44,7 @@ const AddCategoryModal = ({ onClose }) => {
 
     try {
       setIsSubmitting(true);
-      console.log('Form data:', formData);
+  
 
    
       if (!formData.name.trim() || !formData.description.trim() || !formData.image) {
@@ -57,10 +57,9 @@ const AddCategoryModal = ({ onClose }) => {
       formDataToSend.append('description', formData.description.trim());
       formDataToSend.append('image', formData.image);
 
-      console.log('Dispatching addCategory...');
+
       const result = await dispatch(addCategory(formDataToSend)).unwrap();
       
-      console.log('Add result:', result);
       
       if (result) {
         toast.success('Category added successfully');

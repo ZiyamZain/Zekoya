@@ -66,7 +66,7 @@ const Featured = () => {
             {featuredProducts?.map((product) => (
               <Link
                 key={product._id}
-                to={`/product/${product._id}`}
+                to={`/products/${product._id}`}
                 className="group block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:-translate-y-2 hover:shadow-2xl duration-300"
               >
                 <div>

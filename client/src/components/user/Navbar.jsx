@@ -1,37 +1,53 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { userLogout } from '../../features/userAuth/userAuthSlice';
-import { FiSearch, FiHeart, FiShoppingBag, FiUser, FiMenu, FiX } from 'react-icons/fi';
-import { FaChevronDown } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { userLogout } from "../../features/userAuth/userAuthSlice";
+import {
+  FiSearch,
+  FiHeart,
+  FiShoppingBag,
+  FiUser,
+  FiMenu,
+  FiX,
+} from "react-icons/fi";
+import { FaChevronDown } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Navbar = () => {
   const [isTopBannerOpen, setIsTopBannerOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const userInfo = useSelector((state) => state.userAuth.userInfo);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const mainNavItems = [
-    { name: 'FEATURED', path: '/club-jerseys' },
-    { name: 'CLUBS', path: '/international-jerseys' },
-    { name: 'RETRO', path: '/retro-jerseys' },
-    { name: 'TRAINING KIT', path: '/training-jerseys' },
-    { name: 'CRICKET', path: '/cricket-jerseys' },
+    { name: "FEATURED", path: "/club-jerseys" },
+    { name: "CLUBS", path: "/international-jerseys" },
+    { name: "RETRO", path: "/retro-jerseys" },
+    { name: "TRAINING KIT", path: "/training-jerseys" },
+    { name: "CRICKET", path: "/cricket-jerseys" },
   ];
 
   const handleLogout = () => {
     dispatch(userLogout());
-    toast.success('Logged out successfully!');
-    navigate('/');
+    toast.success("Logged out successfully!");
+    navigate("/");
   };
 
   return (
     <>
-      <ToastContainer position="top-center" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+      <ToastContainer
+        position="top-center"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       {/* Navbar */}
       <header className="bg-white">
         {/* Top Banner */}
@@ -54,8 +70,12 @@ const Navbar = () => {
         <div className="hidden md:block bg-gray-100">
           <div className="container mx-auto px-4">
             <div className="flex justify-end items-center py-2 text-xs space-x-4">
-              <Link to="/help" className="hover:underline text-gray-600">help</Link>
-              <Link to="/orders" className="hover:underline text-gray-600">orders and returns</Link>
+              <Link to="/help" className="hover:underline text-gray-600">
+                help
+              </Link>
+              <Link to="/orders" className="hover:underline text-gray-600">
+                orders and returns
+              </Link>
 
               {userInfo ? (
                 <button
@@ -65,7 +85,9 @@ const Navbar = () => {
                   log out
                 </button>
               ) : (
-                <Link to="/login" className="hover:underline text-gray-600">log in</Link>
+                <Link to="/login" className="hover:underline text-gray-600">
+                  log in
+                </Link>
               )}
             </div>
           </div>
@@ -84,7 +106,10 @@ const Navbar = () => {
               </button>
 
               {/* Logo */}
-              <Link to="/" className="flex-shrink-0 hover:opacity-75 font-semibold">
+              <Link
+                to="/"
+                className="flex-shrink-0 hover:opacity-75 font-semibold"
+              >
                 ZEKOYA
               </Link>
 
@@ -95,7 +120,7 @@ const Navbar = () => {
                     key={item.name}
                     to={item.path}
                     className={`text-sm font-medium hover:opacity-75 transition-opacity ${
-                      item.highlight ? 'text-red-600' : 'text-gray-900'
+                      item.highlight ? "text-red-600" : "text-gray-900"
                     }`}
                   >
                     {item.name}
@@ -108,7 +133,7 @@ const Navbar = () => {
                 <button className="md:hidden hover:opacity-75">
                   <FiSearch className="h-6 w-6" />
                 </button>
-                <Link to="/account" className="hover:opacity-75">
+                <Link to="/profile" className="hover:opacity-75">
                   <FiUser className="h-6 w-6" />
                 </Link>
                 <Link to="/wishlist" className="hover:opacity-75">
@@ -132,7 +157,7 @@ const Navbar = () => {
                     key={item.name}
                     to={item.path}
                     className={`text-lg font-medium hover:opacity-75 transition-opacity ${
-                      item.highlight ? 'text-red-600' : 'text-gray-900'
+                      item.highlight ? "text-red-600" : "text-gray-900"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -141,18 +166,40 @@ const Navbar = () => {
                 ))}
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <div className="flex flex-col space-y-4">
-                    <Link to="/help" className="text-sm hover:underline text-gray-600">help</Link>
-                    <Link to="/orders" className="text-sm hover:underline text-gray-600">orders and returns</Link>
-                    <Link to="/register" className="text-sm hover:underline text-gray-600">sign up</Link>
+                    <Link
+                      to="/help"
+                      className="text-sm hover:underline text-gray-600"
+                    >
+                      help
+                    </Link>
+                    <Link
+                      to="/orders"
+                      className="text-sm hover:underline text-gray-600"
+                    >
+                      orders and returns
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="text-sm hover:underline text-gray-600"
+                    >
+                      sign up
+                    </Link>
                     {userInfo ? (
                       <button
-                        onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          handleLogout();
+                        }}
                         className="text-sm hover:underline text-gray-600 bg-transparent border-none p-0 cursor-pointer text-left"
                       >
                         log out
                       </button>
                     ) : (
-                      <Link to="/login" className="text-sm hover:underline text-gray-600" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Link
+                        to="/login"
+                        className="text-sm hover:underline text-gray-600"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
                         log in
                       </Link>
                     )}
@@ -167,4 +214,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

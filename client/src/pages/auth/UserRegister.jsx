@@ -5,15 +5,17 @@ import {
   userRegister,
   verifyOTP,
   resetOTP,
+  resendOTP,
   googleLogin,
 } from "../../features/userAuth/userAuthSlice.js";
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
 
 const UserRegister = () => {
   const [otpTimer, setOtpTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [lastRegisterValues, setLastRegisterValues] = useState(null); // for resend
+  const [resendSuccess, setResendSuccess] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userInfo, userId, otpSent, loading, error } = useSelector(
@@ -30,7 +32,11 @@ const UserRegister = () => {
           console.error("Google Client ID is not configured");
           return;
         }
-        if (window.google && window.google.accounts && window.google.accounts.id) {
+        if (
+          window.google &&
+          window.google.accounts &&
+          window.google.accounts.id
+        ) {
           window.google.accounts.id.initialize({
             client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
             callback: handleGoogleSignIn,
@@ -96,7 +102,7 @@ const UserRegister = () => {
   // Listen for OTP in userId (if backend returns it)
   useEffect(() => {
     // If userId is an object with .otp, or if Redux state has another property for OTP, update devOtp
-    if (userId && typeof userId === 'object' && userId.otp) {
+    if (userId && typeof userId === "object" && userId.otp) {
       setDevOtp(userId.otp);
     }
     // If the backend returns OTP in another way, add logic here
@@ -120,31 +126,37 @@ const UserRegister = () => {
   // Formik/Yup validation schemas
   const registerSchema = Yup.object({
     name: Yup.string()
-      .min(3, 'Name must be at least 3 characters')
-      .matches(/^\S.*\S$|^\S{3,}$/,
-        'Name cannot start or end with spaces')
-      .required('Name is required'),
-    email: Yup.string().email('Invalid email address').required('Email is required'),
+      .min(3, "Name must be at least 3 characters")
+      .matches(/^\S.*\S$|^\S{3,}$/, "Name cannot start or end with spaces")
+      .required("Name is required"),
+    email: Yup.string()
+      .email("Invalid email address")
+      .required("Email is required"),
     password: Yup.string()
-      .min(6, 'Password must be at least 6 characters')
-      .matches(/^\S*$/, 'Password must not contain spaces')
-      .required('Password is required'),
+      .min(6, "Password must be at least 6 characters")
+      .matches(/^\S*$/, "Password must not contain spaces")
+      .required("Password is required"),
   });
 
   const otpSchema = Yup.object({
-    otp: Yup.string().length(6, 'OTP must be 6 digits').required('OTP is required'),
+    otp: Yup.string()
+      .length(6, "OTP must be 6 digits")
+      .required("OTP is required"),
   });
 
   // Resend OTP handler
-  const handleResendOtp = (formValues) => {
-    if (!canResend) return;
-    dispatch(userRegister({
-      name: formValues.name,
-      email: formValues.email,
-      password: formValues.password,
-    }));
-    setOtpTimer(60);
-    setCanResend(false);
+  const handleResendOtp = async () => {
+    if (lastRegisterValues && lastRegisterValues.email) {
+      setResendSuccess("");
+      const resultAction = await dispatch(resendOTP(lastRegisterValues.email));
+      if (resendOTP.fulfilled.match(resultAction)) {
+        setOtpTimer(60); // Reset timer
+        setCanResend(false); // Optionally disable resend for a bit
+        setResendSuccess("OTP resent to your email.");
+      } else if (resendOTP.rejected.match(resultAction)) {
+        setResendSuccess("");
+      }
+    }
   };
 
   return (
@@ -168,20 +180,29 @@ const UserRegister = () => {
           {/* DEV: Show OTP if present for testing (remove in production) */}
           {otpSent && devOtp && (
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-2">
-              <span className="text-yellow-800 font-mono">DEV OTP: {devOtp}</span>
+              <span className="text-yellow-800 font-mono">
+                DEV OTP: {devOtp}
+              </span>
+            </div>
+          )}
+          {resendSuccess && (
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-2">
+              <p className="text-green-700">{resendSuccess}</p>
             </div>
           )}
           {!otpSent ? (
             <Formik
-              initialValues={{ name: '', email: '', password: '', otp: '' }}
+              initialValues={{ name: "", email: "", password: "", otp: "" }}
               validationSchema={registerSchema}
               onSubmit={(values) => {
                 setLastRegisterValues(values); // for resend
-                dispatch(userRegister({
-                  name: values.name,
-                  email: values.email,
-                  password: values.password,
-                }));
+                dispatch(
+                  userRegister({
+                    name: values.name,
+                    email: values.email,
+                    password: values.password,
+                  })
+                );
               }}
             >
               {({ isSubmitting }) => (
@@ -193,21 +214,33 @@ const UserRegister = () => {
                       placeholder="USERNAME"
                       className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
-                    <ErrorMessage name="name" component="div" className="text-red-600 text-sm" />
+                    <ErrorMessage
+                      name="name"
+                      component="div"
+                      className="text-red-600 text-sm"
+                    />
                     <Field
                       type="email"
                       name="email"
                       placeholder="EMAIL"
                       className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
-                    <ErrorMessage name="email" component="div" className="text-red-600 text-sm" />
+                    <ErrorMessage
+                      name="email"
+                      component="div"
+                      className="text-red-600 text-sm"
+                    />
                     <Field
                       type="password"
                       name="password"
                       placeholder="PASSWORD"
                       className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
-                    <ErrorMessage name="password" component="div" className="text-red-600 text-sm" />
+                    <ErrorMessage
+                      name="password"
+                      component="div"
+                      className="text-red-600 text-sm"
+                    />
                   </div>
                   <button
                     type="submit"
@@ -221,20 +254,34 @@ const UserRegister = () => {
             </Formik>
           ) : (
             <Formik
-              initialValues={{ otp: '' }}
+              initialValues={{ otp: "" }}
               validationSchema={otpSchema}
-              onSubmit={(values) => {
-                dispatch(verifyOTP({ userId, otp: values.otp }));
+              onSubmit={async (values, { setSubmitting }) => {
+                try {
+
+                  await dispatch(verifyOTP({ userId, otp: values.otp }));
+                } catch (err) {
+                  console.error("OTP Form Submit Error:", err);
+                } finally {
+                  setSubmitting(false);
+              
+                }
               }}
             >
               {({ isSubmitting }) => (
                 <Form className="space-y-6">
                   <div className="flex flex-col items-center mb-2">
                     <span className="text-xs text-gray-700 font-semibold">
-                      OTP expires in: {Math.floor(otpTimer / 60)}:{otpTimer % 60 < 10 ? '0' + otpTimer % 60 : otpTimer % 60}s
+                      OTP expires in: {Math.floor(otpTimer / 60)}:
+                      {otpTimer % 60 < 10
+                        ? "0" + (otpTimer % 60)
+                        : otpTimer % 60}
+                      s
                     </span>
                     {otpTimer === 0 && (
-                      <span className="text-xs text-red-600 font-semibold mt-1">OTP expired. Please resend OTP.</span>
+                      <span className="text-xs text-red-600 font-semibold mt-1">
+                        OTP expired. Please resend OTP.
+                      </span>
                     )}
                   </div>
                   <div className="space-y-4">
@@ -246,29 +293,41 @@ const UserRegister = () => {
                       maxLength="6"
                       disabled={otpTimer === 0}
                     />
-                    <ErrorMessage name="otp" component="div" className="text-red-600 text-sm" />
+                    <ErrorMessage
+                      name="otp"
+                      component="div"
+                      className="text-red-600 text-sm"
+                    />
                   </div>
                   <div className="flex flex-col gap-2 items-center">
                     <button
                       type="button"
-                      onClick={() => handleResendOtp(lastRegisterValues)}
+                      onClick={handleResendOtp}
                       disabled={!canResend || loading}
-                      className={`w-full py-2 px-4 border-2 border-black font-bold tracking-wider rounded transition-colors duration-300 ${canResend ? 'bg-black text-white hover:bg-white hover:text-black' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                      className={`w-full py-2 px-4 border-2 border-black font-bold tracking-wider rounded transition-colors duration-300 ${
+                        canResend
+                          ? "bg-black text-white hover:bg-white hover:text-black"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      }`}
                     >
-                      {canResend ? 'Resend OTP' : `Resend OTP in ${otpTimer}s`}
+                      {canResend ? "Resend OTP" : `Resend OTP in ${otpTimer}s`}
                     </button>
                   </div>
                   <div className="space-y-3">
+
                     <button
                       type="submit"
                       className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300"
-                      disabled={otpTimer === 0 || loading || isSubmitting}
+                      disabled={false} // TEMP: always enabled for debugging
                     >
                       {loading ? "VERIFYING..." : "VERIFY OTP"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { dispatch(resetOTP()); setDevOtp(""); }}
+                      onClick={() => {
+                        dispatch(resetOTP());
+                        setDevOtp("");
+                      }}
                       className="w-full bg-white text-black py-4 font-bold tracking-wider border-2 border-black hover:bg-black hover:text-white transition-colors duration-300"
                       disabled={loading}
                     >
@@ -291,9 +350,12 @@ const UserRegister = () => {
                   </span>
                 </div>
               </div>
-              <div id="googleSignInButton" className="flex justify-center"></div>
+              <div
+                id="googleSignInButton"
+                className="flex justify-center"
+              ></div>
               <p className="text-center text-black">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <a href="/login" className="font-bold hover:underline">
                   Sign in now
                 </a>

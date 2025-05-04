@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { sendForgotPasswordOtp, verifyForgotPasswordOtp, resetForgotPasswordOtp, changePassword } from '../../features/userAuth/userAuthSlice';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -33,6 +33,13 @@ const ForgotPassword = () => {
       return () => clearInterval(interval);
     }
   }, [step, forgotOtpSent]);
+
+  // Show backend error messages in the UI for forgot password
+  useEffect(() => {
+    if (error) {
+      alert(error); // Replace with toast or better UI in production
+    }
+  }, [error]);
 
   // Request OTP
   const handleRequestOtp = (values) => {

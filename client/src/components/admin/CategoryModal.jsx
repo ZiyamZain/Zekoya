@@ -44,9 +44,6 @@ const CategoryModal = ({ category, onClose }) => {
 
     try {
       setIsSubmitting(true);
-      console.log('Updating category:', category._id);
-      console.log('Form data:', formData);
-
       // Validate required fields
       if (!formData.name.trim() || !formData.description.trim()) {
         toast.error('Please fill in all required fields');
@@ -62,13 +59,11 @@ const CategoryModal = ({ category, onClose }) => {
         formDataToSend.append('image', formData.image);
       }
 
-      console.log('Dispatching updateCategory...');
       const result = await dispatch(updateCategory({ 
         id: category._id, 
         formData: formDataToSend 
       })).unwrap();
       
-      console.log('Update result:', result);
       
       if (result) {
         toast.success('Category updated successfully');

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { userLogin, googleLogin } from "../../features/userAuth/userAuthSlice";
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from "jwt-decode";
 
 const UserLogin = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -46,7 +46,6 @@ const UserLogin = () => {
       // Validate token before decoding
       if (response.data.token && typeof response.data.token === "string") {
         const decodedToken = jwtDecode(response.data.token);
-        console.log("Decoded Token:", decodedToken);
         // ...existing code using decodedToken...
       } else {
         console.error("Invalid token received:", response.data.token);
@@ -134,7 +133,12 @@ const UserLogin = () => {
                   disabled={loading}
                 />
                 <div className="flex justify-end mt-1">
-                  <a href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</a>
+                  <a
+                    href="/forgot-password"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Forgot password?
+                  </a>
                 </div>
               </div>
             </div>

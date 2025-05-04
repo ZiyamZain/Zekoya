@@ -45,6 +45,19 @@ export const resetOTP = createAsyncThunk("userAuth/resetOTP", async () => {
   return { otpSent: false, userId: null };
 });
 
+export const resendOTP = createAsyncThunk(
+  "userAuth/resendOTP",
+  async (email, thunkAPI) => {
+    try {
+      return await userAuthService.resendOTP(email);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "Failed to resend OTP";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 export const userLogin = createAsyncThunk(
   "userAuth/login",
   async (userData, thunkAPI) => {
@@ -70,20 +83,20 @@ export const googleLogin = createAsyncThunk(
     }
   }
 );
-export const googleSignIn = createAsyncThunk(
-  "userAuth/googleSignIn",
-  async (userData, thunkAPI) => {
-    try {
-      return await userAuthService.googleSignIn(userData);
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Google sign-in failed";
-      return thunkAPI.rejectWithValue(message);
-    }
-  }
-);
+// export const googleSignIn = createAsyncThunk(
+//   "userAuth/googleSignIn",
+//   async (userData, thunkAPI) => {
+//     try {
+//       return await userAuthService.googleSignIn(userData);
+//     } catch (error) {
+//       const message =
+//         error.response?.data?.message ||
+//         error.message ||
+//         "Google sign-in failed";
+//       return thunkAPI.rejectWithValue(message);
+//     }
+//   }
+// );
 
 export const userLogout = createAsyncThunk("userAuth/logout", async () => {
   userAuthService.logout();
@@ -109,7 +122,9 @@ export const verifyForgotPasswordOtp = createAsyncThunk(
       return await userAuthService.verifyForgotPasswordOtp({ userId, otp });
     } catch (error) {
       const message =
-        error.response?.data?.message || error.message || "OTP verification failed";
+        error.response?.data?.message ||
+        error.message ||
+        "OTP verification failed";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -127,7 +142,9 @@ export const changePassword = createAsyncThunk(
       return await userAuthService.changePassword({ userId, password });
     } catch (error) {
       const message =
-        error.response?.data?.message || error.message || "Failed to change password";
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to change password";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -162,6 +179,7 @@ const userAuthSlice = createSlice({
         state.userInfo = action.payload;
         state.otpSent = false;
         state.userId = null;
+        state.error = null;
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;
@@ -173,6 +191,18 @@ const userAuthSlice = createSlice({
         state.userId = null;
         state.error = null;
         state.loading = false;
+      })
+
+      .addCase(resendOTP.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resendOTP.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(resendOTP.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
 
       .addCase(userLogin.pending, (state) => {
@@ -200,19 +230,6 @@ const userAuthSlice = createSlice({
         state.error = action.payload;
       })
 
-      .addCase(googleSignIn.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(googleSignIn.fulfilled, (state, action) => {
-        state.loading = false;
-        state.userInfo = action.payload;
-      })
-      .addCase(googleSignIn.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-    
       .addCase(userLogout.fulfilled, (state) => {
         state.userInfo = null;
         state.otpSent = false;

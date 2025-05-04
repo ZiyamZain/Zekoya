@@ -50,7 +50,7 @@ const deleteProduct = async (id, token) => {
     },
   };
 
-  const response = await axios.patch(`${API_URL}/delete/${id}`, {}, config);
+  const response = await axios.delete(`${API_URL}/delete/${id}`, config);
   return response.data;
 };
 

@@ -10,7 +10,7 @@ import { refreshToken } from "../../features/adminAuth/authSlice.js";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import DynamicPage from "../../components/admin/DynamicPage";
-import { FaSearch } from "react-icons/fa";
+
 
 const UsersPage = () => {
   const dispatch = useDispatch();
@@ -19,7 +19,7 @@ const UsersPage = () => {
   const adminAuthState = useSelector((state) => state.adminAuth);
   const usersState = useSelector((state) => state.adminUsers);
 
-  const { users = [], total = 0, isLoading, isError, message } = usersState;
+  const { users = [], total = 0, isLoading, isError, isBlockUnblockSuccess, message } = usersState;
   const { adminInfo } = adminAuthState;
 
   const [page, setPage] = useState(1);
@@ -28,6 +28,16 @@ const UsersPage = () => {
   useEffect(() => {
     dispatch(refreshToken());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (isBlockUnblockSuccess) {
+      toast.success("User status updated successfully");
+      // Refresh the users list after successful block/unblock
+      dispatch(getAllUsers({ page, search }));
+      dispatch(reset());
+    }
+  }, [isBlockUnblockSuccess, dispatch, page, search]);
+
 
   useEffect(() => {
     if (!adminInfo) {
@@ -52,6 +62,7 @@ const UsersPage = () => {
     dispatch(reset());
   }, [isError, message, dispatch]);
 
+  
   const handleSearch = (e) => {
     setSearch(e.target.value);
     setPage(1);
@@ -102,19 +113,22 @@ const UsersPage = () => {
           onClick={() => {
             if (user.isBlocked) {
               dispatch(unblockUser(user._id));
-              toast.success("User unblocked successfully");
             } else {
               dispatch(blockUser(user._id));
-              toast.success("User blocked successfully");
             }
           }}
+          disabled={usersState.isLoading}
           className={`px-3 py-1 rounded-md text-white ${
             user.isBlocked
               ? "bg-green-500 hover:bg-green-600"
               : "bg-red-500 hover:bg-red-600"
-          }`}
+          } ${usersState.isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          {user.isBlocked ? "Unblock" : "Block"}
+          {usersState.isLoading
+            ? "Processing..."
+            : user.isBlocked
+            ? "Unblock"
+            : "Block"}
         </button>
       </td>
     </tr>
@@ -128,7 +142,7 @@ const UsersPage = () => {
       searchValue={search}
       onSearchChange={handleSearch}
       onClearSearch={clearSearch}
-      tableHeaders={["User", "Name", "Email", "Joined", "Status"]}
+      tableHeaders={["User", "Name", "Email", "Joined", "Status", "Action"]}
       tableData={users}
       renderRow={renderRow}
       isLoading={isLoading}

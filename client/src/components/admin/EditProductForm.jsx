@@ -155,7 +155,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
     }
   };
 
-  console.log("[EditProductForm] imagePreviews:", imagePreviews);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
@@ -291,7 +290,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
             <div className="mt-4 grid grid-cols-3 gap-4">
               {imagePreviews.map((preview, index) => {
                 const url = getPreviewUrl(preview);
-                console.log(`[EditProductForm] Preview index ${index}:`, preview, 'URL:', url);
                 return (
                   <div key={index} className="relative">
                     <img

@@ -124,7 +124,6 @@ const AddProductForm = ({ onCancel }) => {
         formDataToSend.append("images", image, image.name || "image.jpg");
       });
 
-      console.log("Images before submission:", formData.images);
 
       const { error } = await dispatch(addProduct(formDataToSend)).unwrap();
 

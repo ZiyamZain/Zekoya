@@ -8,6 +8,7 @@ import adminCategoriesReducer from '../features/adminSide/categories/categorySli
 import adminProductsReducer from '../features/adminSide/products/productSlice'
 import productsReducer from '../features/products/productSlice'
 import categoriesReducer from '../features/categories/categorySlice'
+import userProfileReducer from '../features/userProfile/userProfileSlice'
 
 const store = configureStore({
     reducer:{
@@ -18,6 +19,8 @@ const store = configureStore({
         adminProducts:adminProductsReducer,
         products: productsReducer,
         categories: categoriesReducer,
+        userProfile:userProfileReducer,
+
     }
 })
 

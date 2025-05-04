@@ -12,8 +12,7 @@ const Categories = () => {
     dispatch(getCategories());
   }, [dispatch]);
 
-  // Debug: Log categories to verify data shape
-  console.log('Categories from Redux:', categories);
+
 
   // Ensure categories is always an array
   const safeCategories = Array.isArray(categories)

@@ -20,11 +20,17 @@ import OffersPage from "./pages/admin/OffersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import BannerPage from "./pages/admin/BannerPage";
 import OrdersPage from "./pages/admin/OrdersPage";
+import UserProfile from "./pages/user/UserProfile"; 
+import ChangePassword from "./pages/user/ChangePassword";
+import ChangeEmail from "./pages/user/ChangeEmail";
+import AddAddress from "./pages/user/AddAddress";
+import EditAddress from "./pages/user/EditAddress";
+import EditProfile from "./pages/user/EditProfile";
 
 // User & Auth Pages
-import UserRegister from "./pages/auth/UserRegister"; 
+import UserRegister from "./pages/auth/UserRegister";
 import UserLogin from "./pages/auth/UserLogin";
-import ForgotPassword from './pages/auth/ForgotPassword';
+import ForgotPassword from "./pages/auth/ForgotPassword";
 import Hero from "./pages/user/Hero";
 import Featured from "./pages/user/Featured";
 import Products from "./pages/Products";
@@ -32,8 +38,8 @@ import ProductDetail from "./pages/ProductDetail";
 
 // Layouts & Protection
 import AdminLayout from "./layouts/AdminLayout";
-import UserLayout from './layouts/UserLayout';
-import AuthLayout from './layouts/AuthLayout';
+import UserLayout from "./layouts/UserLayout";
+import AuthLayout from "./layouts/AuthLayout";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 
 function App() {
@@ -52,11 +58,19 @@ function App() {
           {/* User Routes */}
           <Route path="/" element={<UserLayout />}>
             <Route index element={<Hero />} />
-              <Route path="featured" element={<Featured />} />
-              <Route path="products" element={<Products />} />
-              <Route path="products/category/:categoryName" element={<Products />} />
-              <Route path="products/:productId" element={<ProductDetail />} />
-          
+            <Route path="featured" element={<Featured />} />
+            <Route path="products" element={<Products />} />
+            <Route
+              path="products/category/:categoryName"
+              element={<Products />}
+            />
+            <Route path="products/:productId" element={<ProductDetail />} />
+            <Route path="profile" element={<UserProfile />} />
+            <Route path="profile/edit" element={<EditProfile />} />
+            <Route path="profile/change-password" element={<ChangePassword />} />
+            <Route path="profile/change-email" element={<ChangeEmail />} />
+            <Route path="profile/addresses/add" element={<AddAddress />} />
+            <Route path="profile/address/edit/:addressId" element={<EditAddress />} />
           </Route>
 
           {/* Admin Login */}

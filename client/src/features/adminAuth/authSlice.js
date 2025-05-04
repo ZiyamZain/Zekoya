@@ -9,12 +9,7 @@ export const adminLogin = createAsyncThunk(
       const response = await authService.login(adminData);
       return response;
     } catch (error) {
-      const message =
-        (error.response &&
-          error.response.data &&
-          error.response.data.message) ||
-        error.message ||
-        "Login failed";
+      const message = error.response?.data?.message || error.message || "Login failed";
       return thunkAPI.rejectWithValue(message);
     }
   }

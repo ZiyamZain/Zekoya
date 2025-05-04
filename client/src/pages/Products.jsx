@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getProducts, getProductsByCategory } from '../features/products/productSlice';
 import { getCategories } from '../features/categories/categorySlice';
 import ProductCard from '../components/ProductCard';
-import { FaChevronDown, FaChevronLeft, FaChevronRight, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaChevronDown, FaChevronLeft, FaChevronRight,  FaFilter, FaSearch } from 'react-icons/fa';
 
 const Products = () => {
   const dispatch = useDispatch();
@@ -20,7 +20,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFilter, setExpandedFilter] = useState(null);
   const [filters, setFilters] = useState({
-    priceRange: [0, 1000],
+    priceRange: [0, 10000],
     selectedCategory: categoryName || '',
     selectedSizes: [],
     inStockOnly: false,
@@ -33,7 +33,7 @@ const Products = () => {
 
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const [limit] = useState(6);
   const total = productsState?.total || 0;
   const totalPages = Math.ceil(total / limit);
 
@@ -120,14 +120,16 @@ const Products = () => {
     if (page < totalPages) setPage(page + 1);
   };
 
-  const filterProducts = (products) => {
-    if (!products) return [];
-    
-    return products.filter((product) => {
-      const matchesSearch = searchTerm === '' || 
+  const filterProducts = (productsList) => {
+    let filtered = productsList;
+    const matchesSearch = searchTerm === '' || 
+      productsList.some((product) => 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.brand && typeof product.brand === 'string' && product.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    if (!matchesSearch) return [];
 
+    filtered = filtered.filter((product) => {
       const matchesPrice =
         product.price >= filters.priceRange[0] &&
         product.price <= filters.priceRange[1];
@@ -154,13 +156,13 @@ const Products = () => {
       const matchesFeatured = !filters.featuredOnly || product.isFeatured;
 
       return (
-        matchesSearch &&
         matchesPrice &&
         matchesSizes &&
         matchesStock &&
         matchesFeatured
       );
     });
+    return filtered;
   };
 
   const sortProducts = (products) => {
@@ -187,15 +189,6 @@ const Products = () => {
 
   const filteredProducts = filterProducts(productsArray);
   const sortedProducts = sortProducts(filteredProducts);
-  const uniqueBrands = [
-    ...new Set(
-      productsArray?.map((product) =>
-        typeof product.brand === 'object' && product.brand !== null
-          ? product.brand.name
-          : product.brand
-      ) || []
-    ),
-  ];
   const allSizes = [
     ...new Set(
       productsArray?.flatMap((product) =>
@@ -221,6 +214,22 @@ const Products = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Search Bar */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center mb-6">
+          <div className="relative w-full max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search products..."
+              className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+            />
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+      </div>
+
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center text-sm text-gray-500">
@@ -250,7 +259,7 @@ const Products = () => {
             </button>
             <div className="relative">
               <select 
-                className="appearance-none bg-white border border-gray-200 py-2 pl-4 pr-10 rounded focus:outline-none"
+                className="appearance-none bg-white border border-gray-200 py-2 pl-4 pr-10 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 onChange={handleSortChange}
                 value={sortOption}
               >
@@ -326,42 +335,6 @@ const Products = () => {
                 </div>
               )}
             </div>
-
-            <div className="border-t border-gray-200 py-4">
-              <button 
-                onClick={() => toggleFilter('offers')}
-                className="w-full flex justify-between items-center py-2 font-medium"
-              >
-                Sale & Offers
-                <FaChevronDown className={`transition-transform ${expandedFilter === 'offers' ? 'rotate-180' : ''}`} />
-              </button>
-              {expandedFilter === 'offers' && (
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="inStockOnly"
-                      name="inStockOnly"
-                      checked={filters.inStockOnly}
-                      onChange={handleCheckboxChange}
-                      className="mr-2"
-                    />
-                    <label htmlFor="inStockOnly">In Stock Only</label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="featuredOnly"
-                      name="featuredOnly"
-                      checked={filters.featuredOnly}
-                      onChange={handleCheckboxChange}
-                      className="mr-2"
-                    />
-                    <label htmlFor="featuredOnly">Featured Only</label>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Products Grid */}
@@ -375,7 +348,7 @@ const Products = () => {
               </div>
             ) : (
               <div ref={productsGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedProducts.map((product) => (
+                {sortedProducts.slice((page - 1) * limit, page * limit).map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}
               </div>

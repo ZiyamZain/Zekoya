@@ -14,7 +14,6 @@ const CategorySelect = ({ categories, value, onChange }) => {
       <option value="">All Categories</option>
       {categories.map((category) => {
         let displayName = category.name;
-        console.log('Rendering category option:', category, 'displayName:', displayName, 'type:', typeof displayName);
         if (typeof displayName === 'object' && displayName !== null) {
           displayName = displayName.en || Object.values(displayName)[0] || '';
         }

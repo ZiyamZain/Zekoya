@@ -12,7 +12,6 @@ const Sidebar = () => {
   const dispatch = useDispatch();
 
   const handleClick = () => {
-    console.log("Logout clicked");
     dispatch(adminLogout());
   };
 

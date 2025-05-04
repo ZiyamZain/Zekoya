@@ -42,7 +42,7 @@ router.put(
 );
 
 
-router.patch("/delete/:id", protectAdmin, deleteProduct);
+router.delete("/delete/:id", protectAdmin, deleteProduct);
 
 
 router.patch("/:id/toggle-listing", protectAdmin, toggleProductListing);

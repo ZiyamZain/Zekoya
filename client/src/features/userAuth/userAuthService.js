@@ -2,16 +2,14 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5001/api/users";
 
-
 const register = async (userData) => {
   const response = await axios.post(`${API_URL}/register`, userData);
 
   if (response.data && response.data.otp) {
-    console.log('DEV OTP:', response.data.otp);
+    console.log("DEV OTP:", response.data.otp);
   }
   return response.data;
 };
-
 
 const verifyOTP = async (otpData) => {
   const response = await axios.post(`${API_URL}/verify-otp`, otpData);
@@ -20,7 +18,6 @@ const verifyOTP = async (otpData) => {
   }
   return response.data;
 };
-
 
 const login = async (userData) => {
   const response = await axios.post(`${API_URL}/login`, userData);
@@ -39,29 +36,39 @@ const googleLogin = async (userData) => {
   return response.data;
 };
 
-
 const logout = () => {
   localStorage.removeItem("userInfo");
 };
 
-
 const sendForgotPasswordOtp = async ({ email }) => {
-  const response = await axios.post(`${API_URL}/forgot-password/send-otp`, { email });
+  const response = await axios.post(`${API_URL}/forgot-password/send-otp`, {
+    email,
+  });
   if (response.data && response.data.otp) {
-    console.log('DEV FORGOT PASSWORD OTP:', response.data.otp);
+    console.log("DEV FORGOT PASSWORD OTP:", response.data.otp);
   }
   return response.data;
 };
 
-
 const verifyForgotPasswordOtp = async ({ userId, otp }) => {
-  const response = await axios.post(`${API_URL}/forgot-password/verify-otp`, { userId, otp });
+  const response = await axios.post(`${API_URL}/forgot-password/verify-otp`, {
+    userId,
+    otp,
+  });
   return response.data;
 };
 
-
 const changePassword = async ({ userId, password }) => {
-  const response = await axios.post(`${API_URL}/forgot-password/change-password`, { userId, password });
+  const response = await axios.post(
+    `${API_URL}/forgot-password/change-password`,
+    { userId, password }
+  );
+  return response.data;
+};
+
+// Resend OTP
+const resendOTP = async (email) => {
+  const response = await axios.post(`${API_URL}/resend-otp`, { email });
   return response.data;
 };
 
@@ -74,6 +81,7 @@ const userAuthService = {
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   changePassword,
+  resendOTP,
 };
 
 export default userAuthService;
