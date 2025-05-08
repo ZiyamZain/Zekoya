@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addProduct } from "../../features/adminSide/products/productSlice";
+import { addProduct, getProducts, resetPage } from "../../features/adminSide/products/productSlice";
 import { getCategories } from "../../features/adminSide/categories/categorySlice";
 import { toast } from "react-toastify";
 import Cropper from "react-easy-crop";
@@ -129,6 +129,9 @@ const AddProductForm = ({ onCancel }) => {
 
       if (!error) {
         toast.success("Product added successfully");
+        // Reset to page 1 and refresh the products list
+        dispatch(resetPage());
+        await dispatch(getProducts({ page: 1, search: "", limit: 5 }));
         navigate("/admin/products"); 
       } else {
         toast.error("Failed to add product");

@@ -1,17 +1,28 @@
 import axios from "axios";
+// Fix the base URL to match the server's route structure
 const API_URL = "http://localhost:5001/api/users/profile";
 
 
 //get user profile 
 
 const getUserProfile = async(token) =>{
+    console.log('getUserProfile service called with token:', token ? 'Token exists' : 'No token');
     const config ={
         headers:{
             Authorization:`Bearer ${token}`
         }
     }
-    const response = await axios.get(`${API_URL}/profile`,config)
-    return response.data
+    console.log('Making API request to:', API_URL);
+    console.log('With headers:', config.headers);
+    
+    try {
+        const response = await axios.get(API_URL, config);
+        console.log('getUserProfile response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error in getUserProfile service:', error.response?.data || error.message);
+        throw error;
+    }
 }
 
 //update user profile
@@ -19,11 +30,13 @@ const getUserProfile = async(token) =>{
 const updateProfile = async(userData,token) =>{
     const config = {
         headers:{
-            Authorization:`Bearer ${token}`
+            Authorization:`Bearer ${token}`,
         }
     }
-    const response = await axios.put(`${API_URL}/profile`,userData,config)
-    return response.data
+    console.log('Sending update profile request to:', API_URL);
+    console.log('With data:', userData);
+    const response = await axios.put(API_URL, userData, config);
+    return response.data;
 }
 
 //change email

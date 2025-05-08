@@ -9,7 +9,10 @@ import adminProductsReducer from '../features/adminSide/products/productSlice'
 import productsReducer from '../features/products/productSlice'
 import categoriesReducer from '../features/categories/categorySlice'
 import userProfileReducer from '../features/userProfile/userProfileSlice'
-
+import cartReducer from '../features/cart/cartSlice'
+import wishlistReducer from '../features/wishlist/wishlistSlice'
+import orderReducer from '../features/order/orderSlice'
+import adminOrderReducer from '../features/adminOrder/adminOrderSlice'
 const store = configureStore({
     reducer:{
         adminAuth:adminAuthReducer,
@@ -20,7 +23,10 @@ const store = configureStore({
         products: productsReducer,
         categories: categoriesReducer,
         userProfile:userProfileReducer,
-
+        cart:cartReducer,
+        wishlist:wishlistReducer,
+        order: orderReducer,
+        adminOrder: adminOrderReducer,
     }
 })
 

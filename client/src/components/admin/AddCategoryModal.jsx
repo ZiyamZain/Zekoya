@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { addCategory } from '../../features/adminSide/categories/categorySlice';
+import { addCategory, getCategories } from '../../features/adminSide/categories/categorySlice';
 import { toast } from 'react-toastify';
 
 const AddCategoryModal = ({ onClose }) => {
@@ -60,9 +60,12 @@ const AddCategoryModal = ({ onClose }) => {
 
       const result = await dispatch(addCategory(formDataToSend)).unwrap();
       
-      
       if (result) {
         toast.success('Category added successfully');
+        // Refresh the categories list with the updated total count
+        dispatch({ type: 'adminCategories/resetPage' });
+        // Fetch the updated categories list with the correct total
+        await dispatch(getCategories({ page: 1, search: '', limit: 5 }));
         onClose();
       } else {
         throw new Error('Failed to add category');

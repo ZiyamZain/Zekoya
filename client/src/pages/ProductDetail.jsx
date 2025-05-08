@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaStar, FaShoppingCart, FaHeart } from 'react-icons/fa';
+import { addToCart } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import { getProductById } from '../features/products/productSlice';
+import {addToWishlist, removeFromWishlist} from "../features/wishlist/wishlistSlice";
+
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
@@ -18,21 +21,19 @@ const ProductDetail = () => {
   const { productId } = useParams();
   const dispatch = useDispatch();
   const { product, isLoading, isError } = useSelector((state) => state.products);
+  const { userInfo } = useSelector((state) => state.userAuth);
+  const { wishlist } = useSelector((state) => state.wishlist);
+  
   const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [sizeError, setSizeError] = useState(false);
 
   useEffect(() => {
     if (productId) {
       dispatch(getProductById(productId));
     }
   }, [dispatch, productId]);
-
-  const handleAddToCart = () => {
-    toast.success(`${product?.name} added to cart!`);
-  };
-
-  const handleAddToFavorites = () => {
-    toast.info(`${product?.name} added to favorites!`);
-  };
 
   if (isLoading) {
     return (
@@ -79,17 +80,76 @@ const ProductDetail = () => {
   const productDescription = product.description || 
     `Carve a new lane for yourself with the ${product.name}—your go-to for complexity, depth and easy styling. The richly layered design includes premium materials and accents that come together to make one of the coolest products of the season.`;
 
+  const isInWishlist = wishlist && wishlist.products && wishlist.products.some((item) => item._id === product._id);
+
+  const getAvailableStock = () =>{
+    if(!product.sizes || !selectedSize) return 0;
+    const sizeObj = product.sizes.find((s)  => s.size === selectedSize);
+    return sizeObj ? sizeObj.stock :0;
+  }
+  const availableStock = getAvailableStock();
+
+  const handleAddToCart = () =>{
+    if(!userInfo){
+      toast.error("Please login to add to cart");
+      window.location.href = "/login";
+      return;
+    }
+    if(!selectedSize){
+      toast.error("Please select a size!");
+      setSizeError(true);
+      // Scroll to size selection
+      const sizeSection = document.getElementById('size-selection');
+      if (sizeSection) {
+        sizeSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+    if(quantity<1 || quantity > availableStock){
+      toast.error("Invalid quantity!");
+      return;
+    }
+    dispatch(
+      addToCart({
+        productId:product._id,
+        size:selectedSize,
+        quantity,
+      })
+    )
+    toast.success(`${product.name} added to cart!`);
+    setSizeError(false);
+  }
+  const handleWishlistToggle = () => {
+    if (!userInfo) {
+      toast.error("Please login to use wishlist!");
+      window.location.href = "/login";
+      return;
+    }
+    if (isInWishlist) {
+      dispatch(removeFromWishlist(product._id));
+      toast.info("Removed from wishlist!");
+    } else {
+      dispatch(addToWishlist(product._id));
+      toast.success("Added to wishlist!");
+    }
+  };
+
+
+
   return (
     <div className="min-h-screen bg-white">
-  
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center text-sm text-gray-500">
-          <Link to="/" className="hover:underline">Home</Link>
+          <Link to="/" className="hover:underline">
+            Home
+          </Link>
           <span className="mx-2">/</span>
-          <Link to="/products" className="hover:underline">Products</Link>
+          <Link to="/products" className="hover:underline">
+            Products
+          </Link>
           <span className="mx-2">/</span>
-          <Link 
-            to={`/products/category/${encodeURIComponent(displayCategory)}`} 
+          <Link
+            to={`/products/category/${encodeURIComponent(displayCategory)}`}
             className="hover:underline"
           >
             {displayCategory}
@@ -101,30 +161,32 @@ const ProductDetail = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          
           <div className="w-full lg:w-2/3">
             <div className="flex flex-col md:flex-row gap-4">
-           
               <div className="flex md:flex-col gap-2 order-2 md:order-1">
-                {product.images && product.images.map((image, index) => (
-                  <button 
-                    key={index}
-                    className={`border-2 ${selectedImage === index ? 'border-black' : 'border-gray-200'} p-1 w-16 h-16`}
-                    onClick={() => setSelectedImage(index)}
-                  >
-                    <img 
-                      src={getImageUrl(image)} 
-                      alt={`${product.name} thumbnail ${index + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+                {product.images &&
+                  product.images.map((image, index) => (
+                    <button
+                      key={index}
+                      className={`border-2 ${
+                        selectedImage === index
+                          ? "border-black"
+                          : "border-gray-200"
+                      } p-1 w-16 h-16`}
+                      onClick={() => setSelectedImage(index)}
+                    >
+                      <img
+                        src={getImageUrl(image)}
+                        alt={`${product.name} thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
               </div>
 
-     
               <div className="flex-1 bg-gray-100 order-1 md:order-2">
                 <img
-                  src={getImageUrl(product.images?.[selectedImage] || '')}
+                  src={getImageUrl(product.images?.[selectedImage] || "")}
                   alt={product.name}
                   className="w-full h-auto object-contain"
                 />
@@ -138,13 +200,17 @@ const ProductDetail = () => {
 
           {/* Right Column - Product Info */}
           <div className="w-full lg:w-1/3">
-            <h1 className="text-3xl font-medium text-gray-900 mb-1">{product.name}</h1>
+            <h1 className="text-3xl font-medium text-gray-900 mb-1">
+              {product.name}
+            </h1>
             <p className="text-xl text-gray-600 mb-4">{displayCategory}</p>
-            
+
             <div className="mb-6">
               <p className="text-xl font-medium">MRP : {formattedPrice}</p>
               <p className="text-sm text-gray-500">Inclusive of all taxes</p>
-              <p className="text-sm text-gray-500">(Also includes all applicable duties)</p>
+              <p className="text-sm text-gray-500">
+                (Also includes all applicable duties)
+              </p>
             </div>
 
             {isOutOfStock ? (
@@ -154,25 +220,45 @@ const ProductDetail = () => {
               </div>
             ) : (
               <div className="mb-6">
-                <button 
+                <button
                   onClick={handleAddToCart}
-                  className="w-full bg-black text-white py-4 px-6 mb-4 hover:bg-gray-800 transition-colors"
+                  className={`w-full py-4 px-6 mb-2 transition-colors ${
+                    !selectedSize 
+                      ? 'bg-gray-700 text-white hover:bg-gray-800' 
+                      : availableStock === 0 
+                        ? 'bg-gray-400 text-white cursor-not-allowed' 
+                        : 'bg-black text-white hover:bg-gray-800'
+                  }`}
                 >
                   Add to Cart
                 </button>
-                <button 
-                  onClick={handleAddToFavorites}
+                {!selectedSize && (
+                  <p className="text-amber-600 text-sm mb-4 text-center">
+                    Please select a size before adding to cart
+                  </p>
+                )}
+                <button
+                  onClick={handleWishlistToggle}
                   className="w-full border border-gray-300 py-4 px-6 flex items-center justify-center gap-2 hover:border-gray-400 transition-colors"
                 >
-                  <FaHeart />
-                  <span>Favorite</span>
+                  {isInWishlist ? (
+                    <>
+                      <FaHeart className="text-red-500" />
+                      <span>Remove from Wishlist</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaHeart className="text-gray-400" />
+                      <span>Add to Wishlist</span>
+                    </>
+                  )}
                 </button>
               </div>
             )}
 
             <div className="prose max-w-none mb-8">
               <p className="mb-6">{productDescription}</p>
-              
+
               <ul className="list-disc pl-5 space-y-2">
                 {product.color && (
                   <li>
@@ -194,21 +280,48 @@ const ProductDetail = () => {
 
             {/* Sizes Section */}
             {!isOutOfStock && product.sizes && product.sizes.length > 0 && (
-              <div className="mb-8">
-                <h3 className="font-medium mb-2">Select Size</h3>
+              <div id="size-selection" className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium">Select Size</h3>
+                  {sizeError && (
+                    <p className="text-red-500 text-sm font-medium">Please select a size</p>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   {product.sizes.map((size, index) => {
-                    const sizeValue = typeof size === 'object' ? size.size : size;
+                    const sizeObj = typeof size === "object" ? size : { size, stock: 0 };
+                    const sizeValue = sizeObj.size;
+                    const sizeStock = typeof sizeObj.stock === 'number' ? sizeObj.stock : 0;
+                    const isAvailable = sizeStock > 0;
+                    
                     return (
-                      <button 
-                        key={index} 
-                        className="border border-gray-300 py-3 hover:border-black"
+                      <button
+                        key={index}
+                        className={`border ${
+                          selectedSize === sizeValue 
+                            ? 'border-black bg-gray-100' 
+                            : isAvailable 
+                              ? 'border-gray-300 hover:border-black' 
+                              : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                        } py-3 relative`}
+                        onClick={() => isAvailable && setSelectedSize(sizeValue)}
+                        disabled={!isAvailable}
                       >
                         {sizeValue}
+                        {!isAvailable && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60">
+                            <span className="text-xs text-gray-500">Out of stock</span>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
                 </div>
+                {sizeError && (
+                  <p className="text-red-500 text-sm mt-2">
+                    Please select an available size before adding to cart
+                  </p>
+                )}
               </div>
             )}
           </div>

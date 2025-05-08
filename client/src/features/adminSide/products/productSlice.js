@@ -147,6 +147,15 @@ const productSlice = createSlice({
       state.isError = false;
       state.message = "";
     },
+    resetPage: (state) => {
+      // Reset to page 1 after adding a new product
+      state.currentPage = 1;
+    },
+    refreshProducts: (state) => {
+      // This action will be dispatched after adding a product
+      // The actual refresh will happen via the useEffect in the component
+      state.refreshTrigger = Date.now();
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -257,5 +266,5 @@ const productSlice = createSlice({
   },
 });
 
-export const { reset } = productSlice.actions;
+export const { reset, resetPage, refreshProducts } = productSlice.actions;
 export default productSlice.reducer;

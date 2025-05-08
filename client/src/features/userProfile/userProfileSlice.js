@@ -319,9 +319,9 @@ const userProfileSlice = createSlice({
             state.loading = false;
             state.success = true;
             state.message = action.payload.message;
-            if (state.user && state.user.addresses) {
+            if (state.user && state.user.addresses && action.payload.addressId) {
               state.user.addresses = state.user.addresses.filter(
-                (addr) => addr._id !== action.payload.address._id
+                (addr) => addr._id !== action.payload.addressId
               );
             }
           })
@@ -338,7 +338,7 @@ const userProfileSlice = createSlice({
             state.message = action.payload.message;
             if (state.user && state.user.addresses) {
               state.user.addresses = state.user.addresses.map((addr) => {
-                if (addr._id === action.payload.address._id) {
+                if (addr._id === action.payload.address.id) {
                   addr.isDefault = true;
                 } else {
                   addr.isDefault = false;
@@ -358,5 +358,12 @@ const userProfileSlice = createSlice({
     }
     
 })
+export const setUser = (state, action) => {
+    state.user = action.payload;
+    state.loading = false;
+    state.success = true;
+    state.error = null;
+};
+
 export const {resetUserProfile} = userProfileSlice.actions;
 export default userProfileSlice.reducer;

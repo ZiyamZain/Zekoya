@@ -8,7 +8,7 @@ import {
 } from "../../features/userProfile/userProfileSlice";
 
 const EditAddress = () => {
-  const { id } = useParams();
+  const { addressId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -35,7 +35,7 @@ const EditAddress = () => {
     } else if (!user) {
       dispatch(getUserProfile());
     } else {
-      const address = user.addresses.find((addr) => addr._id === id);
+      const address = user.addresses.find((addr) => addr._id === addressId);
       if (address) {
         setFormData({
           name: address.name || "",
@@ -52,7 +52,7 @@ const EditAddress = () => {
         navigate("/profile");
       }
     }
-  }, [dispatch, navigate, userInfo, user, id]);
+  }, [dispatch, navigate, userInfo, user, addressId]);
 
   useEffect(() => {
     if (success) {
@@ -72,7 +72,7 @@ const EditAddress = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(updateAddress({ addressId: id, addressData: formData }));
+    dispatch(updateAddress({ addressId: addressId, addressData: formData }));
   };
 
   return (

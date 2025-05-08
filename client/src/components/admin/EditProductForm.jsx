@@ -142,9 +142,23 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
       formDataToSend.append("price", formData.price);
       formDataToSend.append("category", formData.category);
       formDataToSend.append("sizes", JSON.stringify(formData.sizes));
+      
+      // Handle existing images (URLs) and new images (Blobs) differently
+      const existingImages = [];
+      
       formData.images.forEach((image) => {
-        formDataToSend.append("images", image, image.name || "image.jpg");
+        if (typeof image === 'string') {
+          // For existing images (URLs), collect them to send as JSON
+          existingImages.push(image);
+        } else if (image instanceof Blob) {
+          // For new images (Blobs), append them to FormData
+          formDataToSend.append("newImages", image, image.name || "image.jpg");
+        }
       });
+      
+      // Add existing images as a JSON string
+      formDataToSend.append("existingImages", JSON.stringify(existingImages));
+      
       await dispatch(editProduct({ id: product._id, productData: formDataToSend })).unwrap();
       toast.success("Product updated successfully");
       onSuccess && onSuccess();

@@ -1,0 +1,98 @@
+/* Modern Toast Styling */
+
+/* Base Toast Styles */
+.Toastify__toast {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  padding: 16px !important;
+  min-height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 12px !important;
+  border-left: 4px solid transparent !important;
+}
+
+/* Success Toast */
+.Toastify__toast--success {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  border-left-color: #22c55e !important;
+}
+
+.Toastify__toast--success .Toastify__toast-icon svg {
+  fill: #22c55e !important;
+}
+
+/* Error Toast */
+.Toastify__toast--error {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-left-color: #ef4444 !important;
+}
+
+.Toastify__toast--error .Toastify__toast-icon svg {
+  fill: #ef4444 !important;
+}
+
+/* Info Toast */
+.Toastify__toast--info {
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  border-left-color: #3b82f6 !important;
+}
+
+.Toastify__toast--info .Toastify__toast-icon svg {
+  fill: #3b82f6 !important;
+}
+
+/* Warning Toast */
+.Toastify__toast--warning {
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border-left-color: #f59e0b !important;
+}
+
+.Toastify__toast--warning .Toastify__toast-icon svg {
+  fill: #f59e0b !important;
+}
+
+/* Progress Bar */
+.Toastify__progress-bar {
+  height: 4px !important;
+  opacity: 0.7 !important;
+}
+
+.Toastify__progress-bar--success {
+  background-color: #22c55e !important;
+}
+
+.Toastify__progress-bar--error {
+  background-color: #ef4444 !important;
+}
+
+.Toastify__progress-bar--info {
+  background-color: #3b82f6 !important;
+}
+
+.Toastify__progress-bar--warning {
+  background-color: #f59e0b !important;
+}
+
+/* Close Button */
+.Toastify__close-button {
+  color: currentColor !important;
+  opacity: 0.6 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+}
+
+/* Toast Body */
+.Toastify__toast-body {
+  padding: 0 8px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}

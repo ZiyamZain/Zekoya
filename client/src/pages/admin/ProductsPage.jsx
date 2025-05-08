@@ -23,10 +23,10 @@ const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
 
 const ProductsPage = () => {
   const dispatch = useDispatch();
-  const { products, total, isLoading } = useSelector(
+  const { products, total, isLoading, refreshTrigger } = useSelector(
     (state) => state.adminProducts
   );
-  const limit = 10;
+  const limit = 5;
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -36,7 +36,7 @@ const ProductsPage = () => {
 
   useEffect(() => {
     dispatch(getProducts({ page, search, limit }));
-  }, [dispatch, page, search, limit]);
+  }, [dispatch, page, search, limit, refreshTrigger]);
 
   const handleDelete = async (id) => {
     try {
@@ -309,7 +309,7 @@ const ProductsPage = () => {
                 >
                   Previous
                 </button>
-                {Array.from({ length: Math.ceil(total / 10) }, (_, i) => (
+                {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
                   <button
                     key={i + 1}
                     onClick={() => setPage(i + 1)}
@@ -324,9 +324,9 @@ const ProductsPage = () => {
                 ))}
                 <button
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={page * 10 >= total}
+                  disabled={page * limit >= total}
                   className={`px-3 py-1 rounded-md ${
-                    page * 10 >= total
+                    page * limit >= total
                       ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                       : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                   }`}

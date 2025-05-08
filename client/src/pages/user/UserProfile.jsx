@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 
 import { useSelector, useDispatch } from "react-redux";
-import { getUserProfile, getAddresses, setDefaultAddress, deleteAddress } from "../../features/userProfile/userProfileSlice";
+import { getUserProfile, getAddresses, setDefaultAddress, deleteAddress, resetUserProfile } from "../../features/userProfile/userProfileSlice";
 import { useNavigate, Link } from "react-router-dom";
 
 const UserProfile = () => {
@@ -9,17 +9,25 @@ const UserProfile = () => {
   const navigate = useNavigate();
 
   const { userInfo } = useSelector((state) => state.userAuth);
-  const { user } = useSelector((state) => state.userProfile || {});
-  const { addresses, loading, error } = useSelector((state) => state.userProfile || {});
+  const { user, success, loading, error } = useSelector((state) => state.userProfile || {});
+  
+  // Check if user is authenticated via Google
+  const isGoogleUser = userInfo && userInfo.isGoogle;
 
   useEffect(() => {
     if (!userInfo) {
       navigate("/login");
     } else {
       dispatch(getUserProfile());
-      dispatch(getAddresses());
     }
   }, [dispatch, navigate, userInfo]);
+
+  useEffect(() => {
+    if (success) {
+      dispatch(getUserProfile());
+      dispatch(resetUserProfile());
+    }
+  }, [success, dispatch]);
 
   const handleSetDefault = (addressId) => {
     dispatch(setDefaultAddress(addressId));
@@ -30,6 +38,14 @@ const UserProfile = () => {
       dispatch(deleteAddress(addressId));
     }
   };
+
+  // Watch for loading state changes after delete operation
+  useEffect(() => {
+    // This will run when loading changes from true to false after a delete operation
+    if (!loading && success) {
+      dispatch(resetUserProfile());
+    }
+  }, [loading, success, dispatch]);
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -78,7 +94,29 @@ const UserProfile = () => {
                   </div>
                 </div>
                 <h2 className="text-2xl font-bold mb-1 text-gray-800">{user.name}</h2>
-                <p className="text-gray-600 mb-6">{user.email}</p>
+                <p className="text-gray-600 mb-4">{user.email}</p>
+                
+                {/* Wallet Balance Card */}
+                <div className="w-full bg-gradient-to-r from-gray-800 to-black rounded-lg p-4 mb-6 shadow-md">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-white font-medium">Wallet Balance</h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                      <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    ${user.walletBalance ? user.walletBalance.toFixed(2) : '0.00'}
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    Available for purchases and refunds
+                  </div>
+                  {user.walletHistory && user.walletHistory.length > 0 && (
+                    <Link to="/wallet/history" className="text-xs text-blue-300 hover:text-blue-200 mt-2 inline-block">
+                      View transaction history →
+                    </Link>
+                  )}
+                </div>
                 <div className="space-y-3 w-full">
                   <Link
                     to="/profile/edit"
@@ -89,25 +127,50 @@ const UserProfile = () => {
                     </svg>
                     Edit Profile
                   </Link>
-                  <Link
-                    to="/profile/change-password"
-                    className="flex items-center justify-center w-full bg-white text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition border border-gray-300"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                    </svg>
-                    Change Password
-                  </Link>
-                  <Link
-                    to="/profile/change-email"
-                    className="flex items-center justify-center w-full bg-white text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition border border-gray-300"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                    </svg>
-                    Change Email
-                  </Link>
+                  {!isGoogleUser && (
+                    <>
+                      <Link
+                        to="/profile/change-password"
+                        className="flex items-center justify-center w-full bg-white text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition border border-gray-300"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                        </svg>
+                        Change Password
+                      </Link>
+                      <Link
+                        to="/profile/change-email"
+                        className="flex items-center justify-center w-full bg-white text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition border border-gray-300"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                        </svg>
+                        Change Email
+                      </Link>
+                    </>
+                  )}
+                  {isGoogleUser && (
+                    <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                      <div className="flex justify-center mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-6 w-6">
+                          <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                          <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                          <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                          <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                        </svg>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">Your account is managed by Google</p>
+                      <a 
+                        href="https://myaccount.google.com/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Manage your Google Account
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -127,9 +190,9 @@ const UserProfile = () => {
                     </Link>
                   </div>
 
-                  {addresses && addresses.length > 0 ? (
+                  {user && user.addresses && user.addresses.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {addresses.map((address) => (
+                      {user.addresses.map((address) => (
                         <div
                           key={address._id}
                           className={`rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg ${

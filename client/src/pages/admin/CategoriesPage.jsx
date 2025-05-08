@@ -31,19 +31,22 @@ const CategoriesPage = () => {
     isLoading,
     isError,
     message,
+    refreshTrigger,
   } = useSelector((state) => state.adminCategories);
 
   const limit = 5;
 
   useEffect(() => {
     dispatch(getCategories({ page, search, limit }));
-  }, [dispatch, page, search, limit]);
+  }, [dispatch, page, search, limit, refreshTrigger]);
 
   useEffect(() => {
     if (isError) {
       toast.error(message);
+      // Reset the error state after showing the toast
+      dispatch({ type: 'categories/reset' });
     }
-  }, [isError, message]);
+  }, [isError, message, dispatch]);
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
