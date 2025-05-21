@@ -146,9 +146,34 @@ export const createOrder = async (req, res) => {
     // Generate unique order ID
     const orderId = generateOrderId();
 
+    // Handle wallet payment
+    if (paymentMethod === "Wallet") {
+      // Check if user has sufficient wallet balance
+      if (user.walletBalance < totalPrice) {
+        return res.status(400).json({ 
+          message: "Insufficient wallet balance",
+          walletBalance: user.walletBalance,
+          orderTotal: totalPrice
+        });
+      }
+
+      // Deduct amount from wallet
+      user.walletBalance -= totalPrice;
+      
+      // Add transaction to wallet history
+      user.walletHistory.push({
+        type: 'debit',
+        amount: totalPrice,
+        description: `Payment for order #${orderId}`,
+        date: new Date()
+      });
+      
+      await user.save();
+    }
+
     // Create order with payment status
-    // For Cash on Delivery orders, mark as paid immediately
-    const isPaidOnCreation = paymentMethod === "Cash on Delivery";
+    // For Cash on Delivery and Wallet orders, set different initial states
+    const isPaidOnCreation = paymentMethod === "Wallet";
     
     const order = await Order.create({
       user: req.user._id,
@@ -177,27 +202,34 @@ export const createOrder = async (req, res) => {
       shippingPrice: shippingPrice || 0,
       discountPrice: discountPrice || 0,
       offerDiscountPrice: offerDiscountPrice || 0,
+      couponCode: couponCode || null,
+      couponDiscount: couponDiscount || 0,
       totalPrice:
         totalPrice ||
-        (itemsPrice ||
-          cart.items.reduce(
-            (total, item) => total + item.product.price * item.quantity,
-            0
-          )) +
-          (taxPrice || 0) +
-          (shippingPrice || 0) -
-          (discountPrice || 0) -
-          (offerDiscountPrice || 0),
-      couponCode: validCoupon ? validCoupon.code : null,
-      couponDiscount: couponDiscount || 0,
-      orderId,
+        parseFloat(itemsPrice) +
+          parseFloat(taxPrice) +
+          parseFloat(shippingPrice) -
+          parseFloat(discountPrice || 0) -
+          parseFloat(offerDiscountPrice || 0),
       isPaid: isPaidOnCreation,
-      paidAt: isPaidOnCreation ? new Date() : undefined,
+      paidAt: isPaidOnCreation ? new Date() : null,
+      orderId,
     });
 
+    // Update the order ID reference in wallet history if it's a wallet payment
+    if (paymentMethod === "Wallet") {
+      const lastHistoryIndex = user.walletHistory.length - 1;
+      if (lastHistoryIndex >= 0) {
+        user.walletHistory[lastHistoryIndex].orderId = order._id;
+        await user.save();
+      }
+    }
+
     // Update product stock
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
+    for (const item of order.orderItems) {
+      const product = await Product.findById(item.product);
+      if (!product) continue;
+
       const sizeIndex = product.sizes.findIndex((s) => s.size === item.size);
 
       if (sizeIndex !== -1) {
@@ -210,7 +242,7 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Clear user's cart only for Cash on Delivery orders
+    // Clear user's cart for Cash on Delivery and Wallet payments
     // For Razorpay, we'll clear it after successful payment
     if (paymentMethod !== "Razorpay") {
       cart.items = [];
@@ -273,7 +305,7 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
-// File: /Users/ziyammuhamed/Desktop/zekoya-final/server/controllers/orderController.js (append to existing file)
+
 
 // Cancel entire order
 export const cancelOrder = async (req, res) => {

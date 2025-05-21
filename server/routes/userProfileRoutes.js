@@ -14,7 +14,8 @@ import {
   setDefaultAddress,
   requestPasswordChangeOtp,
   verifyPasswordChangeOtp,
-  checkUserStatus
+  checkUserStatus,
+  getWalletBalance
 } from "../controllers/userProfileController.js";
 
 const router = express.Router();
@@ -30,6 +31,7 @@ router.post("/verify-password-change-otp", protect, verifyPasswordChangeOtp);
 router.post("/change-password", protect, changePassword);
 
 router.get("/check-status", protect, checkUserStatus);
+router.get("/wallet", protect, getWalletBalance);
 
 router.get("/addresses", protect, getAddresses);
 router.post("/addresses", protect, addAddress);

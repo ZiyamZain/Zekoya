@@ -507,6 +507,24 @@ export const setDefaultAddress = async (req, res) => {
   }
 };
 
+// Get user wallet balance
+export const getWalletBalance = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.status(200).json({
+      walletBalance: user.walletBalance || 0,
+      walletHistory: user.walletHistory || []
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // Check if user is blocked
 export const checkUserStatus = async (req, res) => {
   try {

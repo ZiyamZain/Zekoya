@@ -9,7 +9,7 @@ import {
   getOrderDetails,
 } from "../../features/order/orderSlice";
 import { getAddresses } from "../../features/userProfile/userProfileSlice";
-import { FaMapMarkerAlt, FaCheck, FaTag } from "react-icons/fa";
+import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
 import API from "../../utils/axiosConfig";
 import axios from "axios";
@@ -37,6 +37,8 @@ const Checkout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [createdOrderId, setCreatedOrderId] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [insufficientWalletFunds, setInsufficientWalletFunds] = useState(false);
 
   const [itemsPrice, setItemsPrice] = useState(0);
   const [taxPrice, setTaxPrice] = useState(0);
@@ -172,7 +174,7 @@ const Checkout = () => {
       setDiscountAmount(discount);
     }
   }, [cart, appliedCoupon]);
-  
+
   // Separate useEffect to calculate total price after offer discounts are fetched
   useEffect(() => {
     if (itemsPrice > 0) {
@@ -185,6 +187,39 @@ const Checkout = () => {
       );
     }
   }, [itemsPrice, taxPrice, shippingPrice, discountAmount, offerDiscountAmount]);
+
+  // Fetch user wallet balance
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        const config = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/profile/wallet`,
+          config
+        );
+        setWalletBalance(response.data.walletBalance);
+      } catch (error) {
+        console.error("Error fetching wallet balance:", error);
+      }
+    };
+
+    if (userInfo && userInfo.token) {
+      fetchWalletBalance();
+    }
+  }, [userInfo]);
+
+  // Check if wallet has sufficient funds
+  useEffect(() => {
+    if (paymentMethod === "Wallet") {
+      setInsufficientWalletFunds(walletBalance < totalPrice);
+    } else {
+      setInsufficientWalletFunds(false);
+    }
+  }, [paymentMethod, walletBalance, totalPrice]);
 
   const loadRazorpayScript = useCallback(() => {
     return new Promise((resolve) => {
@@ -310,57 +345,51 @@ const Checkout = () => {
   };
 
   const placeOrderHandler = async () => {
-    dispatch(clearOrder());
+    if (hasUnavailableItems) {
+      toast.error("Please remove unavailable items from your cart");
+      return;
+    }
 
     if (!selectedAddressId) {
       toast.error("Please select a shipping address");
       return;
     }
 
-    if (!paymentMethod) {
-      toast.error("Please select a payment method");
+    if (paymentMethod === "Wallet" && insufficientWalletFunds) {
+      toast.error("Insufficient wallet balance for this order");
       return;
     }
 
     const orderData = {
       addressId: selectedAddressId,
       paymentMethod,
-      itemsPrice: parseFloat(itemsPrice),
-      taxPrice: parseFloat(taxPrice),
-      shippingPrice: parseFloat(shippingPrice),
-      totalPrice: parseFloat(totalPrice),
-      discountPrice: parseFloat(discountAmount || 0),
-      offerDiscountPrice: parseFloat(offerDiscountAmount || 0),
-      productOffers: Object.keys(productOffers).length > 0 ? productOffers : null,
-      categoryOffers: Object.keys(categoryOffers).length > 0 ? categoryOffers : null
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      discountPrice: discountAmount,
+      offerDiscountPrice: offerDiscountAmount,
+      totalPrice,
+      productOffers,
     };
 
-    if (appliedCoupon && appliedCoupon.coupon) {
-      orderData.couponCode = appliedCoupon.coupon.code;
-      orderData.couponDiscount = parseFloat(discountAmount);
+    if (appliedCoupon) {
+      orderData.couponCode = appliedCoupon.code;
+      orderData.couponDiscount = appliedCoupon.discountAmount;
     }
 
-    console.log("Placing order with data:", orderData);
-
-    try {
-      const result = await dispatch(createOrder(orderData)).unwrap();
-      console.log("Order created successfully:", result);
-
-      if (paymentMethod === "Razorpay") {
-        console.log("Razorpay payment selected, initializing payment...");
-        localStorage.setItem("razorpay_payment_pending", result._id);
+    dispatch(createOrder(orderData))
+      .unwrap()
+      .then((result) => {
         setCreatedOrderId(result._id);
-        await initializeRazorpayPayment(result._id);
-      } else {
-        toast.success("Order placed successfully!");
-        dispatch(clearCart());
-        navigate(`/order-success/${result._id}`);
-      }
-    } catch (error) {
-      console.error("Order creation failed:", error);
-      localStorage.removeItem("razorpay_payment_pending");
-      toast.error("Failed to place order. Please try again.");
-    }
+        if (paymentMethod === "Razorpay") {
+          initializeRazorpayPayment(result._id);
+        } else {
+          navigate(`/order-success/${result._id}`);
+        }
+      })
+      .catch((error) => {
+        toast.error(error);
+      });
   };
 
   if (cartLoading) {
@@ -675,11 +704,50 @@ const Checkout = () => {
                     />
                     <span>Pay Online (Razorpay)</span>
                   </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="Wallet"
+                      checked={paymentMethod === "Wallet"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="form-radio"
+                    />
+                    <span className="flex items-center">
+                      <FaWallet className="mr-1 text-blue-600" /> Wallet
+                    </span>
+                  </label>
+                  
+                  {paymentMethod === "Wallet" && (
+                    <div className="mt-2 pl-6">
+                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Available Balance:</span>
+                          <span className="font-medium text-blue-700">₹{walletBalance.toFixed(2)}</span>
+                        </div>
+                        
+                        {insufficientWalletFunds && (
+                          <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                            <p>Insufficient wallet balance for this order.</p>
+                            <p>Order Total: ₹{totalPrice.toFixed(2)}</p>
+                            <p>Missing: ₹{(totalPrice - walletBalance).toFixed(2)}</p>
+                          </div>
+                        )}
+                        
+                        {!insufficientWalletFunds && walletBalance >= totalPrice && (
+                          <div className="mt-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                            <p>Your wallet has sufficient balance for this order.</p>
+                            <p>Remaining after purchase: ₹{(walletBalance - totalPrice).toFixed(2)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <button
                 onClick={placeOrderHandler}
-                disabled={orderLoading}
+                disabled={orderLoading || (paymentMethod === "Wallet" && insufficientWalletFunds)}
                 className="w-full mt-6 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {orderLoading ? "Processing..." : "Place Order"}
