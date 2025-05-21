@@ -21,12 +21,6 @@ router.post("/forgot-password/verify-otp", verifyForgotPasswordOtp);
 router.post("/forgot-password/change-password", changePassword);
 router.post("/resend-otp", resendOTP);
 
-// Profile route to fetch user details using JWT
-router.get(
-  "/profile",
-  (req, res) => {
-    res.json({ user: req.user }); // req.user will be populated from JWT payload
-  }
-);
+// Profile routes are now handled in userProfileRoutes.js
 
 export default router;

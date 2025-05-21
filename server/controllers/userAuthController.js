@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
 import generateToken from "../utils/generateToken.js";
 import { OAuth2Client } from "google-auth-library";
-
+import mongoose from "mongoose";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateOTP = () => {
@@ -13,31 +13,41 @@ const generateOTP = () => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-
-    // Input validation
+    const { name, email, password , referralCode } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
           "Password must be at least 6 characters and include uppercase, lowercase, and a number",
       });
     }
+    //check if user already exist
 
-    // Check if user already exists
     let user = await User.findOne({ email });
-
+    
+    //check referral code if provided
+    let referredBy = null;
+    if(referralCode){
+      const referrer = await User.findOne({referralCode});
+      if(!referrer){
+        return res.status(400).json({message:'Invalid referral code'});
+      }
+      referredBy = referrer._id;
+    }
     if (user) {
       if (user.isVerified) {
         return res.status(400).json({ message: "User already exists" });
       } else {
-        // User exists but not verified: update info and resend OTP
+        // User exists but not verified: update info and resend OTP. ( the people who haven't completed the registration)
         user.name = name;
         user.password = password;
+        if(referredBy){
+          user.referredBy = referredBy;
+        }
         user.otp = {
           code: generateOTP(),
           expiry: new Date(Date.now() + 5 * 60 * 1000),
@@ -61,12 +71,13 @@ export const registerUser = async (req, res) => {
     // Create new user if not found
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-    console.log(`DEV OTP for ${email}:`, otp);
+    console.log(` hehe DEV OTP for ${email}:`, otp);
     user = await User.create({
       name,
       email,
       password,
       isVerified: false,
+      referredBy,
       otp: { code: otp, expiry: otpExpiry },
     });
 
@@ -93,19 +104,15 @@ export const verifyOTP = async (req, res) => {
   try {
     const { userId, otp } = req.body;
 
-    // Input validation
     if (!userId || !otp) {
       return res.status(400).json({ message: "User ID and OTP are required" });
     }
 
-    // Find user
     const user = await User.findById(userId);
     if (!user) {
-
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if already verified
     if (!user.otp?.code) {
 
       return res.status(400).json({ message: "User already verified" });
@@ -128,6 +135,54 @@ export const verifyOTP = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
+    //process referral if user was referred
+    if(user.referredBy){
+      try{
+        //find the active referral offer
+        const ReferralOffer = mongoose.model('ReferralOffer');
+        const activeOffer = await ReferralOffer.findOne({isActive:true});
+
+        // Get the referrer user
+        const referrer = await User.findById(user.referredBy);
+        if(referrer){
+          // Update referral count regardless of active offer
+          referrer.referralCount = (referrer.referralCount || 0) + 1;
+          
+          // Default rewards if no active offer found
+          const referrerReward = activeOffer?.referrerRewardValue || 100;
+          const newUserReward = activeOffer?.newUserRewardValue || 50;
+          
+          // Add reward to referrer's wallet
+          referrer.walletBalance = (referrer.walletBalance || 0) + referrerReward;
+          
+          // Add wallet history entry for referrer
+          referrer.walletHistory.push({
+            type: 'credit',
+            amount: referrerReward,
+            description: `Referral bonus for inviting ${user.name}`,
+            date: new Date()
+          });
+          
+          await referrer.save();
+          
+          // Add reward to new user's wallet
+          user.walletBalance = (user.walletBalance || 0) + newUserReward;
+          
+          // Add wallet history entry for new user
+          user.walletHistory.push({
+            type: 'credit',
+            amount: newUserReward,
+            description: 'Welcome bonus for joining with a referral',
+            date: new Date()
+          });
+          
+          await user.save();
+        }
+      }catch(error){
+        console.error( "Error processing referral : " ,error);
+      }
+    }
+
     // Generate JWT
     const token = generateToken(user._id);
 
@@ -138,6 +193,8 @@ export const verifyOTP = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
+      walletBalance: user.walletBalance || 0,
+      referralCode: user.referralCode,
       token,
     });
   } catch (error) {
@@ -345,7 +402,7 @@ export const changePassword = async (req, res) => {
         .json({ message: "User ID and password are required" });
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:

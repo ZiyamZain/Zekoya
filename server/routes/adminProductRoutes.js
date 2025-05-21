@@ -36,7 +36,7 @@ router.post(
 router.put(
   "/:id",
   protectAdmin,
-  upload.array("images", 5),
+  upload.array("newImages", 5),
   handleUploadError,
   updateProduct
 );
@@ -51,4 +51,3 @@ router.patch("/:id/toggle-listing", protectAdmin, toggleProductListing);
 router.patch("/:id/toggle-featured", protectAdmin, toggleProductFeatured);
 
 export default router;
-

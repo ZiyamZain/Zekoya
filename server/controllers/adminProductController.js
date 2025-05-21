@@ -85,7 +85,7 @@ export const addProduct = asyncHandler(async (req, res) => {
 });
 
 export const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 10;
+  const pageSize = 5;
   const page = Number(req.query.page) || 1;
   const search = req.query.search || "";
 
@@ -133,6 +133,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     category,
     sizes,
     specifications,
+    existingImages
   } = req.body;
 
   product.name = name || product.name;
@@ -144,7 +145,17 @@ export const updateProduct = asyncHandler(async (req, res) => {
     ? JSON.parse(specifications)
     : product.specifications;
 
+  // Handle images - replace with existing images from request
+  if (existingImages) {
+    try {
+      const parsedExistingImages = JSON.parse(existingImages);
+      product.images = parsedExistingImages;
+    } catch (error) {
+      console.error('Error parsing existing images:', error);
+    }
+  }
 
+  // Add any new images
   if (req.files && req.files.length > 0) {
     const newImageUrls = req.files.map(file => {
       const filename = path.basename(file.path);
@@ -207,12 +218,18 @@ export const toggleProductFeatured = asyncHandler(async (req, res) => {
 
 export const getFeaturedProducts = asyncHandler(async (req, res) => {
 
+  // Get all listed categories
+  const listedCategories = await Category.find({ isListed: true }).select('_id');
+  const listedCategoryIds = listedCategories.map(cat => cat._id);
   
-  const products = await Product.find({ isFeatured: true, isListed: true })
-    .populate("category", "name")
+  // Find featured products that are listed AND belong to a listed category
+  const products = await Product.find({ 
+    isFeatured: true, 
+    isListed: true,
+    category: { $in: listedCategoryIds } // Only include products from listed categories
+  })
+    .populate("category", "name isListed")
     .sort({ createdAt: -1 });
-
-
 
   res.json(products);
 });

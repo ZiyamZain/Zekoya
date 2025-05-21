@@ -1,5 +1,6 @@
 import express from "express";
 import protect from "../middlewares/userProtect.js";
+import upload, { handleUploadError } from "../middlewares/uploadMiddleware.js";
 import {
   getUserProfile,
   updateUserProfile,
@@ -11,19 +12,24 @@ import {
   updateAddress,
   deleteAddress,
   setDefaultAddress,
+  requestPasswordChangeOtp,
+  verifyPasswordChangeOtp,
+  checkUserStatus
 } from "../controllers/userProfileController.js";
 
 const router = express.Router();
 
-//profile routes
 
-router.get("/profile", protect, getUserProfile);
-router.put("/profile", protect, updateUserProfile);
+router.get("/", protect, getUserProfile);
+router.put("/", protect, upload.single("profileImage"), handleUploadError, updateUserProfile);
 router.post("/change-email", protect, changeEmail);
 router.post("/verify-email-change", protect, verifyEmailChange);
+
+router.post("/request-password-change-otp", protect, requestPasswordChangeOtp);
+router.post("/verify-password-change-otp", protect, verifyPasswordChangeOtp);
 router.post("/change-password", protect, changePassword);
 
-//Address routes
+router.get("/check-status", protect, checkUserStatus);
 
 router.get("/addresses", protect, getAddresses);
 router.post("/addresses", protect, addAddress);

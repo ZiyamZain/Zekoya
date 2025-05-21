@@ -27,10 +27,26 @@ const storage = multer.diskStorage({
 
 
 const fileFilter = (req, file, cb) => {
-  // Accept images only
-  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-    return cb(new Error("Only image files are allowed!"), false);
+
+  const validMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+  const validExtRegex = /\.(jpg|jpeg|png|gif)$/i;
+  
+
+  if (!validMimeTypes.includes(file.mimetype)) {
+
+    return cb(new Error("Only image files are allowed (jpg, jpeg, png, gif)!"), false);
   }
+  
+
+  if (!file.originalname.match(validExtRegex)) {
+   
+    const extension = file.mimetype.split('/')[1];
+    const oldName = file.originalname;
+    file.originalname = `${oldName}.${extension}`;
+    
+
+  }
+  
   cb(null, true);
 };
 
@@ -43,15 +59,26 @@ const upload = multer({
   },
 });
 
-// Error handling middleware
+
 export const handleUploadError = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ message: 'File size too large. Maximum size is 5MB.' });
+  
+  if (err) {
+    console.error('Upload error:', err);
+    
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'File size too large. Maximum size is 5MB.' });
+      } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ message: 'Unexpected file field. Use \'profileImage\' for uploads.' });
+      }
+      return res.status(400).json({ message: `Upload error: ${err.message}` });
+    } else {
+      return res.status(400).json({ message: `File upload error: ${err.message}` });
     }
-    return res.status(400).json({ message: err.message });
   }
-  next(err);
+  
+
+  next();
 };
 
 export default upload; 
