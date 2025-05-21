@@ -1,104 +1,105 @@
-import React, { useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { getOrderDetails, resetOrder } from "../../features/order/orderSlice";
-import { FaCheckCircle, FaBox, FaShoppingBag } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { getOrderDetails, clearOrder } from "../../features/order/orderSlice";
+import { FaCheckCircle, FaShoppingBag, FaFileAlt } from "react-icons/fa";
 
 const OrderSuccess = () => {
-  const { orderId } = useParams();
+  const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [paymentChecked, setPaymentChecked] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const { userInfo } = useSelector((state) => state.userAuth);
-  const { order, isLoading, isError } = useSelector((state) => state.order);
+  const { order, isLoading } = useSelector((state) => state.order);
 
   useEffect(() => {
-    if (!userInfo) {
-      navigate("/login");
-      return;
+    if (id) {
+      dispatch(getOrderDetails(id));
     }
+  }, [dispatch, id]);
 
-    if (orderId) {
-      dispatch(getOrderDetails(orderId));
+  useEffect(() => {
+    if (order && !isLoading && !paymentChecked && retryCount < 3) {
+      setPaymentChecked(true);
+      const pendingPaymentId = localStorage.getItem("razorpay_payment_pending");
+      const isNewOrder = new Date() - new Date(order.createdAt) < 10000;
+
+      if (!isNewOrder && order.paymentMethod === "Razorpay" && !order.isPaid) {
+        // Retry fetching the order after a delay
+        setTimeout(() => {
+          dispatch(getOrderDetails(id));
+          setRetryCount((prev) => prev + 1);
+        }, 2000);
+      } else if (
+        !isNewOrder &&
+        order.paymentMethod === "Razorpay" &&
+        !order.isPaid &&
+        retryCount >= 3
+      ) {
+        console.log(
+          "Redirecting to payment failed page - Razorpay order not paid after retries"
+        );
+        navigate(`/payment-failed/${id}`);
+      }
     }
+  }, [order, isLoading, id, navigate, paymentChecked, retryCount, dispatch]);
 
+  useEffect(() => {
     return () => {
-      dispatch(resetOrder());
+      dispatch(clearOrder());
+      console.log("OrderSuccess component unmounted, clearing order state");
     };
-  }, [dispatch, navigate, orderId, userInfo]);
+  }, [dispatch]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md text-center">
-            <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
-            <p className="text-gray-600 mb-6">
-              We couldn't find your order. Please try again or contact customer
-              support.
-            </p>
-            <button
-              onClick={() => navigate("/products")}
-              className="bg-black text-white py-2 px-6 rounded-md hover:bg-gray-800"
-            >
-              Continue Shopping
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!order) {
-    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md text-center">
-          <FaCheckCircle className="mx-auto text-green-500 text-6xl mb-6" />
-
-          <h1 className="text-3xl font-bold mb-2">
-            Order Placed Successfully!
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Thank you for your order. We'll send you a confirmation email
-            shortly.
-          </p>
-
-          <div className="bg-gray-50 p-4 rounded-md mb-8">
-            <p className="font-medium">Order ID: {order.orderId}</p>
-            <p className="text-sm text-gray-600">
-              Please keep this ID for future reference
+    <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <div className="bg-white rounded-lg shadow-md p-8 text-center">
+        <div className="flex justify-center mb-6">
+          <FaCheckCircle className="text-green-500 text-6xl" />
+        </div>
+        <h1 className="text-3xl font-bold mb-4">Order Placed Successfully!</h1>
+        <p className="text-gray-600 mb-8">
+          Thank you for your purchase. Your order has been received and is being
+          processed.
+        </p>
+        {order && (
+          <div className="bg-gray-50 p-4 rounded-lg mb-8">
+            <h2 className="font-semibold mb-2">Order Details</h2>
+            <p className="text-gray-700 mb-1">Order ID: {order.orderId}</p>
+            <p className="text-gray-700 mb-1">
+              Date: {new Date(order.createdAt).toLocaleDateString()}
+            </p>
+            <p className="text-gray-700 mb-1">
+              Payment Method: {order.paymentMethod}
+              {order.isPaid ? " (Paid)" : " (Payment Pending)"}
+            </p>
+            <p className="text-gray-700">
+              Total Amount: ₹{order.totalPrice.toFixed(2)}
             </p>
           </div>
-
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Link
-              to={`/orders/${order._id}`}
-              className="bg-black text-white py-3 px-6 rounded-md hover:bg-gray-800 flex items-center justify-center gap-2"
-            >
-              <FaBox />
-              <span>View Order</span>
-            </Link>
-
-            <Link
-              to="/products"
-              className="border border-black text-black py-3 px-6 rounded-md hover:bg-gray-100 flex items-center justify-center gap-2"
-            >
-              <FaShoppingBag />
-              <span>Continue Shopping</span>
-            </Link>
-          </div>
+        )}
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <Link
+            to={`/orders/${id}`}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition"
+          >
+            <FaFileAlt /> View Order Details
+          </Link>
+          <Link
+            to="/"
+            className="flex items-center justify-center gap-2 bg-gray-200 text-gray-800 py-3 px-6 rounded-md hover:bg-gray-300 transition"
+          >
+            <FaShoppingBag /> Continue Shopping
+          </Link>
         </div>
       </div>
     </div>

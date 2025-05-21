@@ -13,6 +13,18 @@ import cartReducer from '../features/cart/cartSlice'
 import wishlistReducer from '../features/wishlist/wishlistSlice'
 import orderReducer from '../features/order/orderSlice'
 import adminOrderReducer from '../features/adminOrder/adminOrderSlice'
+import couponReducer from '../features/coupons/couponSlice';
+import adminCouponReducer from '../features/adminSide/coupons/adminCouponSlice';
+import paymentReducer from '../features/payment/paymentSlice';
+
+// Import offer reducers
+import categoryOfferReducer from '../features/adminSide/offers/categoryOfferSlice';
+import productOfferReducer from '../features/adminSide/offers/productOfferSlice';
+import referralOfferReducer from '../features/adminSide/offers/referralOfferSlice';
+import offerReducer from '../features/offers/offerSlice';
+import reportReducer from '../features/report/reportSlice';
+
+
 const store = configureStore({
     reducer:{
         adminAuth:adminAuthReducer,
@@ -27,6 +39,15 @@ const store = configureStore({
         wishlist:wishlistReducer,
         order: orderReducer,
         adminOrder: adminOrderReducer,
+        coupon:couponReducer,
+        adminCoupon: adminCouponReducer,
+        payment: paymentReducer,
+        // Add offer reducers
+        categoryOffer: categoryOfferReducer,
+        productOffer: productOfferReducer,
+        referralOffer: referralOfferReducer,
+        offer: offerReducer,
+        report: reportReducer,
     }
 })
 

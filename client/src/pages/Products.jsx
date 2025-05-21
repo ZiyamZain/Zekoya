@@ -3,7 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import { getProducts, getProductsByCategory } from '../features/products/productSlice';
 import { getCategories } from '../features/categories/categorySlice';
+import { getActiveOfferForCategory } from '../features/offers/offerSlice';
 import ProductCard from '../components/ProductCard';
+import CategoryOffer from '../components/CategoryOffer';
 import { FaChevronDown, FaChevronLeft, FaChevronRight,  FaFilter, FaSearch } from 'react-icons/fa';
 
 const Products = () => {
@@ -11,6 +13,7 @@ const Products = () => {
   const { categoryName } = useParams();
   const productsState = useSelector((state) => state.products);
   const categoriesState = useSelector((state) => state.categories);
+  const { activeCategoryOffer } = useSelector((state) => state.offer);
   
   const products = productsState?.products || [];
   const categories = Array.isArray(categoriesState?.categories) ? categoriesState.categories : [];
@@ -47,6 +50,12 @@ const Products = () => {
     if (categoryName) {
       dispatch(getProductsByCategory({ category: categoryName, page, limit }));
       setFilters((prev) => ({ ...prev, selectedCategory: categoryName }));
+      
+      // Find the category ID to fetch active offers
+      const selectedCategory = categories.find(cat => cat.name === categoryName);
+      if (selectedCategory && selectedCategory._id) {
+        dispatch(getActiveOfferForCategory(selectedCategory._id));
+      }
     } else {
       dispatch(getProducts({ page, limit }));
       setFilters((prev) => ({ ...prev, selectedCategory: '' }));
@@ -101,11 +110,6 @@ const Products = () => {
       }
       return { ...prev, selectedSizes };
     });
-  };
-
-  const handleCheckboxChange = (event) => {
-    const { name } = event.target;
-    setFilters((prev) => ({ ...prev, [name]: event.target.checked }));
   };
 
   const handleSortChange = (e) => {
@@ -214,7 +218,6 @@ const Products = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Search Bar */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center mb-6">
           <div className="relative w-full max-w-md">
@@ -245,7 +248,6 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Header */}
       <div className="container mx-auto px-4 pb-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-medium">
@@ -253,10 +255,6 @@ const Products = () => {
             {filteredProducts.length > 0 && <span className="ml-2 text-gray-500">({filteredProducts.length})</span>}
           </h1>
           <div className="flex items-center space-x-4">
-            <button className="flex items-center text-sm font-medium">
-              Hide Filters
-              <FaFilter className="ml-2" />
-            </button>
             <div className="relative">
               <select 
                 className="appearance-none bg-white border border-gray-200 py-2 pl-4 pr-10 rounded focus:outline-none focus:ring-2 focus:ring-black"
@@ -339,6 +337,12 @@ const Products = () => {
 
           {/* Products Grid */}
           <div className="flex-1">
+            {/* Display Category Offer if available */}
+            {activeCategoryOffer && filters.selectedCategory && (
+              <div className="mb-6">
+                <CategoryOffer offer={activeCategoryOffer} />
+              </div>
+            )}
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12 bg-white">
                 <h3 className="text-xl font-medium mb-2">No Products Found</h3>

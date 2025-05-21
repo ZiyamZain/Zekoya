@@ -2,6 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiChevronDown } from 'react-icons/fi';
 import Featured from './Featured';
+import WhyChooseUs from './WhyChooseUs';
+import CustomJerseys from './CustomJerseys';
+import PromoBanner from './PromoBanner';
 import Categories from './Categories';
 
 const Hero = () => {
@@ -35,7 +38,7 @@ const Hero = () => {
             THE DREAM IS REAL
           </h1>
           <p className="mt-4 text-lg">
-            Experience the next generation of football boots
+            Experience the next generation of sports jerseys.
           </p>
           <div className="mt-6 space-x-4">
             <Link 
@@ -45,10 +48,10 @@ const Hero = () => {
               Shop Now
             </Link>
             <Link 
-              to="/learn-more" 
+              to="/about-us" 
               className="inline-block bg-white text-black border-2 border-black px-8 py-3 rounded-full hover:bg-gray-100 transition-colors"
             >
-              Learn More
+              About Us
             </Link>
           </div>
         </div>
@@ -59,7 +62,11 @@ const Hero = () => {
         </div>
       </div>
       <Featured />
+
       <Categories />
+      <CustomJerseys />
+      <WhyChooseUs />
+      <PromoBanner />
     </div>
   );
 };

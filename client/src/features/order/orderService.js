@@ -3,8 +3,13 @@ import API from "../../utils/axiosConfig";
 const API_URL = "/api/orders";
 // Create new order
 const createOrder = async (orderData) => {
-  const response = await API.post(API_URL, orderData);
-  return response.data;
+  try {
+    const response = await API.post(API_URL, orderData);
+    return response.data;
+  } catch (error) {
+    console.error('Order creation error details:', error.response?.data);
+    throw error;
+  }
 };
 
 // Get order details

@@ -7,6 +7,9 @@ import {
   FaEye,
   FaEyeSlash,
   FaStar,
+  FaChevronDown,
+  FaChevronUp,
+  FaTshirt
 } from "react-icons/fa";
 import { MdAdd } from "react-icons/md";
 import {
@@ -31,8 +34,9 @@ const ProductsPage = () => {
   const [page, setPage] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false); // Add state for showEditModal
-  const [selectedProduct, setSelectedProduct] = useState(null); // Add state for selectedProduct
+  const [showEditModal, setShowEditModal] = useState(false); 
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [expandedStocks, setExpandedStocks] = useState({}); 
 
   useEffect(() => {
     dispatch(getProducts({ page, search, limit }));
@@ -75,6 +79,13 @@ const ProductsPage = () => {
   const handleEdit = (product) => {
     setSelectedProduct(product);
     setShowEditModal(true);
+  };
+
+  const toggleStockDetails = (productId) => {
+    setExpandedStocks(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }));
   };
 
   return (
@@ -170,6 +181,12 @@ const ProductsPage = () => {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
+                    Stock
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Actions
                   </th>
                 </tr>
@@ -257,6 +274,40 @@ const ProductsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-bold text-gray-900">
                           ₹{product.price}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="relative">
+                          <div className="flex items-center">
+                            <div className={`text-sm font-medium ${product.totalStock > 10 ? 'text-green-600' : product.totalStock > 0 ? 'text-orange-500' : 'text-red-600'}`}>
+                              {product.totalStock || 0}
+                            </div>
+                            <button 
+                              onClick={() => toggleStockDetails(product._id)}
+                              className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                            >
+                              {expandedStocks[product._id] ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
+                            </button>
+                          </div>
+                          
+                          {expandedStocks[product._id] && (
+                            <div className="absolute z-10 mt-2 bg-white border border-gray-200 rounded-md shadow-lg p-3 w-48">
+                              <h4 className="text-xs font-semibold text-gray-500 mb-2">Size-specific Stock</h4>
+                              <div className="space-y-1">
+                                {product.sizes && product.sizes.map((sizeItem) => (
+                                  <div key={sizeItem.size} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                      <FaTshirt className="mr-1 text-gray-400" size={12} />
+                                      <span className="text-sm font-medium">{sizeItem.size}</span>
+                                    </div>
+                                    <span className={`text-sm ${sizeItem.stock > 5 ? 'text-green-600' : sizeItem.stock > 0 ? 'text-orange-500' : 'text-red-600'}`}>
+                                      {sizeItem.stock}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -248,7 +248,6 @@ const OrderDetails = () => {
           </div>
         </div>
         
-        {/* Status Timeline */}
         {order.statusHistory && order.statusHistory.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Order Timeline</h2>
@@ -272,7 +271,6 @@ const OrderDetails = () => {
           </div>
         )}
         
-        {/* Shipping Address */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
           <div className="flex items-start">
@@ -292,7 +290,6 @@ const OrderDetails = () => {
           </div>
         </div>
         
-        {/* Payment Info */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Payment Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,7 +312,7 @@ const OrderDetails = () => {
           </div>
         </div>
         
-        {/* Order Items */}
+
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Order Items</h2>
           <div className="overflow-x-auto">
@@ -337,7 +334,7 @@ const OrderDetails = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
-                          <img className="h-10 w-10 rounded-full" src={item.product?.images[0] || '/placeholder.png'} alt="" />
+                          <img className="h-10 w-10 rounded-full" src={`http://localhost:5001${item.product?.images[0]}` || '/placeholder.png'} alt="product" />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{item.product?.name || 'Product'}</div>
@@ -348,7 +345,14 @@ const OrderDetails = () => {
                       <div className="text-sm text-gray-900">{item.size}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">₹{item.price.toFixed(2)}</div>
+                      {item.offerDiscount > 0 ? (
+                        <div>
+                          <div className="text-sm text-green-600">₹{item.discountedPrice.toFixed(2)}</div>
+                          <div className="text-xs text-gray-500 line-through">₹{item.price.toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-900">₹{item.price.toFixed(2)}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{item.quantity}</div>
@@ -373,7 +377,14 @@ const OrderDetails = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      ₹{(item.price * item.quantity).toFixed(2)}
+                      {item.offerDiscount > 0 ? (
+                        <div>
+                          <div className="font-medium text-green-600">₹{(item.discountedPrice * item.quantity).toFixed(2)}</div>
+                          <div className="text-xs text-gray-500 line-through">₹{(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        <div>₹{(item.price * item.quantity).toFixed(2)}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {canCancelOrder && item.status !== 'Cancelled' && !item.returnReason && (
@@ -403,7 +414,7 @@ const OrderDetails = () => {
           </div>
         </div>
         
-        {/* Order Summary */}
+
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
           <div className="w-full md:w-1/2 ml-auto">
@@ -419,9 +430,15 @@ const OrderDetails = () => {
               <p className="text-gray-600">Shipping</p>
               <p className="font-medium">₹{order.shippingPrice.toFixed(2)}</p>
             </div>
+            {order.offerDiscountPrice > 0 && (
+              <div className="flex justify-between py-2">
+                <p className="text-gray-600">Offer Discount</p>
+                <p className="font-medium text-green-600">-₹{order.offerDiscountPrice.toFixed(2)}</p>
+              </div>
+            )}
             {order.discountPrice > 0 && (
               <div className="flex justify-between py-2">
-                <p className="text-gray-600">Discount</p>
+                <p className="text-gray-600">Coupon Discount</p>
                 <p className="font-medium text-green-600">-₹{order.discountPrice.toFixed(2)}</p>
               </div>
             )}
@@ -433,14 +450,13 @@ const OrderDetails = () => {
         </div>
       </div>
       
-      {/* Cancellation Modal */}
       <CancellationModal 
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleCancelConfirm}
       />
       
-      {/* Return Request Modal */}
+
       <ReturnRequestForm 
         isOpen={showReturnModal}
         onClose={() => setShowReturnModal(false)}

@@ -2,8 +2,14 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5001/api/admin/categories";
 
-const getCategories = async (params) => {
-  const queryParams = { ...params, limit: params.limit || 5 };
+const getCategories = async (params = {}) => {
+  // Always include admin=true for admin side categories page
+  const queryParams = { 
+    limit: params.limit || 5, 
+    page: params.page || 1,
+    search: params.search || '',
+    admin: true 
+  };
   const response = await axios.get(API_URL, { params: queryParams });
   return response.data;
 };

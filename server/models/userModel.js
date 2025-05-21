@@ -24,6 +24,11 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    tempEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+    },
     password: { type: String },//not required for google users
     isGoogle: { type: Boolean, default: false },
     googleId: { type: String ,unique:true ,sparse:true},

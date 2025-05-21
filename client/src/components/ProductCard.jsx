@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaShoppingCart } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import {useDispatch , useSelector} from "react-redux";
 import {addToCart} from "../features/cart/cartSlice";
 import { addToWishlist,removeFromWishlist} from "../features/wishlist/wishlistSlice";
+import ProductCardOffer from './ProductCardOffer';
+import axios from 'axios';
 
 
 const getImageUrl = (imagePath) => {
@@ -27,13 +29,59 @@ const ProductCard = ({ product }) => {
     totalStock,
     isFeatured,
   } = product;
+  
+  const [activeOffer, setActiveOffer] = useState(null);
+  const [isLoadingOffer, setIsLoadingOffer] = useState(false);
+  
+  // Fetch active offer for this product
+  useEffect(() => {
+    const fetchOffer = async () => {
+      if (!_id) return;
+      
+      setIsLoadingOffer(true);
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/offers/product/active/${_id}`);
+        if (response.data) {
+          setActiveOffer(response.data);
+        }
+      } catch (error) {
+        // Silently fail - no offer available is a normal state
+        // Don't log errors for 404s as they're expected when no offer exists
+      } finally {
+        setIsLoadingOffer(false);
+      }
+    };
+    
+    fetchOffer();
+  }, [_id]);
 
   const mainImage = images && images.length > 0 ? images[0] : '';
-  const formattedPrice = new Intl.NumberFormat('en-US', {
+  
+  // Calculate discounted price if there's an active offer
+  const calculateDiscountedPrice = () => {
+    if (!activeOffer) return price;
+    
+    if (activeOffer.discountType === 'percentage') {
+      const discountAmount = price * (activeOffer.discountValue / 100);
+      return price - discountAmount;
+    } else {
+      return Math.max(0, price - activeOffer.discountValue);
+    }
+  };
+  
+  const discountedPrice = calculateDiscountedPrice();
+  
+  const formattedOriginalPrice = new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     maximumFractionDigits: 0,
   }).format(price);
+  
+  const formattedDiscountedPrice = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(discountedPrice);
 
   let displayBrand = brand;
   if (typeof displayBrand === 'object' && displayBrand !== null) {
@@ -105,6 +153,7 @@ const ProductCard = ({ product }) => {
   return (
     <Link to={`/products/${_id}`} className="flex flex-col h-full group">
       <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-square">
+        {activeOffer && <ProductCardOffer offer={activeOffer} />}
         <img
           src={getImageUrl(mainImage)}
           alt={name}
@@ -118,7 +167,16 @@ const ProductCard = ({ product }) => {
             <h3 className="text-lg font-medium text-gray-900">{name}</h3>
             <p className="text-sm text-gray-500">{displayCategory}</p>
           </div>
-          <span className="font-medium">{formattedPrice}</span>
+          <div className="text-right">
+            {activeOffer ? (
+              <>
+                <span className="font-medium text-green-600">{formattedDiscountedPrice}</span>
+                <p className="text-xs text-gray-500 line-through">{formattedOriginalPrice}</p>
+              </>
+            ) : (
+              <span className="font-medium">{formattedOriginalPrice}</span>
+            )}
+          </div>
         </div>
 
         <div className="mt-auto pt-4 flex justify-end space-x-2">

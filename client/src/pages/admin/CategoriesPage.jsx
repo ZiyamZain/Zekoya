@@ -12,6 +12,7 @@ import { getCategories, toggleCategoryListing, deleteCategory } from "../../feat
 import CategoryModal from "../../components/admin/CategoryModal";
 import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
+import { createSelector } from "@reduxjs/toolkit";
 
 // Define the backend URL at the top of the file
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
@@ -25,14 +26,28 @@ const CategoriesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
+  // Create a memoized selector
+  const selectCategoriesData = createSelector(
+    (state) => state.adminCategories,
+    (adminCategories) => ({
+      categories: adminCategories.categories || [],
+      total: adminCategories.total || 0,
+      isLoading: adminCategories.isLoading,
+      isError: adminCategories.isError,
+      message: adminCategories.message,
+      refreshTrigger: adminCategories.refreshTrigger,
+    })
+  );
+
+  // Use the memoized selector
   const {
-    categories = [],
-    total = 0,
+    categories,
+    total,
     isLoading,
     isError,
     message,
     refreshTrigger,
-  } = useSelector((state) => state.adminCategories);
+  } = useSelector(selectCategoriesData);
 
   const limit = 5;
 

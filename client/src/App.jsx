@@ -22,6 +22,7 @@ import SettingsPage from "./pages/admin/SettingsPage";
 import BannerPage from "./pages/admin/BannerPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import OrderDetailPage from "./pages/admin/OrderDetailPage";
+import SalesReportPage from "./pages/admin/SalesReportPage";
 import AdminAuthTest from "./pages/admin/AdminAuthTest";
 import UserProfile from "./pages/user/UserProfile"; 
 import ChangePassword from "./pages/user/ChangePassword";
@@ -36,21 +37,26 @@ import UserLogin from "./pages/auth/UserLogin";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Hero from "./pages/user/Hero";
 import Featured from "./pages/user/Featured";
+import AboutUs from "./pages/user/AboutUs";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import Offers from "./pages/Offers";
 import Cart from "./pages/user/Cart";
 import Wishlist from "./pages/user/Wishlist";
 import OrderHistory from "./pages/user/OrderHistory";
 import OrderDetails from "./pages/user/OrderDetails";
 import Checkout from "./pages/user/Checkout";
 import OrderSuccess from "./pages/user/OrderSuccess";
-
+import PaymentFailed from "./pages/user/PaymentFailed";
+import WalletHistory from "./pages/user/WalletHistory";
 
 // Layouts & Protection
 import AdminLayout from "./layouts/AdminLayout";
 import UserLayout from "./layouts/UserLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
+import UserProtectedRoute from "./components/user/UserProtectedRoute";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 function App() {
   return (
@@ -69,6 +75,7 @@ function App() {
         toastClassName="font-bold"
       />
       <Router>
+        <ScrollToTop />
         <Routes>
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
@@ -81,6 +88,8 @@ function App() {
           <Route path="/" element={<UserLayout />}>
             <Route index element={<Hero />} />
             <Route path="featured" element={<Featured />} />
+            <Route path="about-us" element={<AboutUs />} />
+            <Route path="offers" element={<Offers />} />
             <Route path="products" element={<Products />} />
             <Route
               path="products/category/:categoryName"
@@ -101,10 +110,36 @@ function App() {
             />
             <Route path="cart" element={<Cart />} />
             <Route path="wishlist" element={<Wishlist />} />
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="order-success/:orderId" element={<OrderSuccess />} />
-            <Route path="orders/:id" element={<OrderDetails />} />
-            <Route path="orders" element={<OrderHistory />} />
+            <Route path="wallet/history" element={
+              <UserProtectedRoute>
+                <WalletHistory />
+              </UserProtectedRoute>
+            } />
+            <Route path="checkout" element={
+              <UserProtectedRoute>
+                <Checkout />
+              </UserProtectedRoute>
+            } />
+            <Route path="order-success/:id" element={
+              <UserProtectedRoute>
+                <OrderSuccess />
+              </UserProtectedRoute>
+            } />
+            <Route path="payment-failed/:id" element={
+              <UserProtectedRoute>
+                <PaymentFailed />
+              </UserProtectedRoute>
+            } />
+            <Route path="orders/:id" element={
+              <UserProtectedRoute>
+                <OrderDetails />
+              </UserProtectedRoute>
+            } />
+            <Route path="orders" element={
+              <UserProtectedRoute>
+                <OrderHistory />
+              </UserProtectedRoute>
+            } />
           </Route>
 
           {/* Admin Login */}
@@ -123,14 +158,15 @@ function App() {
             <Route path="dashboard" element={<DashboardHome />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="coupons" element={<CouponsPage />} />
+            <Route path="coupons/*" element={<CouponsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
-            <Route path="offers" element={<OffersPage />} />
+            <Route path="offers/*" element={<OffersPage />} />
             <Route path="brands" element={<BrandsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="banner" element={<BannerPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/:id" element={<OrderDetailPage />} />
+            <Route path="sales-report" element={<SalesReportPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="banner" element={<BannerPage />} />
             <Route path="auth-test" element={<AdminAuthTest />} />
 
           </Route>

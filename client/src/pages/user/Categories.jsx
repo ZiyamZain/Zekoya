@@ -1,18 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCategories } from '../../features/categories/categorySlice';
 import { FiArrowRight, FiTag } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+import { FaRunning, FaBasketballBall, FaFootballBall, FaVolleyballBall } from 'react-icons/fa';
 
 const Categories = () => {
   const dispatch = useDispatch();
   const { categories, isLoading, isError, message } = useSelector((state) => state.categories);
+  const [activeCategory, setActiveCategory] = useState(null);
 
   useEffect(() => {
     dispatch(getCategories());
   }, [dispatch]);
-
-
 
   // Ensure categories is always an array
   const safeCategories = Array.isArray(categories)
@@ -20,113 +21,202 @@ const Categories = () => {
     : (categories && Array.isArray(categories.categories))
       ? categories.categories
       : [];
+      
+  // Set first category as active when categories load
+  useEffect(() => {
+    if (safeCategories.length > 0 && activeCategory === null) {
+      setActiveCategory(safeCategories[0]._id);
+    }
+  }, [safeCategories, activeCategory]);
+  
+  // Get sport icon based on category name
+  const getSportIcon = (name) => {
+    const nameLower = name.toLowerCase();
+    if (nameLower.includes('basketball') || nameLower.includes('court')) {
+      return <FaBasketballBall className="text-orange-500" />;
+    } else if (nameLower.includes('football') || nameLower.includes('soccer')) {
+      return <FaFootballBall className="text-green-600" />;
+    } else if (nameLower.includes('volleyball') || nameLower.includes('beach')) {
+      return <FaVolleyballBall className="text-yellow-500" />;
+    }
+    return <FaRunning className="text-blue-500" />;
+  };
 
   return (
-    <section className="py-24 relative overflow-hidden" style={{ 
-      background: `repeating-linear-gradient(135deg, #fff 0px, #fff 18px, #f3f3f3 18px, #f3f3f3 36px)`,
-      boxShadow: '0 6px 32px 0 rgba(0,0,0,0.10)',
-      border: '4px solid black',
-      borderRadius: '1rem'
-    }}>
-      {/* Gradient vignette overlay */}
-      <div className="pointer-events-none absolute inset-0 z-0" style={{background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.04) 0%, rgba(255,255,255,0.97) 100%)'}} />
+    <section className="py-12 md:py-20 bg-gray-100 text-black overflow-hidden relative">
+      {/* Diagonal stripes background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(135deg,transparent_25%,#000_25%,#000_26%,transparent_26%,transparent_50%,#000_50%,#000_51%,transparent_51%,transparent_75%,#000_75%,#000_76%,transparent_76%)] bg-[length:20px_20px]"></div>
+      </div>
+      
+      {/* Dynamic background elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-black to-transparent opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-black to-transparent opacity-5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+      
+      {/* Sporty decorative elements */}
+      <div className="absolute top-10 left-10 w-20 h-1 bg-black opacity-10 rotate-45"></div>
+      <div className="absolute top-14 left-14 w-10 h-1 bg-black opacity-10 rotate-45"></div>
+      <div className="absolute bottom-10 right-10 w-20 h-1 bg-black opacity-10 -rotate-45"></div>
+      <div className="absolute bottom-14 right-14 w-10 h-1 bg-black opacity-10 -rotate-45"></div>
       
       <div className="container mx-auto px-4 relative z-10">
-        {/* Classic Header */}
-        <div className="mb-20 text-center">
-          <h2 className="text-6xl md:text-7xl font-serif text-black mb-4 tracking-wide relative inline-block">
-            Categories
-            <div className="absolute -bottom-4 left-0 w-full h-[3px] bg-black"></div>
-          </h2>
-          <p className="text-[#222] text-lg max-w-2xl mx-auto mt-8 font-serif italic">
-            Browse our collection of premium products
-          </p>
+        {/* Modern Header - Nike/Adidas Style */}
+        <div className="mb-12 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-2">
+              CATEGORIES
+            </h1>
+            <div className="h-1 w-16 bg-black mx-auto"></div>
+            <p className="text-gray-600 text-lg max-w-xl mx-auto mt-6 font-light tracking-wide">
+              Performance gear for every athlete
+            </p>
+          </motion.div>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-16">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-black border-t-white"></div>
+          <div className="flex justify-center py-16">
+            <div className="relative w-16 h-16">
+              <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-black border-t-transparent animate-spin"></div>
+            </div>
           </div>
         ) : isError ? (
-          <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-black">
-            <p className="text-xl font-serif italic text-[#c00]">Error: {message}</p>
+          <div className="text-center py-12 bg-gray-100 rounded-md border-l-4 border-red-500">
+            <p className="text-xl text-red-600">Error: {message}</p>
           </div>
         ) : safeCategories.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-black">
-            <p className="text-xl font-serif italic text-[#222]">No categories available</p>
+          <div className="text-center py-12 bg-gray-100 rounded-md border-l-4 border-gray-400">
+            <p className="text-xl text-gray-600">No categories available</p>
           </div>
         ) : (
           <>
-            {/* Horizontal Layout with Enhanced Styling */}
-            <div className="space-y-28">
-              {safeCategories.map((category, index) => (
-                <div 
-                  key={category._id}
-                  className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-12 md:gap-16 items-center`}
+            {/* Category Navigation Tabs - Nike/Adidas Style */}
+            <div className="mb-10 overflow-x-auto hide-scrollbar">
+              <div className="flex space-x-1 md:space-x-2 pb-2 md:justify-center">
+                {safeCategories.map((category) => (
+                  <motion.button
+                    key={category._id}
+                    className={`px-4 md:px-5 py-2 flex items-center space-x-2 transition-all ${
+                      activeCategory === category._id 
+                        ? 'bg-black text-white font-bold' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                    onClick={() => setActiveCategory(category._id)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="text-lg">{getSportIcon(category.name)}</span>
+                    <span className="uppercase text-sm font-medium tracking-wider">{category.name}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            {/* Featured Category Display */}
+            {safeCategories.map((category) => (
+              <div 
+                key={category._id}
+                className={`${activeCategory === category._id ? 'block' : 'hidden'}`}
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
                 >
-                  {/* Image Side - Larger and with frame */}
-                  <div className="w-full md:w-3/5 group">
-                    <div className="relative overflow-hidden border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.08)]">
-                      {/* Category Image */}
-                      <div className="aspect-[4/3] overflow-hidden relative">
-                        {/* Soft Focus Effect */}
-                        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMjAwdjIwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')] pointer-events-none z-20 mix-blend-multiply"></div>
-                        {/* Retro TV Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-transparent bg-[linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_51%,rgba(0,0,0,0.1)_100%)] bg-[length:100%_4px] pointer-events-none z-20 opacity-20"></div>
+                  {/* Left Content - Adidas/Nike Style */}
+                  <div className="lg:col-span-4 order-2 lg:order-1">
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1, duration: 0.4 }}
+                    >
+                      <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight mb-3">
+                        {category.name}
+                        <span className="block h-1 w-12 bg-black mt-1"></span>
+                      </h2>
+                      
+                      <p className="text-gray-700 mb-6 leading-relaxed">
+                        Premium {category.name.toLowerCase()} gear engineered for peak performance.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-3 mb-6">
+                        <div className="bg-gray-100 px-3 py-2 flex items-center">
+                          <FiTag className="mr-2 text-black" /> 
+                          <span className="font-bold">{category.productCount || '0'}</span>
+                          <span className="ml-1 text-gray-600 text-sm uppercase">Items</span>
+                        </div>
+                      </div>
+                      
+                      <Link 
+                        to={`/products/category/${category.name}`}
+                        className="inline-flex items-center gap-2 bg-black text-white px-5 py-2 font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:bg-gray-900 group"
+                      >
+                        <span>Shop Now</span>
+                        <FiArrowRight className="transform group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </motion.div>
+                  </div>
+                  
+                  {/* Right Image - Smaller Card Size */}
+                  <div className="lg:col-span-8 order-1 lg:order-2">
+                    <motion.div 
+                      className="relative overflow-hidden"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      {/* Minimal overlay */}
+                      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/20 to-transparent z-10"></div>
+                      
+                      {/* Image */}
+                      <div className="aspect-[16/10] overflow-hidden">
                         <img
-                          src={category.image ? `http://localhost:5001${category.image}` : 'https://via.placeholder.com/800x600?text=Category+Image'}
+                          src={category.image ? `http://localhost:5001${category.image}` : 'https://via.placeholder.com/1200x800?text=Sport+Category'}
                           alt={category.name}
-                          className="w-full h-full object-cover object-center transition-all duration-1000 group-hover:scale-105 group-hover:sepia-[0.2] group-hover:contrast-[1.1]"
+                          className="w-full h-full object-cover object-center transition-all duration-500 hover:scale-105"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/800x600?text=Category+Image';
+                            e.target.src = 'https://via.placeholder.com/1200x800?text=Sport+Category';
                           }}
                         />
-                        {/* Overlay */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-700"></div>
                       </div>
-                      {/* Category Stats */}
-                      <div className="absolute top-4 right-4 z-30">
-                        <span className="inline-flex items-center px-3 py-1 bg-black text-white text-sm font-serif">
-                          <FiTag className="mr-1" /> {category.productCount || '0'} items
+                      
+                      {/* Category Badge */}
+                      <div className="absolute bottom-4 left-4 z-20">
+                        <span className="inline-flex items-center px-3 py-1 bg-white text-black text-xs font-bold uppercase tracking-wider">
+                          {category.productCount || '0'} Products
                         </span>
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
-                  {/* Content Side - More elegant typography */}
-                  <div className="w-full md:w-2/5 flex flex-col items-start">
-                    <h3 className="text-4xl font-serif text-black mb-4 tracking-wide relative inline-block">
-                      {category.name}
-                      <span className="absolute -bottom-2 left-0 w-12 h-[2px] bg-black"></span>
-                    </h3>
-                    <p className="text-[#222] mb-8 text-lg font-serif leading-relaxed">
-                      Explore our collection of premium {category.name.toLowerCase()} products designed with style and craftsmanship.
-                    </p>
-                    <Link 
-                      to={`/products/category/${category.name}`}
-                      className="relative overflow-hidden inline-flex items-center gap-2 bg-black text-white px-6 py-3 font-serif tracking-wider text-lg border-2 border-black transition-all duration-500 group hover:text-black hover:bg-transparent"
-                    >
-                      <span className="relative z-10">Explore Collection</span>
-                      <FiArrowRight className="relative z-10 transform group-hover:translate-x-2 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-white transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* View All Button */}
-            <div className="mt-24 text-center">
+                </motion.div>
+              </div>
+            ))}
+            
+            {/* Browse All Categories */}
+            <motion.div 
+              className="mt-12 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
               <Link 
                 to="/products" 
-                className="inline-block bg-black text-white px-10 py-4 font-serif tracking-wider text-xl border-2 border-black hover:bg-transparent hover:text-black transition-colors duration-500 relative overflow-hidden group"
+                className="inline-flex items-center gap-2 bg-black hover:bg-gray-900 text-white px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all duration-300"
               >
-                <span className="relative z-10">View All Products</span>
-                <div className="absolute inset-0 bg-white transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+                <span>View All Products</span>
+                <FiArrowRight />
               </Link>
-            </div>
+            </motion.div>
           </>
         )}
       </div>
+      
+      {/* No additional decorative elements needed at the bottom */}
     </section>
   );
 };

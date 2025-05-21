@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { userLogin, googleLogin } from "../../features/userAuth/userAuthSlice";
 import { jwtDecode } from "jwt-decode";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const UserLogin = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -122,16 +124,25 @@ const UserLogin = () => {
               </div>
 
               <div>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="PASSWORD"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="PASSWORD"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                </div>
                 <div className="flex justify-end mt-1">
                   <a
                     href="/forgot-password"

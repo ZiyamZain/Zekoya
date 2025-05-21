@@ -4,14 +4,12 @@ import orderService from "./orderService";
 const initialState = {
   orders: [],
   order: null,
-
   isError: false,
   isSuccess: false,
   isLoading: false,
   message: "",
 };
 
-// Create new order
 export const createOrder = createAsyncThunk(
   "order/create",
   async (orderData, thunkAPI) => {
@@ -27,7 +25,6 @@ export const createOrder = createAsyncThunk(
   }
 );
 
-// Get order details
 export const getOrderDetails = createAsyncThunk(
   "order/getDetails",
   async (id, thunkAPI) => {
@@ -43,7 +40,6 @@ export const getOrderDetails = createAsyncThunk(
   }
 );
 
-// Get my orders
 export const getMyOrders = createAsyncThunk(
   "order/getMyOrders",
   async (params, thunkAPI) => {
@@ -59,7 +55,6 @@ export const getMyOrders = createAsyncThunk(
   }
 );
 
-// Cancel entire order
 export const cancelOrder = createAsyncThunk(
   "order/cancelOrder",
   async (data, thunkAPI) => {
@@ -75,7 +70,6 @@ export const cancelOrder = createAsyncThunk(
   }
 );
 
-// Cancel order item
 export const cancelOrderItem = createAsyncThunk(
   "order/cancelOrderItem",
   async (data, thunkAPI) => {
@@ -91,7 +85,6 @@ export const cancelOrderItem = createAsyncThunk(
   }
 );
 
-// Request return for item
 export const requestReturnItem = createAsyncThunk(
   "order/requestReturnItem",
   async (data, thunkAPI) => {
@@ -107,16 +100,13 @@ export const requestReturnItem = createAsyncThunk(
   }
 );
 
-// Generate invoice
 export const generateInvoice = createAsyncThunk(
   "order/generateInvoice",
   async (orderId, thunkAPI) => {
     try {
       const data = await orderService.generateInvoice(orderId);
-      // Create a blob from the PDF data
-      const blob = new Blob([data], { type: 'application/pdf' });
-      // Create a link element, set the download attribute, and click it
-      const link = document.createElement('a');
+      const blob = new Blob([data], { type: "application/pdf" });
+      const link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = `invoice-${orderId}.pdf`;
       link.click();
@@ -131,7 +121,6 @@ export const generateInvoice = createAsyncThunk(
   }
 );
 
-// Admin: Get all orders
 export const getAllOrders = createAsyncThunk(
   "order/getAllOrders",
   async (params, thunkAPI) => {
@@ -147,7 +136,6 @@ export const getAllOrders = createAsyncThunk(
   }
 );
 
-// Admin: Update order status
 export const updateOrderStatus = createAsyncThunk(
   "order/updateOrderStatus",
   async (data, thunkAPI) => {
@@ -179,13 +167,15 @@ const orderSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Create order
       .addCase(createOrder.pending, (state) => {
         state.isLoading = true;
+        state.isSuccess = false;
+        state.isError = false;
+        state.message = "";
       })
       .addCase(createOrder.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isSuccess = true;
+        state.isSuccess = true; // Always set to true, regardless of payment method
         state.order = action.payload;
       })
       .addCase(createOrder.rejected, (state, action) => {
@@ -193,7 +183,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Get order details
       .addCase(getOrderDetails.pending, (state) => {
         state.isLoading = true;
       })
@@ -207,7 +196,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Get my orders
       .addCase(getMyOrders.pending, (state) => {
         state.isLoading = true;
       })
@@ -221,7 +209,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Cancel order
       .addCase(cancelOrder.pending, (state) => {
         state.isLoading = true;
       })
@@ -234,7 +221,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Cancel order item
       .addCase(cancelOrderItem.pending, (state) => {
         state.isLoading = true;
       })
@@ -247,7 +233,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Request return item
       .addCase(requestReturnItem.pending, (state) => {
         state.isLoading = true;
       })
@@ -260,7 +245,6 @@ const orderSlice = createSlice({
         state.isError = true;
         state.message = action.payload;
       })
-      // Generate invoice
       .addCase(generateInvoice.pending, (state) => {
         state.isLoading = true;
       })

@@ -1,17 +1,30 @@
-import React, { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getCart, clearCart } from "../../features/cart/cartSlice";
-import { createOrder, resetOrder } from "../../features/order/orderSlice";
-import { FaMapMarkerAlt, FaCheck } from "react-icons/fa";
+import { clearCart } from "../../features/cart/cartSlice";
+import {
+  createOrder,
+  clearOrder,
+  getOrderDetails,
+} from "../../features/order/orderSlice";
+import { getAddresses } from "../../features/userProfile/userProfileSlice";
+import { FaMapMarkerAlt, FaCheck, FaTag } from "react-icons/fa";
+import CouponApply from "../../components/user/CouponApply";
+import API from "../../utils/axiosConfig";
+import axios from "axios";
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const { userInfo } = useSelector((state) => state.userAuth);
-  const { cart, isLoading: cartLoading } = useSelector((state) => state.cart);
+  const {
+    cart,
+    hasUnavailableItems,
+    isLoading: cartLoading,
+  } = useSelector((state) => state.cart);
+  const { addresses } = useSelector((state) => state.userProfile);
   const {
     order,
     isLoading: orderLoading,
@@ -20,33 +33,121 @@ const Checkout = () => {
     message,
   } = useSelector((state) => state.order);
 
-  const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [addresses, setAddresses] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [createdOrderId, setCreatedOrderId] = useState(null);
 
-  // Calculate prices
   const [itemsPrice, setItemsPrice] = useState(0);
   const [taxPrice, setTaxPrice] = useState(0);
   const [shippingPrice, setShippingPrice] = useState(0);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [offerDiscountAmount, setOfferDiscountAmount] = useState(0);
+  const [productOffers, setProductOffers] = useState({});
+  const [categoryOffers, setCategoryOffers] = useState({});
   const [totalPrice, setTotalPrice] = useState(0);
 
+  // Function to fetch active offers for products in the cart
+  const fetchProductOffers = async (cartItems) => {
+    if (!cartItems || cartItems.length === 0) return;
+    
+    try {
+      const productOffers = {};
+      const categoryOffers = {};
+      let totalOfferDiscount = 0;
+      
+      // Fetch offers for each product in the cart
+      for (const item of cartItems) {
+        if (!item.product || !item.product._id) continue;
+        
+        const productId = item.product._id;
+        const productPrice = item.product.price * item.quantity;
+        let bestDiscountForProduct = 0;
+        
+        // Fetch product offer
+        try {
+          const productOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/product/active/${productId}`);
+          if (productOfferResponse.data) {
+            productOffers[productId] = productOfferResponse.data;
+            
+            // Calculate product offer discount
+            let productDiscountValue = 0;
+            if (productOfferResponse.data.discountType === 'percentage') {
+              productDiscountValue = productPrice * (productOfferResponse.data.discountValue / 100);
+            } else {
+              productDiscountValue = Math.min(productPrice, productOfferResponse.data.discountValue * item.quantity);
+            }
+            
+            bestDiscountForProduct = productDiscountValue;
+          }
+        } catch (error) {
+          // No product offer available
+        }
+        
+        // Fetch category offer if product has a category
+        if (item.product.category) {
+          try {
+            const categoryId = typeof item.product.category === 'object' ? item.product.category._id : item.product.category;
+            const categoryOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/category/active/${categoryId}`);
+            
+            if (categoryOfferResponse.data) {
+              categoryOffers[categoryId] = categoryOfferResponse.data;
+              
+              // Calculate category offer discount
+              let categoryDiscountValue = 0;
+              if (categoryOfferResponse.data.discountType === 'percentage') {
+                categoryDiscountValue = productPrice * (categoryOfferResponse.data.discountValue / 100);
+              } else {
+                categoryDiscountValue = Math.min(productPrice, categoryOfferResponse.data.discountValue * item.quantity);
+              }
+              
+              // Use the best discount (either product or category)
+              bestDiscountForProduct = Math.max(bestDiscountForProduct, categoryDiscountValue);
+            }
+          } catch (error) {
+            // No category offer available
+          }
+        }
+        
+        // Add the best discount for this product to the total
+        totalOfferDiscount += bestDiscountForProduct;
+      }
+      
+      setProductOffers(productOffers);
+      setCategoryOffers(categoryOffers);
+      setOfferDiscountAmount(totalOfferDiscount);
+      return totalOfferDiscount;
+    } catch (error) {
+      console.error('Error fetching offers:', error);
+      return 0;
+    }
+  };
+  
   useEffect(() => {
     if (!userInfo) {
       navigate("/login");
       return;
     }
 
-    dispatch(getCart());
-    fetchAddresses();
-
-    return () => {
-      dispatch(resetOrder());
-    };
+    dispatch(getAddresses());
+    return () => {};
   }, [dispatch, navigate, userInfo]);
 
   useEffect(() => {
+    if (addresses && addresses.length > 0 && !selectedAddressId) {
+      setSelectedAddressId(addresses[0]._id);
+    }
+  }, [addresses, selectedAddressId]);
+
+  useEffect(() => {
     if (isSuccess && order) {
-      navigate(`/order-success/${order._id}`);
-      dispatch(clearCart());
+      if (order.paymentMethod !== "Razorpay") {
+        navigate(`/order-success/${order._id}`);
+        dispatch(clearCart());
+      } else if (order.isPaid) {
+        navigate(`/order-success/${order._id}`);
+        dispatch(clearCart());
+      }
     }
 
     if (isError) {
@@ -56,69 +157,210 @@ const Checkout = () => {
 
   useEffect(() => {
     if (cart && cart.items && cart.items.length > 0) {
-      // Calculate prices
+      // Fetch product offers when cart changes
+      fetchProductOffers(cart.items);
+      
       const itemsPriceCalc = cart.items.reduce((total, item) => {
         return total + item.product.price * item.quantity;
       }, 0);
 
       setItemsPrice(itemsPriceCalc);
-      setTaxPrice(Math.round(itemsPriceCalc * 0.18)); // 18% GST
-      setShippingPrice(itemsPriceCalc > 1000 ? 0 : 100); // Free shipping over ₹1000
+      setTaxPrice(Math.round(itemsPriceCalc * 0.18));
+      setShippingPrice(itemsPriceCalc > 1000 ? 0 : 100);
+
+      const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+      setDiscountAmount(discount);
+    }
+  }, [cart, appliedCoupon]);
+  
+  // Separate useEffect to calculate total price after offer discounts are fetched
+  useEffect(() => {
+    if (itemsPrice > 0) {
       setTotalPrice(
-        itemsPriceCalc +
-          Math.round(itemsPriceCalc * 0.18) +
-          (itemsPriceCalc > 1000 ? 0 : 100)
+        itemsPrice +
+          taxPrice +
+          shippingPrice -
+          discountAmount -
+          offerDiscountAmount
       );
     }
-  }, [cart]);
+  }, [itemsPrice, taxPrice, shippingPrice, discountAmount, offerDiscountAmount]);
 
-  const fetchAddresses = async () => {
-    try {
-      const response = await fetch("http://localhost:5001/api/users/profile/addresses", {
-        headers: {
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch addresses");
+  const loadRazorpayScript = useCallback(() => {
+    return new Promise((resolve) => {
+      if (
+        document.querySelector(
+          'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+        )
+      ) {
+        console.log("Razorpay script already loaded");
+        resolve(true);
+        return;
       }
 
-      const addresses = await response.json();
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => {
+        console.log("Razorpay script loaded successfully");
+        resolve(true);
+      };
+      script.onerror = () => {
+        console.error("Failed to load Razorpay script");
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  }, []);
 
-      if (addresses && addresses.length > 0) {
-        setAddresses(addresses);
-
-        // Set default address if available
-        const defaultAddress = addresses.find(addr => addr.isDefault);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress._id);
-        } else {
-          setSelectedAddressId(addresses[0]._id);
+  const initializeRazorpayPayment = useCallback(
+    async (orderId) => {
+      try {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error("Failed to load payment gateway. Please try again.");
+          localStorage.removeItem("razorpay_payment_pending");
+          return;
         }
+
+        const keyResponse = await API.get("/api/payments/razorpay-key");
+        const keyId = keyResponse.data.key_id;
+
+        const orderResponse = await API.post("/api/payments/create-order", {
+          amount: totalPrice,
+          currency: "INR",
+          receipt: `order_rcpt_${orderId.substring(0, 8)}`,
+          notes: {
+            orderId: orderId,
+            userId: userInfo._id,
+          },
+        });
+
+        if (!orderResponse.data.success || !orderResponse.data.order) {
+          toast.error("Failed to create payment order. Please try again.");
+          localStorage.removeItem("razorpay_payment_pending");
+          return;
+        }
+
+        const razorpayOrder = orderResponse.data.order;
+
+        const options = {
+          key: keyId,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          name: "Zekoya",
+          description: "Payment for your order",
+          order_id: razorpayOrder.id,
+          handler: async (response) => {
+            try {
+              const verifyResponse = await API.post(
+                "/api/payments/verify-payment",
+                {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  orderId: orderId,
+                }
+              );
+
+              if (verifyResponse.data.success) {
+                await dispatch(getOrderDetails(orderId));
+                dispatch(clearCart()); // Clear cart only after successful payment
+                localStorage.removeItem("razorpay_payment_pending");
+                navigate(`/order-success/${orderId}`); // Navigate to success page
+              } else {
+                throw new Error("Payment verification failed");
+              }
+            } catch (error) {
+              console.error("Payment verification failed:", error);
+              localStorage.removeItem("razorpay_payment_pending");
+              navigate(`/payment-failed/${orderId}`);
+            }
+          },
+          prefill: {
+            name: userInfo?.name || "",
+            email: userInfo?.email || "",
+            contact: userInfo?.phone || "",
+          },
+          theme: {
+            color: "#3399cc",
+          },
+          modal: {
+            ondismiss: function () {
+              console.log("Payment modal dismissed");
+              localStorage.removeItem("razorpay_payment_pending");
+              navigate(`/payment-failed/${orderId}`);
+            },
+          },
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } catch (error) {
+        console.error("Error initializing Razorpay payment:", error);
+        localStorage.removeItem("razorpay_payment_pending");
+        toast.error("Failed to initialize payment. Please try again.");
       }
-    } catch (error) {
-      toast.error("Failed to load addresses");
-      console.error(error);
-    }
+    },
+    [dispatch, navigate, totalPrice, userInfo, loadRazorpayScript]
+  );
+
+  const handleCouponApplied = (couponData) => {
+    setAppliedCoupon(couponData);
   };
 
-  const placeOrderHandler = () => {
+  const placeOrderHandler = async () => {
+    dispatch(clearOrder());
+
     if (!selectedAddressId) {
       toast.error("Please select a shipping address");
       return;
     }
 
-    dispatch(
-      createOrder({
-        addressId: selectedAddressId,
-        paymentMethod: "Cash on Delivery",
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
-        totalPrice,
-      })
-    );
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    const orderData = {
+      addressId: selectedAddressId,
+      paymentMethod,
+      itemsPrice: parseFloat(itemsPrice),
+      taxPrice: parseFloat(taxPrice),
+      shippingPrice: parseFloat(shippingPrice),
+      totalPrice: parseFloat(totalPrice),
+      discountPrice: parseFloat(discountAmount || 0),
+      offerDiscountPrice: parseFloat(offerDiscountAmount || 0),
+      productOffers: Object.keys(productOffers).length > 0 ? productOffers : null,
+      categoryOffers: Object.keys(categoryOffers).length > 0 ? categoryOffers : null
+    };
+
+    if (appliedCoupon && appliedCoupon.coupon) {
+      orderData.couponCode = appliedCoupon.coupon.code;
+      orderData.couponDiscount = parseFloat(discountAmount);
+    }
+
+    console.log("Placing order with data:", orderData);
+
+    try {
+      const result = await dispatch(createOrder(orderData)).unwrap();
+      console.log("Order created successfully:", result);
+
+      if (paymentMethod === "Razorpay") {
+        console.log("Razorpay payment selected, initializing payment...");
+        localStorage.setItem("razorpay_payment_pending", result._id);
+        setCreatedOrderId(result._id);
+        await initializeRazorpayPayment(result._id);
+      } else {
+        toast.success("Order placed successfully!");
+        dispatch(clearCart());
+        navigate(`/order-success/${result._id}`);
+      }
+    } catch (error) {
+      console.error("Order creation failed:", error);
+      localStorage.removeItem("razorpay_payment_pending");
+      toast.error("Failed to place order. Please try again.");
+    }
   };
 
   if (cartLoading) {
@@ -128,6 +370,12 @@ const Checkout = () => {
       </div>
     );
   }
+
+  const hasUnavailableItemsInCart =
+    hasUnavailableItems &&
+    cart &&
+    cart.items &&
+    cart.items.some((item) => !item.isAvailable);
 
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
@@ -155,13 +403,80 @@ const Checkout = () => {
       <div className="container mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
+        {hasUnavailableItemsInCart && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  width="20"
+                  height="20"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">
+                    Cannot proceed with checkout!
+                  </span>{" "}
+                  Some items in your cart are no longer available. Please return
+                  to your cart and remove these items before continuing.
+                </p>
+                <p className="mt-2">
+                  <button
+                    onClick={() => navigate("/cart")}
+                    className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-red-200"
+                  >
+                    Return to Cart
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasUnavailableItems && !hasUnavailableItemsInCart && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-yellow-400"
+                  width="20"
+                  height="20"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  <span className="font-medium">Note:</span> Some items in your
+                  cart had their quantities adjusted due to limited stock
+                  availability.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Cart Items & Address */}
           <div className="lg:col-span-2">
-            {/* Cart Items */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-
               <div className="divide-y">
                 {cart.items.map((item) => (
                   <div
@@ -170,12 +485,11 @@ const Checkout = () => {
                   >
                     <div className="w-16 h-16 flex-shrink-0 mr-4 overflow-hidden rounded-md">
                       <img
-                        src={item.product.images[0]}
+                        src={`http://localhost:5001${item.product.images[0]}`}
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
-
                     <div className="flex-grow">
                       <h3 className="text-base font-medium">
                         {item.product.name}
@@ -184,48 +498,75 @@ const Checkout = () => {
                       <p className="text-sm text-gray-500">
                         Qty: {item.quantity}
                       </p>
+                      {(productOffers[item.product._id] || categoryOffers[item.product.category]) && (
+                        <div className="flex items-center mt-1 text-xs text-green-600">
+                          <FaTag className="mr-1" />
+                          <span>
+                            {(productOffers[item.product._id] || categoryOffers[item.product.category]).discountType === 'percentage' 
+                              ? `${(productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue}% off` 
+                              : `₹${(productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue} off`}
+                          </span>
+                        </div>
+                      )}
                     </div>
-
                     <div className="text-right">
-                      <p className="font-medium">
-                        ₹{item.product.price * item.quantity}
-                      </p>
+                      {(productOffers[item.product._id] || categoryOffers[item.product.category]) ? (
+                        <>
+                          <p className="font-medium text-green-600">
+                            {(productOffers[item.product._id] || categoryOffers[item.product.category]).discountType === 'percentage' 
+                              ? `₹${(item.product.price * item.quantity * (1 - (productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue / 100)).toFixed(2)}` 
+                              : `₹${(item.product.price * item.quantity - Math.min((productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue * item.quantity, item.product.price * item.quantity)).toFixed(2)}`}
+                          </p>
+                          <p className="text-xs text-gray-500 line-through">
+                            ₹{(item.product.price * item.quantity).toFixed(2)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="font-medium">
+                          ₹{(item.product.price * item.quantity).toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Shipping Address */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
-
               {addresses.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {addresses.map((address) => (
                     <div
                       key={address._id}
-                      className={`border rounded-lg p-4 cursor-pointer hover:border-black transition-colors ${
-                        selectedAddressId === address._id.toString()
-                          ? "border-black bg-gray-50"
-                          : "border-gray-200"
+                      className={`border rounded-lg p-4 mb-3 ${
+                        selectedAddressId === address._id
+                          ? "border-black"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
-                      onClick={() =>
-                        setSelectedAddressId(address._id.toString())
-                      }
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{address.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {address.phone}
-                          </p>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium">{address.name}</h3>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(
+                                `/profile/addresses/edit/${address._id}?returnUrl=/checkout`
+                              );
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
+                          {selectedAddressId === address._id && (
+                            <FaCheck className="text-green-500" />
+                          )}
                         </div>
-                        {selectedAddressId === address._id.toString() && (
-                          <FaCheck className="text-green-500" />
-                        )}
                       </div>
-                      <div className="mt-2 text-sm text-gray-600">
+                      <div
+                        className="mt-2 text-sm text-gray-600 cursor-pointer"
+                        onClick={() => setSelectedAddressId(address._id)}
+                      >
                         <p>{address.addressLine1}</p>
                         {address.addressLine2 && <p>{address.addressLine2}</p>}
                         <p>
@@ -243,18 +584,21 @@ const Checkout = () => {
                     No addresses found. Please add an address to continue.
                   </p>
                   <button
-                    onClick={() => navigate("/profile/addresses/add")}
+                    onClick={() =>
+                      navigate("/profile/addresses/add?returnUrl=/checkout")
+                    }
                     className="bg-black text-white py-2 px-6 rounded-md hover:bg-gray-800"
                   >
                     Add New Address
                   </button>
                 </div>
               )}
-
               {addresses.length > 0 && (
                 <div className="text-right">
                   <button
-                    onClick={() => navigate("/profile/addresses/add")}
+                    onClick={() =>
+                      navigate("/profile/addresses/add?returnUrl=/checkout")
+                    }
                     className="text-black underline"
                   >
                     Add New Address
@@ -263,12 +607,9 @@ const Checkout = () => {
               )}
             </div>
           </div>
-
-          {/* Right Column - Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
               <h2 className="text-xl font-semibold mb-4">Payment Summary</h2>
-
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
@@ -286,6 +627,22 @@ const Checkout = () => {
                       : "Free"}
                   </span>
                 </div>
+                {offerDiscountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Offer Discount</span>
+                    <span>-₹{offerDiscountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <CouponApply
+                  orderTotal={itemsPrice - offerDiscountAmount}
+                  onCouponApplied={handleCouponApplied}
+                />
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Coupon Discount</span>
+                    <span>-₹{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
@@ -293,26 +650,37 @@ const Checkout = () => {
                   </div>
                 </div>
               </div>
-
               <div className="mb-6">
                 <h3 className="font-medium mb-2">Payment Method</h3>
-                <div className="border rounded-md p-3 bg-gray-50">
-                  <label className="flex items-center">
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
                     <input
                       type="radio"
-                      checked={true}
-                      readOnly
-                      className="mr-2"
+                      name="paymentMethod"
+                      value="Cash on Delivery"
+                      checked={paymentMethod === "Cash on Delivery"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="form-radio"
                     />
                     <span>Cash on Delivery</span>
                   </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="Razorpay"
+                      checked={paymentMethod === "Razorpay"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="form-radio"
+                    />
+                    <span>Pay Online (Razorpay)</span>
+                  </label>
                 </div>
               </div>
-
               <button
                 onClick={placeOrderHandler}
-                disabled={!selectedAddressId || orderLoading}
-                className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={orderLoading}
+                className="w-full mt-6 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {orderLoading ? "Processing..." : "Place Order"}
               </button>

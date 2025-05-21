@@ -42,7 +42,7 @@ const Featured = () => {
       <div className="container mx-auto px-4">
         {/* Retro Header */}
         <div className="mb-12 text-center">
-          <div className="inline-block bg-black py-2 px-8 -rotate-2 transform mb-6">
+          <div className="inline-block bg-black py-2 px-8 -rotate-2 transform mb-20">
             <h2 className="text-5xl md:text-6xl font-['Bebas_Neue'] text-white tracking-wider">
               FEATURED COLLECTION
             </h2>
@@ -62,70 +62,90 @@ const Featured = () => {
             <p className="text-xl font-medium text-gray-600">No featured products available</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-12">
             {featuredProducts?.map((product) => (
               <Link
                 key={product._id}
                 to={`/products/${product._id}`}
-                className="group block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:-translate-y-2 hover:shadow-2xl duration-300"
+                className="group block overflow-hidden transition-all duration-300 relative"
               >
-                <div>
+                {/* Main card with border */}
+                <div className="relative border-2 border-black bg-white">
                   {/* Sale Badge */}
                   {product.onSale && (
-                    <div className="absolute top-0 right-0 z-30 bg-red-600 text-white transform rotate-[15deg] origin-top-right shadow-md">
-                      <div className="py-1 px-8 text-sm font-['Bebas_Neue'] tracking-wider">SALE</div>
+                    <div className="absolute top-0 right-0 z-30">
+                      <div className="bg-black text-white py-1 px-4 text-sm font-bold uppercase tracking-wider transform rotate-45 origin-bottom-left translate-x-[30%] translate-y-[-30%] shadow-md">
+                        Sale
+                      </div>
                     </div>
                   )}
+                  
+                  {/* Team/League Badge */}
+                  <div className="absolute top-3 left-3 z-30">
+                    <div className="bg-black text-white py-1 px-3 text-xs font-bold uppercase tracking-wider">
+                      {product.category?.name || 'Product'}
+                    </div>
+                  </div>
+                  
                   {/* Image Container */}
-                  <div className="relative h-56 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30 z-10"></div>
+                  <div className="relative h-80 overflow-hidden border-b-2 border-black">
+                    {/* Image */}
                     <img
                       src={getImageUrl(product.images[0])}
                       alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://via.placeholder.com/400x500?text=Image+Not+Found';
                       }}
                     />
-                    {/* Vintage Overlay */}
-                    <div className="absolute inset-0 bg-[radial-gradient(#000_0.5px,transparent_1px)] [background-size:12px_12px] opacity-10 mix-blend-multiply pointer-events-none"></div>
-                    {/* Shop Now Button */}
-                    <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <span className="bg-black text-white px-6 py-2 font-['Bebas_Neue'] tracking-wider text-lg flex items-center border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                        SHOP NOW <FiArrowRight className="ml-2" />
+                    
+                    {/* Overlay with stripes pattern */}
+                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_12px)]"></div>
+                    
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
+                      <span className="bg-white text-black px-6 py-3 font-bold text-sm uppercase tracking-wider transform translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 flex items-center">
+                        View Details <FiArrowRight className="ml-2" />
                       </span>
                     </div>
                   </div>
+                  
                   {/* Content */}
-                  <div className="p-3 space-y-1.5">
-                    {/* Category Tag */}
-                    <div className="mb-2">
-                      <span className="inline-block bg-black text-white text-xs px-3 py-1 font-['Bebas_Neue'] tracking-wider">
-                        {product.category?.name || 'PRODUCT'}
-                      </span>
-                    </div>
+                  <div className="p-4">
                     {/* Product Name */}
-                    <h3 className="text-md font-semibold text-amber-900 line-clamp-1">{product.name}</h3>
+                    <h3 className="text-lg font-bold text-black tracking-tight line-clamp-1 mb-2">{product.name}</h3>
+                    
+                    {/* Divider */}
+                    <div className="w-12 h-1 bg-black mb-3"></div>
+                    
                     {/* Price & Stock */}
-                    <div className="flex justify-between items-center pt-2">
-                      {product.onSale ? (
-                        <>
-                          <p className="text-lg font-medium text-amber-900">₹{Math.round(product.price * 0.9)}</p>
-                          <p className="text-sm text-gray-500 line-through">₹{product.price}</p>
-                        </>
-                      ) : (
-                        <p className="text-lg font-medium text-amber-900">₹{product.price}</p>
-                      )}
-                      <div className="flex items-center">
-                        <span className={`h-3 w-3 rounded-full mr-1 ${product.sizes.some(size => size.stock > 0) ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <span className="text-xs uppercase font-medium">
-                          {product.sizes.some(size => size.stock > 0) ? 'In Stock' : 'Sold Out'}
+                    <div className="flex justify-between items-center">
+                      {/* Price */}
+                      <div>
+                        {product.onSale ? (
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-black text-black">₹{Math.round(product.price * 0.9)}</p>
+                            <p className="text-sm text-gray-500 line-through">₹{product.price}</p>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-black text-black">₹{product.price}</p>
+                        )}
+                      </div>
+                      
+                      {/* Stock Status */}
+                      <div className="border border-black px-2 py-1">
+                        <span className="text-xs uppercase font-bold flex items-center">
+                          <span className={`inline-block h-2 w-2 mr-1 rounded-full ${product.sizes.some(size => size.stock > 0) ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          {product.sizes.some(size => size.stock > 0) ? 'Available' : 'Sold Out'}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
+                
+                {/* Shadow element for 3D effect */}
+                <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 -z-10 group-hover:translate-x-2 group-hover:translate-y-2 transition-transform duration-300"></div>
               </Link>
             ))}
           </div>

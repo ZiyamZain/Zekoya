@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import {
+  sendPasswordChangeOtp,
+  verifyPasswordChangeOtp,
   changePassword,
-  resetUserProfile,
+  resetUserProfile
 } from "../../features/userProfile/userProfileSlice";
 
 const ChangePassword = () => {
@@ -11,19 +16,35 @@ const ChangePassword = () => {
   const navigate = useNavigate();
 
   const { userInfo } = useSelector((state) => state.userAuth);
-  const { loading, error, success, message } = useSelector(
+  const { loading, error, success } = useSelector(
     (state) => state.userProfile
   );
 
-  // Check if user is authenticated via Google
   const isGoogleUser = userInfo && userInfo.isGoogle;
+  
 
-  const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  const [passwordError, setPasswordError] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+
+  const [step, setStep] = useState('request'); 
+  const [otpTimer, setOtpTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+
+  // Clear any previous errors when component mounts
+  useEffect(() => {
+    dispatch(resetUserProfile());
+  }, [dispatch]);
+
+  // Clear error state when user changes input
+  const clearErrors = () => {
+    if (error) {
+      dispatch(resetUserProfile());
+    }
+  };
 
   useEffect(() => {
     if (!userInfo) {
@@ -39,41 +60,89 @@ const ChangePassword = () => {
       }, 2000);
     }
   }, [success, dispatch, navigate]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    if (name === "confirmPassword" || name === "newPassword") {
-      if (
-        formData.newPassword &&
-        formData.confirmPassword &&
-        formData.newPassword !== formData.confirmPassword
-      ) {
-        setPasswordError("Passwords do not match");
-      } else {
-        setPasswordError("");
-      }
+  
+  // Handle OTP timer
+  useEffect(() => {
+    if (step === 'verify' && otpSent) {
+      setOtpTimer(60);
+      setCanResend(false);
+      const interval = setInterval(() => {
+        setOtpTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
     }
+  }, [step, otpSent]);
+  
+  // Move to next step when OTP is sent or verified
+  useEffect(() => {
+    if (otpSent && step === 'request') {
+      setStep('verify');
+    }
+    if (otpVerified && step === 'verify') {
+      setStep('reset');
+    }
+  }, [otpSent, otpVerified, step]);
+
+
+  const handleRequestOtp = (values) => {
+    dispatch(resetUserProfile()); // Reset any previous errors
+    dispatch(sendPasswordChangeOtp({ currentPassword: values.currentPassword }))
+      .unwrap()
+      .then(() => {
+        setOtpSent(true);
+      })
+      .catch((err) => {
+        // Error is already set in the state by the rejected action
+        console.error("Failed to send OTP:", err);
+      });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      setPasswordError("Passwords do not match");
-      return;
-    }
-
-    dispatch(
-      changePassword({
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword,
+  const handleVerifyOtp = (values) => {
+    dispatch(resetUserProfile()); // Reset any previous errors
+    dispatch(verifyPasswordChangeOtp({ otp: values.otp }))
+      .unwrap()
+      .then(() => {
+        setOtpVerified(true);
       })
-    );
+      .catch((err) => {
+        console.error("Failed to verify OTP:", err);
+      });
+  };
+
+
+  const handleResendOtp = () => {
+    if (!canResend) return;
+    const currentPassword = localStorage.getItem('tempCurrentPassword') || '';
+    setOtpTimer(60);
+    setCanResend(false);
+  };
+
+  // Change Password handler
+  const handleChangePassword = (values) => {
+    dispatch(resetUserProfile()); // Reset any previous errors
+    dispatch(changePassword({
+      currentPassword: localStorage.getItem('tempCurrentPassword') || '',
+      newPassword: values.newPassword
+    }));
+    // Clean up temporary storage
+    localStorage.removeItem('tempCurrentPassword');
+  };
+
+  // Reset flow handler
+  const handleResetFlow = () => {
+    setStep('request');
+    setOtpSent(false);
+    setOtpVerified(false);
+    localStorage.removeItem('tempCurrentPassword');
+    dispatch(resetUserProfile()); // Reset any errors when going back
   };
 
   if (success) {
@@ -187,189 +256,224 @@ const ChangePassword = () => {
               </a>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div>
-                <label
-                  className="block text-gray-700 font-medium mb-2"
-                  htmlFor="currentPassword"
+            <div className="p-8">
+              {/* Step 1: Request OTP */}
+              {step === 'request' && (
+                <Formik
+                  initialValues={{ currentPassword: '' }}
+                  validationSchema={Yup.object({
+                    currentPassword: Yup.string().required('Current password is required')
+                  })}
+                  onSubmit={(values, { setSubmitting }) => {
+                    handleRequestOtp(values);
+                    setSubmitting(false);
+                  }}
                 >
-                  Current Password
-                </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    id="currentPassword"
-                    name="currentPassword"
-                    value={formData.currentPassword}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
-                    required
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  className="block text-gray-700 font-medium mb-2"
-                  htmlFor="newPassword"
-                >
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    id="newPassword"
-                    name="newPassword"
-                    value={formData.newPassword}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
-                    required
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Password must be at least 6 characters and include uppercase,
-                  lowercase, and a number
-                </p>
-              </div>
-
-              <div>
-                <label
-                  className="block text-gray-700 font-medium mb-2"
-                  htmlFor="confirmPassword"
-                >
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-3 rounded-lg border focus:ring-2 transition-colors ${
-                      passwordError
-                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                        : "border-gray-300 focus:ring-black focus:border-black"
-                    }`}
-                    required
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                {passwordError && (
-                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-                )}
-              </div>
-
-              <div className="flex space-x-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => navigate("/profile")}
-                  className="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-2"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || passwordError}
-                  className="flex-1 bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400 flex items-center justify-center shadow-md"
-                >
-                  {loading ? (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
+                  {({ isSubmitting }) => (
+                    <Form className="space-y-6">
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-2" htmlFor="currentPassword">
+                          Current Password
+                        </label>
+                        <div className="relative">
+                          <Field
+                            type={showCurrentPassword ? "text" : "password"}
+                            id="currentPassword"
+                            name="currentPassword"
+                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          >
+                            {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
+                          </button>
+                        </div>
+                        <ErrorMessage name="currentPassword" component="div" className="text-red-600 text-sm mt-1" />
+                      </div>
+                      
+                      <p className="text-gray-600 text-sm">
+                        We'll send a verification code to your email to confirm it's you.
+                      </p>
+                      
+                      <button
+                        type="submit"
+                        className="w-full bg-black text-white py-3 rounded-md font-medium hover:bg-gray-900 transition-colors duration-300"
+                        disabled={loading || isSubmitting}
+                        onClick={clearErrors}
                       >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Update Password
-                    </>
+                        {loading ? "Sending Verification Code..." : "Send Verification Code"}
+                      </button>
+                    </Form>
                   )}
-                </button>
-              </div>
-            </form>
+                </Formik>
+              )}
+              
+              {/* Step 2: Verify OTP */}
+              {step === 'verify' && (
+                <Formik
+                  initialValues={{ otp: '' }}
+                  validationSchema={Yup.object({
+                    otp: Yup.string().length(6, 'OTP must be 6 digits').required('OTP is required')
+                  })}
+                  onSubmit={(values, { setSubmitting }) => {
+                    handleVerifyOtp(values);
+                    setSubmitting(false);
+                  }}
+                >
+                  {({ isSubmitting }) => (
+                    <Form className="space-y-6">
+                      <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Verify Your Identity</h2>
+                        <p className="text-gray-600">
+                          Enter the 6-digit code sent to your email
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-center mb-2">
+                        <span className="text-xs text-gray-700 font-semibold">
+                          Code expires in: {Math.floor(otpTimer / 60)}:{otpTimer % 60 < 10 ? "0" + (otpTimer % 60) : otpTimer % 60}s
+                        </span>
+                        {otpTimer === 0 && (
+                          <span className="text-xs text-red-600 font-semibold mt-1">
+                            Code expired. Please request a new one.
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <Field
+                          type="text"
+                          name="otp"
+                          placeholder="Enter 6-digit code"
+                          maxLength="6"
+                          className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-center text-2xl tracking-widest"
+                          disabled={otpTimer === 0}
+                        />
+                        <ErrorMessage name="otp" component="div" className="text-red-600 text-sm mt-1" />
+                      </div>
+                      
+                      <div className="flex flex-col space-y-3">
+                        <button
+                          type="submit"
+                          className="w-full bg-black text-white py-3 rounded-md font-medium hover:bg-gray-900 transition-colors duration-300"
+                          disabled={loading || isSubmitting || otpTimer === 0}
+                        >
+                          {loading ? "Verifying..." : "Verify Code"}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={!canResend || loading}
+                          className="w-full bg-gray-200 text-black py-2 rounded-md hover:bg-gray-300 transition-colors duration-300 disabled:opacity-50"
+                        >
+                          {canResend ? "Resend Code" : `Resend Code in ${otpTimer}s`}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={handleResetFlow}
+                          className="text-gray-600 text-sm hover:underline"
+                        >
+                          Back to previous step
+                        </button>
+                      </div>
+                    </Form>
+                  )}
+                </Formik>
+              )}
+              
+              {/* Step 3: Set New Password */}
+              {step === 'reset' && (
+                <Formik
+                  initialValues={{ newPassword: '', confirmPassword: '' }}
+                  validationSchema={Yup.object({
+                    newPassword: Yup.string()
+                      .min(6, "Password must be at least 6 characters")
+                      .matches(
+                        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,}$/,
+                        'Password must be at least 6 characters and include uppercase, lowercase, and a number'
+                      )
+                      .required("Password is required"),
+                    confirmPassword: Yup.string()
+                      .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
+                      .required('Confirm password is required')
+                  })}
+                  onSubmit={(values, { setSubmitting }) => {
+                    handleChangePassword(values);
+                    setSubmitting(false);
+                  }}
+                >
+                  {({ isSubmitting }) => (
+                    <Form className="space-y-6">
+                      <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Set New Password</h2>
+                        <p className="text-gray-600">
+                          Create a strong password for your account
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-2" htmlFor="newPassword">
+                          New Password
+                        </label>
+                        <div className="relative">
+                          <Field
+                            type={showNewPassword ? "text" : "password"}
+                            id="newPassword"
+                            name="newPassword"
+                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                          >
+                            {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+                          </button>
+                        </div>
+                        <ErrorMessage name="newPassword" component="div" className="text-red-600 text-sm mt-1" />
+                        <p className="text-gray-500 text-xs mt-1">
+                          Password must be at least 6 characters and include uppercase, lowercase, and a number
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-2" htmlFor="confirmPassword">
+                          Confirm New Password
+                        </label>
+                        <div className="relative">
+                          <Field
+                            type={showConfirmPassword ? "text" : "password"}
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                          </button>
+                        </div>
+                        <ErrorMessage name="confirmPassword" component="div" className="text-red-600 text-sm mt-1" />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        className="w-full bg-black text-white py-3 rounded-md font-medium hover:bg-gray-900 transition-colors duration-300"
+                        disabled={loading || isSubmitting}
+                      >
+                        {loading ? "Updating Password..." : "Update Password"}
+                      </button>
+                    </Form>
+                  )}
+                </Formik>
+              )}
+            </div>
           )}
         </div>
       </div>

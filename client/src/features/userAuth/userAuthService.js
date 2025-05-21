@@ -72,6 +72,37 @@ const resendOTP = async (email) => {
   return response.data;
 };
 
+const checkUserStatus = async () => {
+  // Get the token from localStorage
+  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  
+  if (!userInfo || !userInfo.token) {
+    return { isBlocked: false }; // No user logged in
+  }
+  
+  try {
+    const config = {
+      headers: {
+        Authorization: `Bearer ${userInfo.token}`,
+      },
+    };
+    
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/profile/check-status`, 
+      config
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error checking user status:", error);
+    // If we get a 403 error, the user is likely blocked
+    if (error.response && error.response.status === 403) {
+      return { isBlocked: true };
+    }
+    return { isBlocked: false };
+  }
+};
+
 const userAuthService = {
   register,
   verifyOTP,
@@ -82,6 +113,7 @@ const userAuthService = {
   verifyForgotPasswordOtp,
   changePassword,
   resendOTP,
+  checkUserStatus
 };
 
 export default userAuthService;

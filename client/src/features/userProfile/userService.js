@@ -6,18 +6,15 @@ const API_URL = "http://localhost:5001/api/users/profile";
 //get user profile 
 
 const getUserProfile = async(token) =>{
-    console.log('getUserProfile service called with token:', token ? 'Token exists' : 'No token');
     const config ={
         headers:{
             Authorization:`Bearer ${token}`
         }
     }
-    console.log('Making API request to:', API_URL);
-    console.log('With headers:', config.headers);
+
     
     try {
         const response = await axios.get(API_URL, config);
-        console.log('getUserProfile response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error in getUserProfile service:', error.response?.data || error.message);
@@ -33,8 +30,6 @@ const updateProfile = async(userData,token) =>{
             Authorization:`Bearer ${token}`,
         }
     }
-    console.log('Sending update profile request to:', API_URL);
-    console.log('With data:', userData);
     const response = await axios.put(API_URL, userData, config);
     return response.data;
 }
@@ -63,15 +58,37 @@ const verifyEmailChange = async(otpData,token)=>{
     return response.data
 }
 
-//change password
-
-const changePassword = async(passwordData,token)=>{
+// Request OTP for password change
+const requestPasswordChangeOtp = async(passwordData, token) => {
     const config = {
-        headers:{
-            Authorization:`Bearer ${token}`
+        headers: {
+            Authorization: `Bearer ${token}`
         }
     }
-    const response = await axios.post(`${API_URL}/change-password`,passwordData,config)
+    const response = await axios.post(`${API_URL}/request-password-change-otp`, passwordData, config)
+    return response.data
+}
+
+// Verify OTP for password change
+const verifyPasswordChangeOtp = async(otpData, token) => {
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+    const response = await axios.post(`${API_URL}/verify-password-change-otp`, otpData, config)
+    return response.data
+}
+
+//change password
+
+const changePassword = async(passwordData, token) => {
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    }
+    const response = await axios.post(`${API_URL}/change-password`, passwordData, config)
     return response.data
 }
 
@@ -140,6 +157,8 @@ const userProfileService = {
   updateProfile,
   changeEmail,
   verifyEmailChange,
+  requestPasswordChangeOtp,
+  verifyPasswordChangeOtp,
   changePassword,
   getAddresses,
   addAddress,

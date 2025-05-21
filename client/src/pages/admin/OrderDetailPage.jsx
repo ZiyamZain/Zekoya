@@ -52,40 +52,37 @@ const OrderDetailPage = () => {
     dispatch(getOrderDetails(id));
   }, [dispatch, id]);
 
+
   useEffect(() => {
     if (order) {
       setSelectedStatus(order.orderStatus);
     }
   }, [order]);
 
-  // Handle status update validation and confirmation
   const handleStatusUpdateClick = () => {
     if (!newStatus) {
       toast.error('Please select a status');
       return;
     }
-    
-    // Clear previous errors
+
     setStatusError('');
-    
-    // Get the current status index and new status index
+
     const statusOrder = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
     const currentIndex = statusOrder.indexOf(order.orderStatus);
     const newIndex = statusOrder.indexOf(newStatus);
     
-    // Validate status change
+
     if (order.orderStatus === 'Delivered' && newStatus === 'Cancelled') {
       setStatusError('Cannot cancel an order that has been delivered');
       return;
     }
-    
-    // Prevent moving backwards in the flow (except for Cancelled)
+
     if (newIndex < currentIndex && newStatus !== 'Cancelled') {
       setStatusError(`Cannot change status from ${order.orderStatus} to ${newStatus}`);
       return;
     }
     
-    // Show confirmation modal
+
     setModalInfo({
       show: true,
       title: 'Confirm Status Update',
@@ -103,49 +100,6 @@ const OrderDetailPage = () => {
             setStatusNote('');
             setStatusError('');
             dispatch(getOrderDetails(id));
-            // Refresh the orders list after updating status
-            dispatch(refreshOrders());
-            setModalInfo(prev => ({ ...prev, show: false }));
-          })
-          .catch((error) => {
-            toast.error(error || 'Failed to update order status');
-            setModalInfo(prev => ({ ...prev, show: false }));
-          });
-      }
-    });
-  };
-  
-  // Legacy status change handler for the timeline buttons
-  const handleStatusChange = (status) => {
-    // Get the current status index and new status index
-    const statusOrder = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-    const currentIndex = statusOrder.indexOf(order.orderStatus);
-    const newIndex = statusOrder.indexOf(status);
-    
-    // Validate status change
-    if (order.orderStatus === 'Delivered' && status === 'Cancelled') {
-      toast.error('Cannot cancel an order that has been delivered');
-      return;
-    }
-    
-    // Prevent moving backwards in the flow (except for Cancelled)
-    if (newIndex < currentIndex && status !== 'Cancelled') {
-      toast.error(`Cannot change status from ${order.orderStatus} to ${status}`);
-      return;
-    }
-    
-    // Show confirmation modal
-    setModalInfo({
-      show: true,
-      title: 'Confirm Status Change',
-      message: `Are you sure you want to change the order status to ${status}?`,
-      onConfirm: () => {
-        dispatch(updateOrderStatus({ orderId: id, status }))
-          .unwrap()
-          .then(() => {
-            toast.success(`Order status updated to ${status}`);
-            dispatch(getOrderDetails(id));
-            // Refresh the orders list after updating status
             dispatch(refreshOrders());
             setModalInfo(prev => ({ ...prev, show: false }));
           })
@@ -157,7 +111,46 @@ const OrderDetailPage = () => {
     });
   };
 
-  // Handle direct cancel order action
+  const handleStatusChange = (status) => {
+
+    const statusOrder = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+    const currentIndex = statusOrder.indexOf(order.orderStatus);
+    const newIndex = statusOrder.indexOf(status);
+    
+    if (order.orderStatus === 'Delivered' && status === 'Cancelled') {
+      toast.error('Cannot cancel an order that has been delivered');
+      return;
+    }
+    
+
+    if (newIndex < currentIndex && status !== 'Cancelled') {
+      toast.error(`Cannot change status from ${order.orderStatus} to ${status}`);
+      return;
+    }
+    
+
+    setModalInfo({
+      show: true,
+      title: 'Confirm Status Change',
+      message: `Are you sure you want to change the order status to ${status}?`,
+      onConfirm: () => {
+        dispatch(updateOrderStatus({ orderId: id, status }))
+          .unwrap()
+          .then(() => {
+            toast.success(`Order status updated to ${status}`);
+            dispatch(getOrderDetails(id));
+            dispatch(refreshOrders());
+            setModalInfo(prev => ({ ...prev, show: false }));
+          })
+          .catch((error) => {
+            toast.error(error || 'Failed to update order status');
+            setModalInfo(prev => ({ ...prev, show: false }));
+          });
+      }
+    });
+  };
+
+
   const handleCancelOrderClick = () => {
     setModalInfo({
       show: true,
@@ -183,9 +176,8 @@ const OrderDetailPage = () => {
     });
   };
 
-  // Handle return request with confirmation
   const handleReturnRequest = (itemId, action, item) => {
-    // Calculate refund amount if accepting the return
+
     const refundAmount = action === 'accept' ? item.price * item.quantity : 0;
     
     setModalInfo({
@@ -208,7 +200,6 @@ This action will also add ${item.quantity} item(s) back to inventory.`
               toast.success('Return request rejected successfully');
             }
             dispatch(getOrderDetails(id));
-            // Refresh the orders list after processing a return request
             dispatch(refreshOrders());
             setModalInfo(prev => ({ ...prev, show: false }));
           })
@@ -245,7 +236,7 @@ This action will also add ${item.quantity} item(s) back to inventory.`
     );
   }
 
-  // Close modal handler
+
   const closeModal = () => {
     setModalInfo(prev => ({ ...prev, show: false }));
   };
@@ -402,7 +393,7 @@ This action will also add ${item.quantity} item(s) back to inventory.`
             </div>
           </div>
           
-          {/* Status Update Form */}
+
           <div className="mb-8 border-t border-gray-200">
             <div className="px-6 py-6 bg-gray-50">
               <h2 className="text-lg font-semibold mb-4">Update Order Status</h2>
@@ -460,10 +451,9 @@ This action will also add ${item.quantity} item(s) back to inventory.`
             </div>
           </div>
           
-          {/* Customer & Shipping Details */}
+
           <div className="px-6 py-6 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Customer Details */}
               <div>
                 <h2 className="text-lg font-semibold mb-4 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -485,7 +475,6 @@ This action will also add ${item.quantity} item(s) back to inventory.`
                 </div>
               </div>
 
-              {/* Shipping Address */}
               <div>
                 <h2 className="text-lg font-semibold mb-4 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -516,9 +505,9 @@ This action will also add ${item.quantity} item(s) back to inventory.`
               Order Items
             </h2>
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[500px]">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -530,17 +519,30 @@ This action will also add ${item.quantity} item(s) back to inventory.`
                   <tbody className="bg-white divide-y divide-gray-200">
                     {order.orderItems.map((item) => (
                       <tr key={item._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                        <td className="px-6 py-4">
+                          <div className="flex items-start">
                             <div className="flex-shrink-0 h-16 w-16">
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                className="h-16 w-16 object-cover rounded-md"
-                              />
+                              {item.product && item.product.images && item.product.images.length > 0 ? (
+                                <img
+                                  src={`http://localhost:5001${item.product.images[0]}`}
+                                  alt={item.product.name}
+                                  className="h-16 w-16 object-cover rounded-md"
+                                />
+                              ) : (
+                                <div className="h-16 w-16 bg-gray-200 flex items-center justify-center rounded-md">
+                                  <span className="text-xs text-gray-500">No image</span>
+                                </div>
+                              )}
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                            <div className="ml-4 flex-1">
+                              <div className="text-sm font-medium text-gray-900 break-words">{item.product?.name || 'Product name unavailable'}</div>
+                              <div className="text-xs text-gray-500 mt-1 break-words">
+                                {item.product?.description ? 
+                                  (item.product.description.length > 100 ? 
+                                    `${item.product.description.substring(0, 100)}...` : 
+                                    item.product.description) : 
+                                  'No description available'}
+                              </div>
                               {item.returnStatus === 'Requested' && (
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                   Return Requested
@@ -559,16 +561,10 @@ This action will also add ${item.quantity} item(s) back to inventory.`
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">₹{item.price}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{item.quantity}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">₹{item.price * item.quantity}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-6 py-4 text-sm text-gray-500">₹{item.price}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{item.quantity}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">₹{(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-right text-sm font-medium">
                           {item.returnStatus === 'Requested' && (
                             <div className="flex justify-end space-x-2">
                               <button

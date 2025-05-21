@@ -10,6 +10,7 @@ const initialState ={
     error:null,
     message:'',
     otpSent:false,
+    otpVerified:false,
 };
 
 //get user profile
@@ -71,6 +72,40 @@ export const verifyEmailChange = createAsyncThunk(
     try {
       const token = thunkAPI.getState().userAuth.userInfo.token;
       return await userProfileService.verifyEmailChange(otpData, token);
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Request OTP for password change
+export const sendPasswordChangeOtp = createAsyncThunk(
+  "userProfile/sendPasswordChangeOtp",
+  async (passwordData, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().userAuth.userInfo.token;
+      return await userProfileService.requestPasswordChangeOtp(passwordData, token);
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+// Verify OTP for password change
+export const verifyPasswordChangeOtp = createAsyncThunk(
+  "userProfile/verifyPasswordChangeOtp",
+  async (otpData, thunkAPI) => {
+    try {
+      const token = thunkAPI.getState().userAuth.userInfo.token;
+      return await userProfileService.verifyPasswordChangeOtp(otpData, token);
     } catch (error) {
       const message =
         error.response && error.response.data.message
@@ -194,6 +229,7 @@ const userProfileSlice = createSlice({
             state.error = null;
             state.message="";
             state.otpSent = false;
+            state.otpVerified = false;
         }
     },
 
@@ -250,13 +286,44 @@ const userProfileSlice = createSlice({
             state.loading = false;
             state.error = action.payload;
           })
+          // Send Password Change OTP
+          .addCase(sendPasswordChangeOtp.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+          })
+          .addCase(sendPasswordChangeOtp.fulfilled, (state, action) => {
+            state.loading = false;
+            state.otpSent = true;
+            state.message = action.payload.message;
+          })
+          .addCase(sendPasswordChangeOtp.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.payload;
+          })
+          // Verify Password Change OTP
+          .addCase(verifyPasswordChangeOtp.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+          })
+          .addCase(verifyPasswordChangeOtp.fulfilled, (state, action) => {
+            state.loading = false;
+            state.otpVerified = true;
+            state.message = action.payload.message;
+          })
+          .addCase(verifyPasswordChangeOtp.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.payload;
+          })
           // Change password
           .addCase(changePassword.pending, (state) => {
             state.loading = true;
+            state.error = null;
           })
           .addCase(changePassword.fulfilled, (state, action) => {
             state.loading = false;
             state.success = true;
+            state.otpSent = false;
+            state.otpVerified = false;
             state.message = action.payload.message;
           })
           .addCase(changePassword.rejected, (state, action) => {

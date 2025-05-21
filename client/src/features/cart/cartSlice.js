@@ -3,6 +3,7 @@ import cartService from "./cartService";
 
 const initialState = {
   cart: null,
+  hasUnavailableItems: false,
   isError: false,
   isSuccess: false,
   isLoading: false,
@@ -31,11 +32,39 @@ export const addToCart = createAsyncThunk(
       const token = thunkAPI.getState().userAuth.userInfo.token;
       return await cartService.addToCart(cartData, token);
     } catch (error) {
-      const message =
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message;
-      return thunkAPI.rejectWithValue(message);
+      // Handle different error types from the backend
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        
+        // If it's a duplicate item error, include the existing item ID in the error payload
+        if (errorData.errorType === 'duplicateItem') {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message,
+            errorType: errorData.errorType,
+            existingItem: errorData.existingItem
+          });
+        }
+        
+        // For other error types, just include the message and type
+        if (errorData.errorType) {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message,
+            errorType: errorData.errorType
+          });
+        }
+        
+        // For standard errors with just a message
+        if (errorData.message) {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message
+          });
+        }
+      }
+      
+      // Fallback for unexpected errors
+      return thunkAPI.rejectWithValue({
+        message: error.message || 'An unexpected error occurred'
+      });
     }
   }
 );
@@ -48,11 +77,39 @@ export const updateCartItem = createAsyncThunk(
       const token = thunkAPI.getState().userAuth.userInfo.token;
       return await cartService.updateCartItem(itemData, token);
     } catch (error) {
-      const message =
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message;
-      return thunkAPI.rejectWithValue(message);
+      // Handle different error types from the backend
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        
+        // If it's a maximum quantity error, include the max quantity in the error payload
+        if (errorData.errorType === 'maxQuantity') {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message,
+            errorType: errorData.errorType,
+            maxQuantity: errorData.maxQuantity
+          });
+        }
+        
+        // For other error types, just include the message and type
+        if (errorData.errorType) {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message,
+            errorType: errorData.errorType
+          });
+        }
+        
+        // For standard errors with just a message
+        if (errorData.message) {
+          return thunkAPI.rejectWithValue({
+            message: errorData.message
+          });
+        }
+      }
+      
+      // Fallback for unexpected errors
+      return thunkAPI.rejectWithValue({
+        message: error.message || 'An unexpected error occurred'
+      });
     }
   }
 );
@@ -96,7 +153,8 @@ export const cartSlice = createSlice({
       .addCase(getCart.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.cart = action.payload;
+        state.cart = action.payload.cart;
+        state.hasUnavailableItems = action.payload.hasUnavailableItems;
       })
       .addCase(getCart.rejected, (state, action) => {
         state.isLoading = false;
@@ -109,12 +167,22 @@ export const cartSlice = createSlice({
       .addCase(addToCart.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.cart = action.payload;
+        state.cart = action.payload.cart;
+        state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
-        state.message = action.payload;
+        // Handle different error payload formats
+        if (action.payload && typeof action.payload === 'object') {
+          state.message = action.payload.message || 'Error adding to cart';
+          state.errorType = action.payload.errorType || null;
+          state.errorData = action.payload;
+        } else {
+          state.message = action.payload || 'Error adding to cart';
+          state.errorType = null;
+          state.errorData = null;
+        }
       })
       .addCase(updateCartItem.pending, (state) => {
         state.isLoading = true;
@@ -122,12 +190,22 @@ export const cartSlice = createSlice({
       .addCase(updateCartItem.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.cart = action.payload;
+        state.cart = action.payload.cart;
+        state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
       })
       .addCase(updateCartItem.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
-        state.message = action.payload;
+        // Handle different error payload formats
+        if (action.payload && typeof action.payload === 'object') {
+          state.message = action.payload.message || 'Error updating cart';
+          state.errorType = action.payload.errorType || null;
+          state.errorData = action.payload;
+        } else {
+          state.message = action.payload || 'Error updating cart';
+          state.errorType = null;
+          state.errorData = null;
+        }
       })
       .addCase(removeFromCart.pending, (state) => {
         state.isLoading = true;
@@ -135,7 +213,8 @@ export const cartSlice = createSlice({
       .addCase(removeFromCart.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.cart = action.payload;
+        state.cart = action.payload.cart;
+        state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
       })
       .addCase(removeFromCart.rejected, (state, action) => {
         state.isLoading = false;

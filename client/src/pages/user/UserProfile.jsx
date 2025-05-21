@@ -3,6 +3,8 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { getUserProfile, getAddresses, setDefaultAddress, deleteAddress, resetUserProfile } from "../../features/userProfile/userProfileSlice";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import { FaWhatsapp, FaTwitter, FaCopy, FaClipboard, FaPlus } from "react-icons/fa";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
@@ -106,12 +108,12 @@ const UserProfile = () => {
                     </svg>
                   </div>
                   <div className="text-2xl font-bold text-white mb-1">
-                    ${user.walletBalance ? user.walletBalance.toFixed(2) : '0.00'}
+                    ₹{user?.walletBalance ? user.walletBalance.toFixed(2) : '0.00'}
                   </div>
                   <div className="text-xs text-gray-300">
                     Available for purchases and refunds
                   </div>
-                  {user.walletHistory && user.walletHistory.length > 0 && (
+                  {user?.walletHistory && user?.walletHistory.length > 0 && (
                     <Link to="/wallet/history" className="text-xs text-blue-300 hover:text-blue-200 mt-2 inline-block">
                       View transaction history →
                     </Link>
@@ -176,6 +178,112 @@ const UserProfile = () => {
 
               {/* Main content with addresses */}
               <div className="md:w-2/3 p-8">
+                {/* Referral Section */}
+                <div className="mb-8 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <div className="border-b border-gray-100 bg-gray-50 px-6 py-4">
+                    <h3 className="text-xl font-semibold text-gray-800">Refer & Earn</h3>
+                  </div>
+                  
+                  <div className="p-6">
+                    {user?.referralCode ? (
+                      <div>
+                        <div className="flex flex-col md:flex-row gap-6 mb-6">
+                          <div className="flex-1">
+                            <p className="text-gray-700 mb-4">
+                              Share your referral code with friends. You get ₹100 and your friend gets ₹50 in wallet credits.
+                            </p>
+                            
+                            <div className="mb-5">
+                              <label className="block text-sm font-medium text-gray-600 mb-2">
+                                Your Referral Code
+                              </label>
+                              <div className="flex items-center">
+                                <div className="flex-1 bg-gray-50 p-3 rounded-l-md font-mono text-lg border border-r-0 border-gray-200">
+                                  {user.referralCode}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(user.referralCode);
+                                    toast.success("Referral code copied to clipboard!");
+                                  }}
+                                  className="bg-black text-white px-4 py-3 rounded-r-md hover:bg-gray-800 transition flex items-center"
+                                >
+                                  <FaCopy className="mr-2" />
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          <button
+                            onClick={() => {
+                              const referralLink = `${window.location.origin}/register?ref=${user.referralCode}`;
+                              navigator.clipboard.writeText(referralLink);
+                              toast.success("Referral link copied to clipboard!");
+                            }}
+                            className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition flex items-center"
+                          >
+                            <FaClipboard className="mr-2" />
+                            Copy Link
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const referralLink = `${window.location.origin}/register?ref=${user.referralCode}`;
+                              window.open(`https://wa.me/?text=Join me on Zekoya! Use my referral code ${user.referralCode} to sign up and get exclusive discounts! ${referralLink}`, '_blank');
+                              toast.success("Sharing on WhatsApp!");
+                            }}
+                            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition flex items-center"
+                          >
+                            <FaWhatsapp className="mr-2" />
+                            WhatsApp
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const referralLink = `${window.location.origin}/register?ref=${user.referralCode}`;
+                              window.open(`https://twitter.com/intent/tweet?text=Join me on Zekoya! Use my referral code ${user.referralCode} to sign up and get exclusive discounts!&url=${encodeURIComponent(referralLink)}`, '_blank');
+                              toast.success("Sharing on Twitter!");
+                            }}
+                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition flex items-center"
+                          >
+                            <FaTwitter className="mr-2" />
+                            Twitter
+                          </button>
+                        </div>
+                        
+                        {user?.referralCount > 0 && (
+                          <div className="mt-6 border-t border-gray-100 pt-6">
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="text-gray-700 font-medium">Total Referrals</div>
+                                  <div className="text-gray-500">{user.referralCount} successful {user.referralCount === 1 ? 'referral' : 'referrals'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500 text-sm">Total Earned</div>
+                                  <div className="text-2xl font-bold text-gray-800">₹{user.referralCount * 100}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
+                        <p className="text-gray-700 flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          Your referral code is being generated...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="mb-8">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-bold text-gray-800">My Addresses</h3>
@@ -183,9 +291,7 @@ const UserProfile = () => {
                       to="/profile/addresses/add"
                       className="bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition flex items-center shadow-md"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
+                      <FaPlus className="h-4 w-4 mr-2" />
                       Add New Address
                     </Link>
                   </div>
@@ -244,7 +350,7 @@ const UserProfile = () => {
                                 onClick={() => handleDeleteAddress(address._id)}
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
                                 </svg>
                                 Delete
                               </button>
@@ -269,7 +375,7 @@ const UserProfile = () => {
                         className="bg-black text-white py-3 px-6 rounded-lg hover:bg-gray-800 transition inline-flex items-center shadow-md"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 01-1 1h-3a1 1 0 110-2h3V9a1 1 0 011-1z" clipRule="evenodd" />
                         </svg>
                         Add Your First Address
                       </Link>

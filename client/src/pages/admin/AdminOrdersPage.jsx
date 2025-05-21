@@ -10,6 +10,7 @@ const AdminOrdersPage = () => {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
   const [statusFilter, setStatusFilter] = useState('');
@@ -22,10 +23,12 @@ const AdminOrdersPage = () => {
       limit: ordersPerPage,
       sort: sortField,
       order: sortDirection,
-      search: searchTerm,
+      search: appliedSearchTerm,
       status: statusFilter
     }));
-  }, [dispatch, currentPage, sortField, sortDirection, searchTerm, statusFilter]);
+  }, [dispatch, currentPage, sortField, sortDirection, appliedSearchTerm, statusFilter]);
+  
+
   
   const handleSort = (field) => {
     if (field === sortField) {
@@ -38,11 +41,14 @@ const AdminOrdersPage = () => {
   
   const handleSearch = (e) => {
     e.preventDefault();
+    // Only apply search if form is submitted (Enter key or search button click)
+    setAppliedSearchTerm(searchTerm);
     setCurrentPage(1);
   };
   
   const clearSearch = () => {
     setSearchTerm('');
+    setAppliedSearchTerm('');
     setCurrentPage(1);
   };
   
@@ -94,11 +100,11 @@ const AdminOrdersPage = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="w-full md:w-1/3">
-              <form onSubmit={handleSearch} className="relative">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Search by Order ID or Customer Name"
-                  className="w-full p-3 border border-gray-300 rounded-md pr-10"
+                  className="w-full p-3 border border-gray-300 rounded-md pr-20"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -112,12 +118,13 @@ const AdminOrdersPage = () => {
                   </button>
                 )}
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSearch}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   <FaSearch />
                 </button>
-              </form>
+              </div>
             </div>
             
             <div className="w-full md:w-1/4">

@@ -18,9 +18,7 @@ export const getAllOrders = createAsyncThunk(
   "adminOrder/getAll",
   async (params, thunkAPI) => {
     try {
-      console.log('getAllOrders thunk called with params:', params);
       const result = await adminOrderService.getAllOrders(params);
-      console.log('getAllOrders thunk result:', result);
       return result;
     } catch (error) {
       console.error('getAllOrders thunk error:', error);

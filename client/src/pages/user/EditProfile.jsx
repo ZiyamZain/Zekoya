@@ -24,7 +24,7 @@ const EditProfile = () => {
     phone: "",
   });
   
-  // Image cropping states
+
   const [profileImage, setProfileImage] = useState(null);
   const [imageSrc, setImageSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -69,7 +69,7 @@ const EditProfile = () => {
         return;
       }
       
-      // Use FileReader to read the file as data URL
+
       const reader = new FileReader();
       reader.onload = () => {
         setImageSrc(reader.result);
@@ -79,7 +79,7 @@ const EditProfile = () => {
       };
       reader.readAsDataURL(file);
       
-      // Also store the original file as a fallback if cropping fails
+
       setProfileImage(file);
     }
   };
@@ -99,7 +99,7 @@ const EditProfile = () => {
         const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
         console.log('Cropped image blob:', croppedImageBlob);
         
-        // Ensure we have a valid Blob with the correct type
+
         if (!(croppedImageBlob instanceof Blob)) {
           throw new Error("Failed to create a valid image blob");
         }

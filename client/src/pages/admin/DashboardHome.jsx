@@ -1,31 +1,69 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import {
   MdPeople,
   MdShoppingCart,
   MdAttachMoney,
   MdPendingActions,
+  MdBarChart,
+  MdArrowForward,
 } from "react-icons/md";
+import { FaFileAlt } from "react-icons/fa";
+import { getDashboardStats } from "../../features/report/reportSlice";
+import Spinner from "../../components/Spinner";
 
 const Dashboard = () => {
-  const stats = [
-    { label: "Total Users", value: "29", icon: <MdPeople size={24} /> },
-    { label: "Items Sold", value: "19", icon: <MdShoppingCart size={24} /> },
+  const dispatch = useDispatch();
+  const { adminInfo } = useSelector((state) => state.adminAuth);
+  const { reports, isLoading } = useSelector((state) => state.report);
+  
+  const [stats, setStats] = useState([
+    { label: "Total Users", value: "--", icon: <MdPeople size={24} /> },
+    { label: "Items Sold", value: "--", icon: <MdShoppingCart size={24} /> },
     {
       label: "Total Sales",
-      value: "₹999,156",
+      value: "₹--",
       icon: <MdAttachMoney size={24} />,
     },
     {
       label: "Pending Orders",
-      value: "12",
+      value: "--",
       icon: <MdPendingActions size={24} />,
     },
-  ];
-
-  // Placeholder product data to populate the table
-  const products = [
+  ]);
   
-  ];
+  // Recent orders to populate the table
+  const [recentOrders, setRecentOrders] = useState([]);
+  
+  useEffect(() => {
+    if (adminInfo) {
+      dispatch(getDashboardStats());
+    }
+  }, [dispatch, adminInfo]);
+  
+  useEffect(() => {
+    if (reports?.stats) {
+      const { today, week, month, recentOrders } = reports.stats;
+      
+      setStats([
+        { label: "Total Users", value: reports.stats.userCount || "--", icon: <MdPeople size={24} /> },
+        { label: "Monthly Orders", value: month?.orders || "--", icon: <MdShoppingCart size={24} /> },
+        {
+          label: "Monthly Revenue",
+          value: `₹${month?.revenue?.toFixed(2) || "--"}`,
+          icon: <MdAttachMoney size={24} />,
+        },
+        {
+          label: "Pending Orders",
+          value: reports.stats.pendingOrders || "--",
+          icon: <MdPendingActions size={24} />,
+        },
+      ]);
+      
+      setRecentOrders(recentOrders || []);
+    }
+  }, [reports]);
 
   return (
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
@@ -39,138 +77,144 @@ const Dashboard = () => {
             Overview of your store's performance
           </p>
         </div>
+        <Link
+          to="/admin/sales-report"
+          className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+        >
+          <MdBarChart className="mr-2" />
+          View Sales Report
+        </Link>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-xl shadow-md p-6 flex items-center justify-between transition-all duration-200 hover:shadow-lg"
-          >
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {stat.value}
-              </p>
-            </div>
-            <div className="text-gray-400 group-hover:text-gray-600">
-              {stat.icon}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Products Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Top Sold Products</h2>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-32">
+          <Spinner />
         </div>
-
-        {products.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No products found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-md p-6 flex items-center justify-between transition-all duration-200 hover:shadow-lg"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {stat.value}
+                </p>
+              </div>
+              <div className="bg-indigo-100 p-3 rounded-full">{stat.icon}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Recent Orders */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-medium text-gray-900">Recent Orders</h2>
+            <p className="text-sm text-gray-500 mt-1">Latest transactions</p>
+          </div>
+          <Link
+            to="/admin/orders"
+            className="flex items-center text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            View All <MdArrowForward className="ml-1" />
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <Spinner />
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Order ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Brand
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Revenue
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Qty Sold
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Action
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product, index) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{product.id}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-12 h-12 object-cover rounded-md border border-gray-200"
-                        />
-                        <span className="text-sm font-medium text-gray-900">
-                          {product.name}
+                {recentOrders.length > 0 ? (
+                  recentOrders.map((order) => (
+                    <tr key={order._id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {order.orderId || `#${order._id.substring(order._id.length - 6)}`}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {order.user?.name || 'Guest'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ₹{order.totalPrice.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : order.status === 'shipped' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}
+                        >
+                          {order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : 'Pending'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {product.brand}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {product.amount}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {product.revenue}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{product.qty}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <Link
+                          to={`/admin/orders/${order._id}`} // Keep using _id for the link as the route likely expects the MongoDB ID
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          <FaFileAlt />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                      No recent orders found
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {products.length > 0 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing <span className="font-medium">{products.length}</span> of{" "}
-              <span className="font-medium">10</span> products
-            </div>
-            <div className="flex space-x-2">
-              <button
-                disabled={true}
-                className="px-3 py-1 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button className="px-3 py-1 rounded-md bg-gradient-to-r from-red-500 to-orange-400 text-white">
-                1
-              </button>
-              <button className="px-3 py-1 rounded-md bg-white text-gray-700 hover:bg-gray-100 border border-gray-300">
-                2
-              </button>
-              <button className="px-3 py-1 rounded-md bg-white text-gray-700 hover:bg-gray-100 border border-gray-300">
-                3
-              </button>
-              <button className="px-3 py-1 rounded-md bg-white text-gray-700 hover:bg-gray-100 border border-gray-300">
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

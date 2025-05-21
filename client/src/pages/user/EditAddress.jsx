@@ -1,16 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
-  getUserProfile,
   updateAddress,
   resetUserProfile,
+  getUserProfile
 } from "../../features/userProfile/userProfileSlice";
+import { FaMapMarkerAlt, FaSave, FaTimes } from "react-icons/fa";
+import { toast } from "react-toastify";
+import debounce from "lodash/debounce";
+import {
+  fetchAddressSuggestions,
+  fetchAddressFromCoords,
+} from "../../utils/nominatimService.js";
 
 const EditAddress = () => {
-  const { addressId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const queryParams = new URLSearchParams(location.search);
+  const returnUrl = queryParams.get("returnUrl");
+  const { addressId } = useParams(); // Get addressId from URL params
 
   const { userInfo } = useSelector((state) => state.userAuth);
   const { user, loading, error, success } = useSelector(
@@ -28,13 +39,20 @@ const EditAddress = () => {
     country: "India",
     isDefault: false,
   });
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     if (!userInfo) {
       navigate("/login");
-    } else if (!user) {
+      return;
+    }
+
+    // Fetch user profile data if not already loaded
+    if (!user) {
       dispatch(getUserProfile());
     } else {
+      // Load existing address data once user data is available
       const address = user.addresses.find((addr) => addr._id === addressId);
       if (address) {
         setFormData({
@@ -49,47 +67,200 @@ const EditAddress = () => {
           isDefault: address.isDefault || false,
         });
       } else {
-        navigate("/profile");
+        toast.error("Address not found");
+        navigate(returnUrl || "/profile");
       }
     }
-  }, [dispatch, navigate, userInfo, user, addressId]);
+  }, [userInfo, navigate, user, addressId, dispatch, returnUrl]);
 
   useEffect(() => {
     if (success) {
       dispatch(resetUserProfile());
-      navigate("/profile");
+      navigate(returnUrl || "/profile");
     }
-  }, [success, dispatch, navigate]);
+  }, [success, dispatch, navigate, returnUrl]);
 
-  const handleChange = (e) => {
-    const value =
-      e.target.type === "checkbox" ? e.target.checked : e.target.value;
+  const fetchSuggestions = useCallback(
+    debounce(async (query) => {
+      try {
+        const data = await fetchAddressSuggestions(query);
+        setSuggestions(data);
+      } catch (error) {
+        toast.error("Error fetching address suggestions");
+        setSuggestions([]);
+      }
+    }, 500),
+    []
+  );
+
+  const handleAddressInput = (e) => {
+    const query = e.target.value;
+    setFormData({ ...formData, addressLine1: query });
+    fetchSuggestions(query);
+  };
+
+  const handleSuggestionSelect = (suggestion) => {
     setFormData({
       ...formData,
-      [e.target.name]: value,
+      addressLine1:
+        suggestion.address.house_number ||
+        suggestion.address.road ||
+        suggestion.display_name.split(",")[0] ||
+        "",
+      city:
+        suggestion.address.city ||
+        suggestion.address.town ||
+        suggestion.address.village ||
+        "",
+      state: suggestion.address.state || "",
+      postalCode: suggestion.address.postcode || "",
+      country: suggestion.address.country || "India",
     });
+
+    setSuggestions([]);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "phone") {
+      const phoneRegex = /^[0-9]{0,10}$/;
+      if (!phoneRegex.test(value)) return;
+    }
+    if (name === "postalCode") {
+      const postalCodeRegex = /^[0-9]{0,6}$/;
+      if (!phoneRegex.test(value)) return;
+    }
+    const newValue = e.target.type === "checkbox" ? e.target.checked : value;
+    setFormData({
+      ...formData,
+      [name]: newValue,
+    });
+  };
+
+  const handleCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          const data = await fetchAddressFromCoords(latitude, longitude);
+          if (data) {
+            setFormData({
+              ...formData,
+              addressLine1:
+                data.address.house_number ||
+                data.address.road ||
+                data.display_name.split(",")[0] ||
+                "",
+              city:
+                data.address.city ||
+                data.address.town ||
+                data.address.village ||
+                "",
+              state: data.address.state || "",
+              postalCode: data.address.postcode || "",
+              country: data.address.country || "India",
+            });
+          } else {
+            toast.error("Unable to retrieve address from location");
+          }
+        } catch (error) {
+          toast.error("Error fetching location data");
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        toast.error(
+          "Unable to retrieve your location. Please allow location access."
+        );
+        setIsFetchingLocation(false);
+      }
+    );
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      toast.error("Phone number must be 10 digits");
+      return;
+    }
+
+    const postalCodeRegex = /^[0-9]{6}$/;
+    if (!postalCodeRegex.test(formData.postalCode)) {
+      toast.error("Postal code must be 6 digits");
+      return;
+    }
+
     dispatch(updateAddress({ addressId: addressId, addressData: formData }));
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Edit Address</h1>
+    <div className="bg-gray-50 min-h-screen pb-12">
+      <div className="bg-black text-white">
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-4xl font-bold mb-2">Edit Address</h1>
+          <p className="text-gray-300">
+            Update your shipping or billing address
+          </p>
+        </div>
+      </div>
 
-      <div className="max-w-2xl mx-auto bg-white shadow-md rounded-lg overflow-hidden p-6">
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
+      <div className="container mx-auto px-4 -mt-8">
+        <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-xl overflow-hidden">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 m-6 rounded-md">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-gray-100 text-black rounded-full flex items-center justify-center mr-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Address Details
+                </h2>
+                <p className="text-gray-600">
+                  Update the information below to edit your address
+                </p>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-gray-700 mb-2" htmlFor="name">
+              <label
+                className="block text-gray-700 font-medium mb-2"
+                htmlFor="name"
+              >
                 Full Name
               </label>
               <input
@@ -98,13 +269,16 @@ const EditAddress = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2" htmlFor="phone">
+              <label
+                className="block text-gray-700 font-medium mb-2"
+                htmlFor="phone"
+              >
                 Phone Number
               </label>
               <input
@@ -113,136 +287,225 @@ const EditAddress = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
                 required
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-gray-700 mb-2" htmlFor="addressLine1">
-              Address Line 1
-            </label>
-            <input
-              type="text"
-              id="addressLine1"
-              name="addressLine1"
-              value={formData.addressLine1}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 mb-2" htmlFor="addressLine2">
-              Address Line 2 (Optional)
-            </label>
-            <input
-              type="text"
-              id="addressLine2"
-              name="addressLine2"
-              value={formData.addressLine2}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-700 mb-2" htmlFor="city">
-                City
+            <div className="relative">
+              <label
+                className="block text-gray-700 font-medium mb-2"
+                htmlFor="addressLine1"
+              >
+                Address Line 1
               </label>
               <input
                 type="text"
-                id="city"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
+                id="addressLine1"
+                name="addressLine1"
+                value={formData.addressLine1}
+                onChange={handleAddressInput}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                placeholder="Street address, P.O. box, company name"
                 required
               />
+              {suggestions.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
+                  {suggestions.map((suggestion) => (
+                    <li
+                      key={suggestion.place_id}
+                      onClick={() => handleSuggestionSelect(suggestion)}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {suggestion.display_name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={handleCurrentLocation}
+                disabled={isFetchingLocation}
+                className="mt-2 text-indigo-600 hover:text-indigo-800 flex items-center"
+              >
+                <FaMapMarkerAlt className="mr-2" />
+                {isFetchingLocation
+                  ? "Fetching Location..."
+                  : "Use Current Location"}
+              </button>
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2" htmlFor="state">
-                State
+              <label
+                className="block text-gray-700 font-medium mb-2"
+                htmlFor="addressLine2"
+              >
+                Address Line 2{" "}
+                <span className="text-gray-500 font-normal">(Optional)</span>
               </label>
               <input
                 type="text"
-                id="state"
-                name="state"
-                value={formData.state}
+                id="addressLine2"
+                name="addressLine2"
+                value={formData.addressLine2}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
-                required
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                placeholder="Apartment, suite, unit, building, floor, etc."
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-700 mb-2" htmlFor="postalCode">
-                Postal Code
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  className="block text-gray-700 font-medium mb-2"
+                  htmlFor="city"
+                >
+                  City
+                </label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block text-gray-700 font-medium mb-2"
+                  htmlFor="state"
+                >
+                  State / Province
+                </label>
+                <input
+                  type="text"
+                  id="state"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  className="block text-gray-700 font-medium mb-2"
+                  htmlFor="postalCode"
+                >
+                  Postal / ZIP Code
+                </label>
+                <input
+                  type="text"
+                  id="postalCode"
+                  name="postalCode"
+                  value={formData.postalCode}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block text-gray-700 font-medium mb-2"
+                  htmlFor="country"
+                >
+                  Country
+                </label>
+                <input
+                  type="text"
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center mt-4">
               <input
-                type="text"
-                id="postalCode"
-                name="postalCode"
-                value={formData.postalCode}
+                type="checkbox"
+                id="isDefault"
+                name="isDefault"
+                checked={formData.isDefault}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
-                required
+                className="h-5 w-5 text-black focus:ring-black border-gray-300 rounded"
               />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 mb-2" htmlFor="country">
-                Country
+              <label
+                htmlFor="isDefault"
+                className="ml-2 block text-gray-700 font-medium"
+              >
+                Set as default address
               </label>
-              <input
-                type="text"
-                id="country"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-black"
-                required
-              />
             </div>
-          </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="isDefault"
-              name="isDefault"
-              checked={formData.isDefault}
-              onChange={handleChange}
-              className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-            />
-            <label htmlFor="isDefault" className="ml-2 block text-gray-700">
-              Set as default address
-            </label>
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              type="button"
-              onClick={() => navigate("/profile")}
-              className="flex-1 py-2 px-4 border border-gray-300 rounded hover:bg-gray-100 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-black text-white py-2 px-4 rounded hover:bg-gray-800 transition disabled:bg-gray-400"
-            >
-              {loading ? "Updating..." : "Update Address"}
-            </button>
-          </div>
-        </form>
+            <div className="flex space-x-4 pt-6 border-t border-gray-100 mt-6">
+              <button
+                type="button"
+                onClick={() => navigate(returnUrl || "/profile")}
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center"
+              >
+                <FaTimes className="h-5 w-5 mr-2" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-400 flex items-center justify-center shadow-md"
+              >
+                {loading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <FaSave className="h-5 w-5 mr-2" />
+                    Update Address
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className="text-center mt-4 text-gray-500 text-sm">
+          Powered by{" "}
+          <a
+            href="https://www.openstreetmap.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-600 hover:underline"
+          >
+            OpenStreetMap
+          </a>
+        </div>
       </div>
     </div>
   );

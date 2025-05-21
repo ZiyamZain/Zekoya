@@ -10,12 +10,15 @@ import {
 } from "../../features/userAuth/userAuthSlice.js";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const UserRegister = () => {
   const [otpTimer, setOtpTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [lastRegisterValues, setLastRegisterValues] = useState(null); // for resend
   const [resendSuccess, setResendSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userInfo, userId, otpSent, loading, error } = useSelector(
@@ -110,7 +113,6 @@ const UserRegister = () => {
 
   const handleGoogleSignIn = async (response) => {
     try {
-      // Use googleLogin instead of googleSignIn, send the credential as { token }
       dispatch(googleLogin({ token: response.credential }));
     } catch (error) {
       console.error("Error handling Google sign-in:", error);
@@ -134,8 +136,17 @@ const UserRegister = () => {
       .required("Email is required"),
     password: Yup.string()
       .min(6, "Password must be at least 6 characters")
-      .matches(/^\S*$/, "Password must not contain spaces")
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/,
+        'Password must be at least 6 characters and include uppercase, lowercase, and a number'
+      )
       .required("Password is required"),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref('password'), null], 'Passwords must match')
+      .required('Confirm password is required'),
+    referralCode: Yup.string()
+      .trim()
+      .matches(/^$|^ZK[A-Z0-9]{8}$/, 'Invalid referral code format')
   });
 
   const otpSchema = Yup.object({
@@ -144,7 +155,6 @@ const UserRegister = () => {
       .required("OTP is required"),
   });
 
-  // Resend OTP handler
   const handleResendOtp = async () => {
     if (lastRegisterValues && lastRegisterValues.email) {
       setResendSuccess("");
@@ -192,7 +202,7 @@ const UserRegister = () => {
           )}
           {!otpSent ? (
             <Formik
-              initialValues={{ name: "", email: "", password: "", otp: "" }}
+              initialValues={{ name: "", email: "", password: "", confirmPassword: "", referralCode: "", otp: "" }}
               validationSchema={registerSchema}
               onSubmit={(values) => {
                 setLastRegisterValues(values); // for resend
@@ -201,6 +211,7 @@ const UserRegister = () => {
                     name: values.name,
                     email: values.email,
                     password: values.password,
+                    referralCode: values.referralCode
                   })
                 );
               }}
@@ -230,22 +241,66 @@ const UserRegister = () => {
                       component="div"
                       className="text-red-600 text-sm"
                     />
-                    <Field
-                      type="password"
-                      name="password"
-                      placeholder="PASSWORD"
-                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
-                    />
+                    <div className="relative">
+                      <Field
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        placeholder="PASSWORD"
+                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
                     <ErrorMessage
                       name="password"
                       component="div"
                       className="text-red-600 text-sm"
                     />
+                    <div className="relative">
+                      <Field
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        placeholder="CONFIRM PASSWORD"
+                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
+                    <ErrorMessage
+                      name="confirmPassword"
+                      component="div"
+                      className="text-red-600 text-sm"
+                    />
+
+                    {/* Referral Code Field */}
+                    <div className="relative">
+                      <Field
+                        type="text"
+                        name="referralCode"
+                        placeholder="REFERRAL CODE (OPTIONAL)"
+                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
+                      />
+                      <ErrorMessage
+                        name="referralCode"
+                        component="div"
+                        className="text-red-600 text-sm"
+                      />
+                    </div>
                   </div>
                   <button
                     type="submit"
                     className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300 disabled:bg-gray-400"
-                    disabled={loading || isSubmitting}
+                    disabled={loading}
                   >
                     {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
                   </button>
