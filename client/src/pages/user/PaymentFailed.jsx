@@ -25,25 +25,22 @@ const PaymentFailed = () => {
     }
   }, [dispatch, id]);
 
-  // Cleanup effect - clear order state when component unmounts
+
   useEffect(() => {
     return () => {
-      // Clear order state when component unmounts
+
       dispatch(clearOrder());
-      console.log("PaymentFailed component unmounted, clearing order state");
+
     };
   }, [dispatch]);
 
-  // Load Razorpay script
   const loadRazorpayScript = useCallback(() => {
     return new Promise((resolve) => {
-      // Check if script already exists
       if (
         document.querySelector(
           'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
         )
       ) {
-        console.log("Razorpay script already loaded");
         resolve(true);
         return;
       }
@@ -52,7 +49,7 @@ const PaymentFailed = () => {
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
       script.onload = () => {
-        console.log("Razorpay script loaded successfully");
+
         resolve(true);
       };
       script.onerror = () => {
@@ -63,7 +60,7 @@ const PaymentFailed = () => {
     });
   }, []);
 
-  // Handle retry payment
+
   const handleRetryPayment = async () => {
     if (!order || !id) {
       toast.error("Order information not available");
@@ -71,18 +68,16 @@ const PaymentFailed = () => {
     }
 
     try {
-      // Load Razorpay script
+
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         toast.error("Failed to load payment gateway. Please try again.");
         return;
       }
 
-      // Get Razorpay key
       const keyResponse = await API.get("/api/payments/razorpay-key");
       const keyId = keyResponse.data.key_id;
 
-      // Create Razorpay order
       const orderResponse = await API.post("/api/payments/create-order", {
         amount: order.totalPrice,
         currency: "INR",
@@ -136,7 +131,6 @@ const PaymentFailed = () => {
         },
         modal: {
           ondismiss: function () {
-            console.log("Payment modal dismissed");
             toast.info("Payment cancelled. You can try again later.");
           },
         },

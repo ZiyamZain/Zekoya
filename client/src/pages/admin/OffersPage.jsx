@@ -12,11 +12,7 @@ const OffersPage = () => {
   const location = useLocation();
   const path = location.pathname;
   
-  useEffect(() => {
-    console.log('Current path:', path);
-  }, [path]);
 
-  // Determine which tab should be active based on the current path
   const getTabValue = () => {
     if (path.includes('/admin/offers/product')) return 0;
     if (path.includes('/admin/offers/category')) return 1;
@@ -36,7 +32,7 @@ const OffersPage = () => {
     }
   };
 
-  // Redirect to product offers if we're at the root /admin/offers path
+
   useEffect(() => {
     if (path === '/admin/offers') {
       navigate('/admin/offers/product');

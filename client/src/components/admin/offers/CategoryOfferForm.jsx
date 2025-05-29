@@ -12,12 +12,10 @@ import {
   clearCategoryOffer,
 } from "../../../features/adminSide/offers/categoryOfferSlice";
 
-// We'll need to fetch categories for the dropdown
+
 import { getCategories } from "../../../features/adminSide/categories/categorySlice";
 
 const CategoryOfferForm = () => {
-  console.log('CategoryOfferForm component mounted');
-  
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();

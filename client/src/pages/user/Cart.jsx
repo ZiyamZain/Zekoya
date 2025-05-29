@@ -117,7 +117,9 @@ const Cart = () => {
     if (!cart || !cart.items || cart.items.length === 0) return 0;
 
     return cart.items.reduce((total, item) => {
-      return total + item.product.price * item.quantity;
+      // Add null check for item and item.product
+      if (!item || !item.product) return total;
+      return total + (item.product.price * item.quantity);
     }, 0);
   };
   
@@ -125,7 +127,7 @@ const Cart = () => {
   const calculateDiscountedSubtotal = () => {
     if (!cart || !cart.items || cart.items.length === 0) return 0;
     
-    return calculateSubtotal() - offerDiscountAmount;
+    return calculateSubtotal() - (offerDiscountAmount || 0);
   };
 
   const subtotal = calculateSubtotal();

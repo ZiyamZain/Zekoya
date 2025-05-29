@@ -151,6 +151,21 @@ export const updateOrderStatus = createAsyncThunk(
   }
 );
 
+export const updateOrderToPaid = createAsyncThunk(
+  "order/updateToPaid",
+  async (orderId, thunkAPI) => {
+    try {
+      return await orderService.updateOrderToPaid(orderId);
+    } catch (error) {
+      const message =
+        error.response && error.response.data.message
+          ? error.response.data.message
+          : error.message;
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState,

@@ -85,6 +85,5 @@ couponSchema.methods.isValid = function(orderAmount){
     return { isValid: true, message: 'Coupon is valid' };
 }
 
-const Coupon = mongoose.model('Coupon' , couponSchema);
-
+const Coupon = mongoose.model('Coupon', couponSchema);
 export default Coupon;

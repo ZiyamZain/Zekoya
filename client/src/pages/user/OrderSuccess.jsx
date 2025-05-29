@@ -37,9 +37,7 @@ const OrderSuccess = () => {
         !order.isPaid &&
         retryCount >= 3
       ) {
-        console.log(
-          "Redirecting to payment failed page - Razorpay order not paid after retries"
-        );
+        
         navigate(`/payment-failed/${id}`);
       }
     }
@@ -48,7 +46,7 @@ const OrderSuccess = () => {
   useEffect(() => {
     return () => {
       dispatch(clearOrder());
-      console.log("OrderSuccess component unmounted, clearing order state");
+
     };
   }, [dispatch]);
 

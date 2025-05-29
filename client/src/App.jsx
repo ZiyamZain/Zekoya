@@ -16,10 +16,9 @@ import UsersPage from "./pages/admin/UsersPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
-import BrandsPage from "./pages/admin/BrandsPage";
+
 import OffersPage from "./pages/admin/OffersPage";
-import SettingsPage from "./pages/admin/SettingsPage";
-import BannerPage from "./pages/admin/BannerPage";
+
 import OrdersPage from "./pages/admin/OrdersPage";
 import OrderDetailPage from "./pages/admin/OrderDetailPage";
 import SalesReportPage from "./pages/admin/SalesReportPage";
@@ -49,6 +48,8 @@ import Checkout from "./pages/user/Checkout";
 import OrderSuccess from "./pages/user/OrderSuccess";
 import PaymentFailed from "./pages/user/PaymentFailed";
 import WalletHistory from "./pages/user/WalletHistory";
+import ComingSoon from "./pages/user/ComingSoon";
+
 
 // Layouts & Protection
 import AdminLayout from "./layouts/AdminLayout";
@@ -91,6 +92,8 @@ function App() {
             <Route path="about-us" element={<AboutUs />} />
             <Route path="offers" element={<Offers />} />
             <Route path="products" element={<Products />} />
+            <Route path="coming-soon" element={<ComingSoon/>}/>
+
             <Route
               path="products/category/:categoryName"
               element={<Products />}
@@ -161,12 +164,11 @@ function App() {
             <Route path="coupons/*" element={<CouponsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="offers/*" element={<OffersPage />} />
-            <Route path="brands" element={<BrandsPage />} />
+      
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/:id" element={<OrderDetailPage />} />
             <Route path="sales-report" element={<SalesReportPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="banner" element={<BannerPage />} />
+
             <Route path="auth-test" element={<AdminAuthTest />} />
 
           </Route>

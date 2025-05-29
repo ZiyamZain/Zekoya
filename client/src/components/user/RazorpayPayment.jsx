@@ -14,13 +14,11 @@ const RazorpayPayment = ({ orderData, orderId }) => {
     (state) => state.payment
   );
 
-  // Load Razorpay script
   const loadRazorpayScript = useCallback(() => {
-    console.log('Loading Razorpay script...');
     return new Promise((resolve) => {
       // Check if script already exists
       if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
-        console.log('Razorpay script already loaded');
+
         resolve(true);
         return;
       }
@@ -29,7 +27,6 @@ const RazorpayPayment = ({ orderData, orderId }) => {
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
       script.onload = () => {
-        console.log('Razorpay script loaded successfully');
         resolve(true);
       };
       script.onerror = () => {
@@ -40,15 +37,13 @@ const RazorpayPayment = ({ orderData, orderId }) => {
     });
   }, []);
 
-  // Initialize payment
+
   const initializePayment = useCallback(async () => {
     try {
-      console.log('Initializing payment for order:', orderId);
-      console.log('Order data:', orderData);
-      
+
       // First get the Razorpay key
       const keyResult = await dispatch(getRazorpayKey()).unwrap();
-      console.log('Razorpay key retrieved:', keyResult);
+
       
       // Then create a payment order
       const paymentOrderData = {
@@ -61,11 +56,9 @@ const RazorpayPayment = ({ orderData, orderId }) => {
         }
       };
       
-      console.log('Creating payment order with data:', paymentOrderData);
+
       const orderResult = await dispatch(createPaymentOrder(paymentOrderData)).unwrap();
-      console.log('Payment order created:', orderResult);
-      
-      // Immediately open Razorpay after creating the order
+
       if (orderResult && orderResult.order) {
         setTimeout(() => {
           handlePayment(keyResult.key_id, orderResult.order);
@@ -77,9 +70,8 @@ const RazorpayPayment = ({ orderData, orderId }) => {
     }
   }, [dispatch, orderData, orderId, userInfo]);
 
-  // Handle payment
+
   const handlePayment = useCallback(async (key, order) => {
-    console.log('Handling payment...');
     const scriptLoaded = await loadRazorpayScript();
     
     if (!scriptLoaded) {
@@ -96,7 +88,6 @@ const RazorpayPayment = ({ orderData, orderId }) => {
       return;
     }
     
-    console.log('Opening Razorpay with order:', paymentOrder);
     
     const options = {
       key: paymentKey,
@@ -107,7 +98,6 @@ const RazorpayPayment = ({ orderData, orderId }) => {
       order_id: paymentOrder.id,
       handler: async (response) => {
         try {
-          console.log('Payment response:', response);
           const paymentData = {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
@@ -117,7 +107,6 @@ const RazorpayPayment = ({ orderData, orderId }) => {
           
           await dispatch(verifyPayment(paymentData));
           
-          // Clear cart and navigate to success page
           dispatch(clearCart());
           navigate(`/order-success/${orderId}`);
         } catch (error) {
@@ -135,7 +124,6 @@ const RazorpayPayment = ({ orderData, orderId }) => {
       },
       modal: {
         ondismiss: function() {
-          console.log('Payment modal dismissed');
           navigate(`/payment-failed/${orderId}`);
         }
       }
@@ -152,30 +140,21 @@ const RazorpayPayment = ({ orderData, orderId }) => {
   }, [razorpayKey, razorpayOrder, orderId, userInfo, dispatch, navigate, loadRazorpayScript]);
 
   useEffect(() => {
-    console.log('Component mounted, initializing payment...');
     initializePayment();
     
     return () => {
-      console.log('Component unmounting, resetting payment state...');
       dispatch(reset());
     };
   }, [initializePayment, dispatch]);
 
   useEffect(() => {
     if (isError) {
-      console.log('Payment error:', message);
       toast.error(message || 'Payment initialization failed');
       dispatch(reset());
     }
   }, [isError, message, dispatch]);
   
-  // We don't need this useEffect anymore since we're directly calling handlePayment from initializePayment
-  // useEffect(() => {
-  //   if (isSuccess && razorpayOrder) {
-  //     console.log('Payment order created successfully, opening Razorpay...');
-  //     handlePayment();
-  //   }
-  // }, [isSuccess, razorpayOrder, handlePayment]);
+
 
   return (
     <div className="text-center">

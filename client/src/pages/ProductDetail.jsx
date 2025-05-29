@@ -13,6 +13,7 @@ import {
   getActiveOfferForProduct,
   getActiveOfferForCategory,
 } from "../features/offers/offerSlice";
+import ImageZoom from "../components/ImageZoom";
 import ProductOffer from "../components/ProductOffer";
 import CategoryOffer from "../components/CategoryOffer";
 import DiscountedPrice from "../components/DiscountedPrice";
@@ -234,15 +235,18 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Main Image */}
+              {/* Main Image with Zoom */}
               <div className="flex-1 order-1 md:order-2">
-                <img
-                  src={getImageUrl(
-                    product.images?.[selectedImage] || product.images?.[0] || ""
-                  )}
-                  alt={product.name}
-                  className="w-full h-auto object-cover"
-                />
+                <div className="product-image-container" style={{ border: '1px solid #f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <ImageZoom 
+                    src={getImageUrl(
+                      product.images?.[selectedImage] || product.images?.[0] || ""
+                    )}
+                    alt={product.name}
+                    zoomScale={2.5}
+                    height="400px"
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,6 @@
 import ProductOffer from '../models/productOfferModel.js';
 import Product from '../models/productModel.js';
 
-
 // Get all product offers
 export const getAllProductOffers = async (req, res) => {
   try {
@@ -200,7 +199,7 @@ export const deleteProductOffer = async (req, res) => {
       return res.status(404).json({ message: 'Product offer not found' });
     }
     
-    await offer.remove();
+    await offer.deleteOne();
     
     res.status(200).json({ message: 'Product offer deleted successfully' });
   } catch (error) {

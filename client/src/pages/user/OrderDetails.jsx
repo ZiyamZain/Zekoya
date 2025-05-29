@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getOrderDetails, resetOrder, cancelOrder, cancelOrderItem, requestReturnItem, generateInvoice } from '../../features/order/orderSlice';
+import { getOrderDetails, resetOrder, cancelOrder, cancelOrderItem, requestReturnItem, generateInvoice, updateOrderToPaid } from '../../features/order/orderSlice';
+import { createPaymentOrder, verifyPayment, getRazorpayKey } from '../../features/payment/paymentSlice';
 import { FaArrowLeft, FaMapMarkerAlt, FaPhone, FaTruck, FaFileInvoice, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import customToast from '../../utils/toast';
 import CancellationModal from '../../components/CancellationModal';
@@ -16,10 +17,44 @@ const OrderDetails = () => {
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [cancellingFullOrder, setCancellingFullOrder] = useState(false);
-  
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
+
   const { userInfo } = useSelector((state) => state.userAuth);
   const { order, isLoading, isError, message } = useSelector((state) => state.order);
   
+  useEffect(() => {
+    const loadRazorpay = () => {
+      return new Promise((resolve) => {
+        if (window.Razorpay) {
+          setIsRazorpayLoaded(true);
+          return resolve(true);
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        script.onload = () => {
+          console.log('Razorpay SDK loaded successfully');
+          setIsRazorpayLoaded(true);
+          resolve(true);
+        };
+        script.onerror = () => {
+          console.error('Failed to load Razorpay SDK');
+          setIsRazorpayLoaded(false);
+          resolve(false);
+        };
+        document.body.appendChild(script);
+      });
+    };
+
+    loadRazorpay();
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
+
   useEffect(() => {
     if (!userInfo) {
       navigate('/login');
@@ -81,32 +116,242 @@ const OrderDetails = () => {
     }
   };
   
-  const handleReturnConfirm = (reason) => {
-    dispatch(requestReturnItem({ orderId: id, itemId: selectedItemId, reason }))
-      .unwrap()
-      .then((result) => {
-        customToast.success('Return request submitted successfully');
-        setShowReturnModal(false);
-        
-        // If this was an acceptance with refund, update the profile
-        if (result?.user) {
-          // Update the user profile directly
-          dispatch({
-            type: 'userProfile/setUser',
-            payload: result.user
-          });
-        } else {
-          // Otherwise, refresh the profile
-          dispatch(getUserProfile());
+  const handleReturnConfirm = async (returnReason) => {
+    try {
+      await dispatch(requestReturnItem({ orderId: id, itemId: selectedItemId, returnReason })).unwrap();
+      customToast.success('Return request submitted successfully');
+      setShowReturnModal(false);
+      await dispatch(getOrderDetails(id));
+    } catch (error) {
+      customToast.error(error.message || 'Failed to submit return request');
+    }
+  };
+
+  // Move loadRazorpay function outside to be accessible in handleRetryPayment
+  const loadRazorpay = useCallback(() => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        setIsRazorpayLoaded(true);
+        return resolve(true);
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => {
+        console.log('Razorpay SDK loaded successfully');
+        setIsRazorpayLoaded(true);
+        resolve(true);
+      };
+      script.onerror = () => {
+        console.error('Failed to load Razorpay SDK');
+        setIsRazorpayLoaded(false);
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  }, []);
+
+  const handleRetryPayment = async () => {
+    if (!order) {
+      console.error('No order found');
+      customToast.error('Order information is missing');
+      return;
+    }
+    
+    try {
+      console.log('Starting payment retry process for order:', order._id);
+      setIsRetryingPayment(true);
+      
+      // 1. Get Razorpay key
+      console.log('Fetching Razorpay key...');
+      let keyResponse;
+      try {
+        keyResponse = await dispatch(getRazorpayKey()).unwrap();
+        console.log('Razorpay key response:', keyResponse);
+      } catch (keyError) {
+        console.error('Error getting Razorpay key:', {
+          error: keyError,
+          response: keyError?.response?.data
+        });
+        throw new Error('Failed to get payment gateway key. Please try again.');
+      }
+      
+      if (!keyResponse || !keyResponse.key_id) {
+        console.error('Invalid key response:', keyResponse);
+        throw new Error('Invalid payment gateway configuration');
+      }
+      
+      // 2. Create a new Razorpay order
+      // Note: Backend will handle the conversion to paise
+      const amount = Math.round(order.totalPrice);
+      console.log('Creating payment order with amount:', amount, 'INR');
+      
+      let orderResponse;
+      // Generate a shorter receipt ID to stay within Razorpay's 40-char limit
+      // Format: 'ord_' + first 8 chars of order ID + last 4 digits of timestamp
+      const shortOrderId = order._id.toString().substring(0, 8);
+      const timestamp = Date.now().toString().slice(-4);
+      const receiptId = `ord_${shortOrderId}${timestamp}`;
+      
+      const paymentOrderData = {
+        amount: amount,
+        currency: 'INR',
+        receipt: receiptId,
+        notes: {
+          orderId: order._id,
+          userId: userInfo?._id
         }
+      };
+      
+      console.log('Creating payment order with data:', JSON.stringify(paymentOrderData, null, 2));
+      
+      try {
+        const actionResult = dispatch(createPaymentOrder(paymentOrderData));
+        console.log('Dispatch result:', {
+          type: actionResult?.type,
+          payload: actionResult?.payload,
+          meta: actionResult?.meta
+        });
         
-        dispatch(getOrderDetails(id));
-      })
-      .catch((error) => {
-        customToast.error(error || 'Failed to submit return request');
+        orderResponse = await actionResult.unwrap();
+        console.log('Payment order created successfully:', JSON.stringify(orderResponse, null, 2));
+      } catch (orderError) {
+        console.error('Error creating payment order:', {
+          name: orderError.name,
+          message: orderError.message,
+          stack: orderError.stack,
+          response: {
+            status: orderError.response?.status,
+            statusText: orderError.response?.statusText,
+            data: orderError.response?.data,
+            headers: orderError.response?.headers
+          },
+          request: {
+            url: orderError.request?.responseURL,
+            method: orderError.config?.method,
+            data: orderError.config?.data
+          },
+          config: {
+            url: orderError.config?.url,
+            method: orderError.config?.method,
+            headers: orderError.config?.headers,
+            data: orderError.config?.data
+          }
+        });
+        
+        const errorMessage = orderError.response?.data?.message || 
+                          orderError.message || 
+                          'Failed to create payment order. Please try again.';
+        throw new Error(errorMessage);
+      }
+      
+      if (!orderResponse || !orderResponse.order) {
+        console.error('Invalid order response:', orderResponse);
+        throw new Error('Invalid response from payment gateway');
+      }
+      
+      // 3. Ensure Razorpay is loaded
+      if (!isRazorpayLoaded) {
+        console.error('Razorpay SDK not loaded');
+        // Try to load it dynamically
+        const loadSuccess = await loadRazorpay();
+        if (!loadSuccess) {
+          throw new Error('Payment gateway not available. Please check your internet connection and try again.');
+        }
+      }
+      
+      if (typeof window.Razorpay === 'undefined') {
+        throw new Error('Payment gateway initialization failed. Please try again.');
+      }
+      
+      const options = {
+        key: keyResponse.key_id,
+        amount: amount,
+        currency: 'INR',
+        name: 'Zekoya',
+        description: `Order #${order.orderId}`,
+        order_id: orderResponse.order.id,
+        handler: async function (response) {
+          try {
+            console.log('Payment successful, verifying...', response);
+            
+            // 4. Verify the payment
+            const verifyResult = await dispatch(verifyPayment({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              orderId: order._id
+            })).unwrap();
+            
+            console.log('Payment verified:', verifyResult);
+            
+            // 5. Refresh order details to get the updated status
+            await dispatch(getOrderDetails(id));
+            
+            customToast.success('Payment successful! Your order has been confirmed.');
+          } catch (error) {
+            console.error('Payment verification failed:', {
+              error: error.message,
+              stack: error.stack,
+              response: error.response?.data
+            });
+            customToast.error(error.message || 'Payment verification failed. Please contact support.');
+          } finally {
+            setIsRetryingPayment(false);
+          }
+        },
+        prefill: {
+          name: userInfo?.name || '',
+          email: userInfo?.email || '',
+          contact: userInfo?.phone || ''
+        },
+        theme: {
+          color: '#4F46E5'
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment modal dismissed');
+            setIsRetryingPayment(false);
+          }
+        }
+      };
+
+      console.log('Opening Razorpay checkout with options:', options);
+      
+      try {
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          console.error('Payment failed:', response.error);
+          customToast.error(`Payment failed: ${response.error?.description || 'Please try again or contact support'}`);
+          setIsRetryingPayment(false);
+        });
+        
+        rzp.open();
+      } catch (rzpError) {
+        console.error('Error initializing Razorpay:', rzpError);
+        throw new Error('Failed to initialize payment gateway. Please try again.');
+      }
+
+    } catch (error) {
+      console.error('Error in handleRetryPayment:', {
+        error: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        name: error.name,
+        code: error.code
       });
+      customToast.error(error.message || 'Something went wrong with payment initiation');
+      setIsRetryingPayment(false);
+    }
   };
   
+  // Check if retry payment button should be shown
+  const showRetryPayment = order && 
+    !order.isPaid && 
+    order.paymentMethod === 'Razorpay' && 
+    order.orderStatus !== 'Cancelled';
+
   const handleDownloadInvoice = () => {
     dispatch(generateInvoice(id))
       .unwrap()
@@ -299,9 +544,20 @@ const OrderDetails = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Payment Status</p>
-              <p className="font-medium">
-                {order.isPaid ? `Paid on ${formatDate(order.paidAt)}` : 'Not Paid'}
-              </p>
+              <div className="flex items-center">
+                <p className="font-medium mr-4">
+                  {order.isPaid ? `Paid on ${formatDate(order.paidAt)}` : 'Not Paid'}
+                </p>
+                {showRetryPayment && (
+                  <button
+                    onClick={handleRetryPayment}
+                    disabled={isRetryingPayment}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                  >
+                    {isRetryingPayment ? 'Processing...' : 'Retry Payment'}
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <p className="text-sm text-gray-500">Delivery Status</p>

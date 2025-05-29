@@ -4,6 +4,7 @@ import couponService from './couponService.js';
 // Simplified user coupon slice - only handles validation
 const initialState = {
     activeCoupon: null,
+    availableCoupons: [],
     isError: false,
     isSuccess: false,
     isLoading: false,
@@ -23,6 +24,20 @@ export const validateCoupon = createAsyncThunk(
         }
     }
 );
+
+export const getAvailableCoupons = createAsyncThunk(
+    'coupon/getAvailable',
+    async(orderAmount, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().userAuth.userInfo.token;
+            return await couponService.getAvailableCoupons(orderAmount, token);
+        } catch(error) {
+            const message = error.response?.data?.message || error.message;
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 
 export const couponSlice = createSlice({
     name: 'coupon',
@@ -49,6 +64,19 @@ export const couponSlice = createSlice({
                 state.activeCoupon = action.payload;
             })
             .addCase(validateCoupon.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(getAvailableCoupons.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getAvailableCoupons.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.availableCoupons = action.payload;
+            })
+            .addCase(getAvailableCoupons.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

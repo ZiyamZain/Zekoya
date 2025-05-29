@@ -45,7 +45,7 @@ export default async function getCroppedImg(imageSrc, pixelCrop) {
         
         // Create a File object instead of a Blob to ensure it has a proper filename with extension
         const file = new File([blob], 'cropped_profile.jpg', { type: 'image/jpeg' });
-        console.log('Created file from blob:', file.name, 'type:', file.type);
+
         
         resolve(file); // Return the File object instead of Blob
       }, 'image/jpeg', 0.95); // Higher quality

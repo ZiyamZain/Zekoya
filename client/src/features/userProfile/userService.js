@@ -1,5 +1,6 @@
 import axios from "axios";
-// Fix the base URL to match the server's route structure
+
+
 const API_URL = "http://localhost:5001/api/users/profile";
 
 

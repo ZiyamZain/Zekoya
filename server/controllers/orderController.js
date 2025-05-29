@@ -5,7 +5,8 @@ import Cart from "../models/cartModel.js";
 import Coupon from "../models/couponModel.js";
 import fs from "fs";
 import {generateOrderInvoice} from '../utils/pdfGenerator.js'
-// Generate a unique order ID
+
+
 const generateOrderId = () => {
   const timestamp = new Date().getTime().toString().slice(-6);
   const random = Math.floor(Math.random() * 10000)
@@ -14,7 +15,7 @@ const generateOrderId = () => {
   return `ZK-${timestamp}-${random}`;
 };
 
-// Create new order
+
 export const createOrder = async (req, res) => {
   try {
     const {
@@ -31,7 +32,7 @@ export const createOrder = async (req, res) => {
       productOffers
     } = req.body;
 
-    // Check if address exists
+    
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -44,7 +45,7 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid shipping address" });
     }
 
-    // Get user's cart
+
     const cart = await Cart.findOne({ user: req.user._id }).populate({
       path: "items.product",
       select: "name price images isListed sizes category",
@@ -58,7 +59,7 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Validate all products and check stock
+  
     for (const item of cart.items) {
       const product = item.product;
 
@@ -75,6 +76,7 @@ export const createOrder = async (req, res) => {
         });
       }
 
+
       // Check stock availability
       const sizeObj = product.sizes.find((s) => s.size === item.size);
       if (!sizeObj || sizeObj.stock < item.quantity) {
@@ -84,7 +86,6 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Create order items with offer details if available
     const orderItems = cart.items.map((item) => {
       const itemOffer = productOffers && productOffers[item.product._id];
       
@@ -118,12 +119,10 @@ export const createOrder = async (req, res) => {
       };
     });
 
-    // Get the selected address
     const selectedAddress = user.addresses.find(
       (addr) => addr._id.toString() === addressId
     );
 
-    // Validate coupon if provided
     let validCoupon = null;
     if (couponCode) {
       validCoupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
@@ -138,17 +137,16 @@ export const createOrder = async (req, res) => {
         return res.status(400).json({ message: validationResult.message });
       }
       
-      // Increment coupon usage count
+
       validCoupon.usageCount += 1;
       await validCoupon.save();
     }
     
-    // Generate unique order ID
+
     const orderId = generateOrderId();
 
-    // Handle wallet payment
+
     if (paymentMethod === "Wallet") {
-      // Check if user has sufficient wallet balance
       if (user.walletBalance < totalPrice) {
         return res.status(400).json({ 
           message: "Insufficient wallet balance",
@@ -157,10 +155,8 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Deduct amount from wallet
       user.walletBalance -= totalPrice;
-      
-      // Add transaction to wallet history
+y
       user.walletHistory.push({
         type: 'debit',
         amount: totalPrice,
@@ -242,8 +238,7 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Clear user's cart for Cash on Delivery and Wallet payments
-    // For Razorpay, we'll clear it after successful payment
+
     if (paymentMethod !== "Razorpay") {
       cart.items = [];
       await cart.save();
@@ -274,7 +269,7 @@ export const getOrderById = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Check if the order belongs to the logged-in user
+
     if (order.user.toString() !== req.user._id.toString()) {
       return res
         .status(403)
@@ -288,7 +283,7 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// Get logged in user's orders
+
 export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
@@ -335,13 +330,37 @@ export const cancelOrder = async (req, res) => {
     order.orderStatus = "Cancelled";
     order.cancelReason = reason || "Cancelled by customer";
     order.cancelledAt = new Date();
-
+    
     // Add to status history
     order.statusHistory.push({
       status: "Cancelled",
       date: new Date(),
       note: reason || "Cancelled by customer"
     });
+
+    // Process refund for paid orderrs
+    if (order.isPaid && order.paymentMethod !== "Cash on Delivery") {
+    
+      const user = await User.findById(order.user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Add refund amount to wallet
+      const refundAmount = order.totalPrice;
+      user.walletBalance += refundAmount;
+      
+      // Add transaction to wallet history
+      user.walletHistory.push({
+        amount: refundAmount,
+        type: 'credit',
+        description: `Refund for cancelled order #${order.orderId}`,
+        orderId: order._id,
+        date: new Date()
+      });
+      
+      await user.save();
+    }
 
     // Restore stock for all items
     for (const item of order.orderItems) {
@@ -444,6 +463,14 @@ export const cancelOrderItem = async (req, res) => {
     } else {
       // Recalculate prices
       order.itemsPrice = activeItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      
+      // Check if we need to update shipping price based on the new total
+      const FREE_SHIPPING_THRESHOLD = 1000;
+      if (order.itemsPrice < FREE_SHIPPING_THRESHOLD && order.shippingPrice === 0) {
+        // If total drops below threshold and shipping was free, add shipping fee
+        order.shippingPrice = 100;
+      }
+      
       order.totalPrice = order.itemsPrice + order.taxPrice + order.shippingPrice - order.discountPrice;
     }
 

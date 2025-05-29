@@ -11,10 +11,10 @@ const API = axios.create({
 
 API.interceptors.request.use(
   (config) => {
-    const isAdminRoute = config.url.includes('/api/admin') || config.url.includes('/admin');
+    // Check if the route is an admin route
+    const isAdminRoute = config.url.includes('/api/admin');
 
     if (isAdminRoute) {
-
       const adminInfoStr = localStorage.getItem('adminInfo');
       
       if (adminInfoStr) {
@@ -22,7 +22,6 @@ API.interceptors.request.use(
         
         if (adminInfo && adminInfo.token) {
           config.headers.Authorization = `Bearer ${adminInfo.token}`;
-
         } else {
           console.log('Admin token not found in adminInfo');
         }

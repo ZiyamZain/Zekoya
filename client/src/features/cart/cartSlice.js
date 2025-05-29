@@ -1,8 +1,19 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import cartService from "./cartService";
 
+// Load cart from localStorage if available
+const loadCartFromStorage = () => {
+  try {
+    const savedCart = localStorage.getItem('cart');
+    return savedCart ? JSON.parse(savedCart) : null;
+  } catch (error) {
+    console.error('Error loading cart from localStorage:', error);
+    return null;
+  }
+};
+
 const initialState = {
-  cart: null,
+  cart: loadCartFromStorage(),
   hasUnavailableItems: false,
   isError: false,
   isSuccess: false,
@@ -143,6 +154,8 @@ export const cartSlice = createSlice({
     },
     clearCart: (state) => {
       state.cart = null;
+      // Clear cart from localStorage
+      localStorage.removeItem('cart');
     },
   },
   extraReducers: (builder) => {
@@ -155,6 +168,8 @@ export const cartSlice = createSlice({
         state.isSuccess = true;
         state.cart = action.payload.cart;
         state.hasUnavailableItems = action.payload.hasUnavailableItems;
+        // Save cart to localStorage
+        localStorage.setItem('cart', JSON.stringify(action.payload.cart));
       })
       .addCase(getCart.rejected, (state, action) => {
         state.isLoading = false;
@@ -169,6 +184,8 @@ export const cartSlice = createSlice({
         state.isSuccess = true;
         state.cart = action.payload.cart;
         state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
+        // Save cart to localStorage
+        localStorage.setItem('cart', JSON.stringify(action.payload.cart));
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.isLoading = false;
@@ -192,6 +209,8 @@ export const cartSlice = createSlice({
         state.isSuccess = true;
         state.cart = action.payload.cart;
         state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
+        // Save cart to localStorage
+        localStorage.setItem('cart', JSON.stringify(action.payload.cart));
       })
       .addCase(updateCartItem.rejected, (state, action) => {
         state.isLoading = false;
@@ -214,7 +233,8 @@ export const cartSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = true;
         state.cart = action.payload.cart;
-        state.hasUnavailableItems = action.payload.hasUnavailableItems || false;
+        // Save cart to localStorage
+        localStorage.setItem('cart', JSON.stringify(action.payload.cart));
       })
       .addCase(removeFromCart.rejected, (state, action) => {
         state.isLoading = false;

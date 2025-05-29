@@ -172,9 +172,9 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Add a pre-save hook to update status history
+
 orderSchema.pre('save', function(next) {
-  // If this is a new document or the status has changed
+  
   if (this.isNew || this.isModified('orderStatus')) {
     this.statusHistory.push({
       status: this.orderStatus,

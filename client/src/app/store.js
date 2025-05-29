@@ -42,7 +42,6 @@ const store = configureStore({
         coupon:couponReducer,
         adminCoupon: adminCouponReducer,
         payment: paymentReducer,
-        // Add offer reducers
         categoryOffer: categoryOfferReducer,
         productOffer: productOfferReducer,
         referralOffer: referralOfferReducer,

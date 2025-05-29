@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createCoupon, updateCoupon, getAllCoupons, reset } from '../../features/adminSide/coupons/adminCouponSlice';
+import { createCoupon, updateCoupon, getCouponById, reset, resetAll } from '../../features/adminSide/coupons/adminCouponSlice';
 import { toast } from 'react-toastify';
 
 const CouponForm = () => {
@@ -9,7 +9,7 @@ const CouponForm = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  const { coupons, isLoading, isError, isSuccess, message } = useSelector(state => state.adminCoupon);
+  const { coupon, isLoading, isError, isSuccess, message } = useSelector(state => state.adminCoupon);
   
   const [formData, setFormData] = useState({
     code: '',
@@ -30,49 +30,58 @@ const CouponForm = () => {
     usageLimit, isActive 
   } = formData;
 
-  // If editing, populate form with coupon data
+  // Reset state completely when component mounts
+  useEffect(() => {
+    dispatch(resetAll());
+  }, [dispatch]);
+
+  // If editing, fetch coupon data by ID
   useEffect(() => {
     if (id) {
-      const couponToEdit = coupons.find(coupon => coupon._id === id);
-      
-      if (couponToEdit) {
-        // Format dates for input fields
-        const formattedStartDate = new Date(couponToEdit.startDate)
-          .toISOString().split('T')[0];
-        const formattedEndDate = new Date(couponToEdit.endDate)
-          .toISOString().split('T')[0];
-
-        setFormData({
-          ...couponToEdit,
-          startDate: formattedStartDate,
-          endDate: formattedEndDate,
-        });
-      } else {
-        // If coupon not found in state, fetch it
-        dispatch(getAllCoupons());
-      }
+      dispatch(getCouponById(id));
     }
 
     return () => {
-      dispatch(reset());
+      dispatch(resetAll());
     };
-  }, [id, coupons, dispatch]);
+  }, [id, dispatch]);
+
+  // Populate form with coupon data when available
+  useEffect(() => {
+    if (id && coupon) {
+      // Format dates for input fields
+      const formattedStartDate = new Date(coupon.startDate)
+        .toISOString().split('T')[0];
+      const formattedEndDate = new Date(coupon.endDate)
+        .toISOString().split('T')[0];
+
+      setFormData({
+        ...coupon,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+      });
+    }
+  }, [id, coupon]);
+
+  // Track if form has been submitted
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   useEffect(() => {
     if (isError) {
       toast.error(message);
     }
 
-    if (isSuccess && !id) {
-      toast.success('Coupon created successfully');
-      navigate('/admin/coupons');
+    // Only show success messages if the form has been submitted
+    if (isSuccess && formSubmitted) {
+      if (!id) {
+        toast.success('Coupon created successfully');
+        navigate('/admin/coupons');
+      } else {
+        toast.success('Coupon updated successfully');
+        navigate('/admin/coupons');
+      }
     }
-
-    if (isSuccess && id) {
-      toast.success('Coupon updated successfully');
-      navigate('/admin/coupons');
-    }
-  }, [isError, isSuccess, message, navigate, id]);
+  }, [isError, isSuccess, message, navigate, id, formSubmitted]);
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -95,6 +104,9 @@ const CouponForm = () => {
       toast.error('End date must be after start date');
       return;
     }
+
+    // Set form as submitted
+    setFormSubmitted(true);
 
     // Create payload
     const couponData = {

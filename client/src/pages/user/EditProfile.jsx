@@ -97,7 +97,6 @@ const EditProfile = () => {
       
       try {
         const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-        console.log('Cropped image blob:', croppedImageBlob);
         
 
         if (!(croppedImageBlob instanceof Blob)) {
@@ -106,15 +105,13 @@ const EditProfile = () => {
         
         setProfileImage(croppedImageBlob);
         setPreviewUrl(URL.createObjectURL(croppedImageBlob));
-        setImageSrc(null); // Close the cropper
+        setImageSrc(null); 
         toast.success("Image cropped successfully");
       } catch (cropError) {
         console.error("Error in image cropping:", cropError);
         toast.warning("Could not crop the image, using the original file instead");
-        // We already set profileImage to the original file in handleImageChange
-        // Just create a preview URL from the original file
         setPreviewUrl(URL.createObjectURL(profileImage));
-        setImageSrc(null); // Close the cropper
+        setImageSrc(null);
       }
     } catch (error) {
       console.error("Error handling image:", error);

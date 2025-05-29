@@ -16,8 +16,7 @@ import {
 import { getProducts } from '../../../features/adminSide/products/productSlice';
 
 const ProductOfferForm = () => {
-  console.log('ProductOfferForm component mounted');
-  
+
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -214,10 +213,6 @@ const ProductOfferForm = () => {
         // Note: createdBy is handled by the server using the authentication token
       };
       
-      // Debug logging
-      console.log('Submitting offer data:', JSON.stringify(offerData, null, 2));
-      console.log('Form data before processing:', JSON.stringify(formData, null, 2));
-      console.log('Name field value:', formData.name);
 
       // Set the hasSubmitted flag to true
       setHasSubmitted(true);

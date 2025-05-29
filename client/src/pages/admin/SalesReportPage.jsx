@@ -1,556 +1,519 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { FaFileExcel, FaFilePdf, FaSearch, FaFilter, FaCalendarAlt, FaChartPie, FaChartBar } from 'react-icons/fa';
-import { format, subDays, subWeeks, subMonths, parseISO } from 'date-fns';
-import { getSalesReport } from '../../features/report/reportSlice';
-import Spinner from '../../components/Spinner';
+import { getSalesReport, downloadReport } from '../../features/report/reportSlice';
+import { format } from 'date-fns';
+import { FaFileDownload, FaSearch, FaSpinner } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import * as pdfMake from 'pdfmake/build/pdfmake';
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-import * as XLSX from 'xlsx';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-// Initialize pdfMake with fonts
-pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
 
 const SalesReportPage = () => {
   const dispatch = useDispatch();
-  const { reports, isLoading, isError, message } = useSelector((state) => state.report);
-  
+  const salesReport = useSelector((state) => state.report.salesReport);
+  const data = salesReport?.data || { orders: [], pagination: { total: 0, totalPages: 1 } };
+  const isLoading = salesReport?.isLoading || false;
+  const downloadStatus = useSelector((state) => state.report.downloadStatus);
+  const isDownloading = downloadStatus?.isLoading || false;
+
+  // Filter states
+  const [filterType, setFilterType] = useState('monthly'); // custom, daily, weekly, monthly, yearly
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [filterType, setFilterType] = useState('custom');
-  const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const limit = 7; // Matches the backend limit
+
+  // Load initial data when component mounts
   useEffect(() => {
-    // Set default dates to current date
+    // Set default date range to current month
     const today = new Date();
-    setEndDate(format(today, 'yyyy-MM-dd'));
-    setStartDate(format(subDays(today, 7), 'yyyy-MM-dd'));
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const formattedStartDate = format(firstDayOfMonth, 'yyyy-MM-dd');
+    const formattedEndDate = format(today, 'yyyy-MM-dd');
     
-    // Load initial report data
-    const reportParams = {
-      startDate: format(subDays(today, 7), 'yyyy-MM-dd'),
-      endDate: format(today, 'yyyy-MM-dd'),
+    setStartDate(formattedStartDate);
+    setEndDate(formattedEndDate);
+    
+    // Fetch report with default monthly filter
+    const filters = {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
     };
-    dispatch(getSalesReport(reportParams));
+    dispatch(getSalesReport(filters))
+      .unwrap()
+      .then(response => {
+        console.log('Sales report data:', response);
+        if (response.data && response.data.orders) {
+          console.log('Orders count:', response.data.orders.length);
+          if (response.data.orders.length > 0) {
+            console.log('Sample order:', response.data.orders[0]);
+          }
+        } else {
+          console.error('No orders data found in response');
+        }
+      })
+      .catch(error => console.error('Error fetching sales report:', error));
   }, [dispatch]);
 
+  // Update pagination when data changes
   useEffect(() => {
-    if (isError) {
-      toast.error(message);
+    if (data) {
+      console.log('Pagination data:', data.pagination);
+      setTotalPages(data.pagination?.totalPages || data.pagination?.pages || 1);
+      setTotalOrders(data.pagination?.total || 0);
+      // Update current page if it's out of bounds
+      if (currentPage > (data.pagination?.totalPages || data.pagination?.pages || 1)) {
+        setCurrentPage(1);
+      }
     }
-  }, [isError, message]);
+  }, [data, currentPage]);
 
-  // useEffect for any future report data processing if needed
-  // useEffect(() => {
-  //   if (reports) {
-  //     // Process report data if needed
-  //   }
-  // }, [reports]);
+  // Summary states
+  const [summary, setSummary] = useState({
+    totalOrders: 0,
+    totalRevenue: 0,
+    totalDiscount: 0,
+    averageOrderValue: 0,
+  });
+
+  useEffect(() => {
+    if (data && data.summary) {
+      setSummary({
+        totalOrders: data.summary.totalOrders || 0,
+        totalRevenue: data.summary.totalRevenue || 0,
+        totalDiscount: data.summary.totalDiscount || 0,
+        averageOrderValue: data.summary.averageOrderValue || 0,
+      });
+    }
+  }, [data]);
 
   const handleFilterChange = (type) => {
+    setFilterType(type);
     const today = new Date();
-    let start = today;
-    
-    switch(type) {
-      case 'day':
-        start = subDays(today, 1);
+    let start = new Date();
+    let end = new Date();
+
+    switch (type) {
+      case 'daily':
+        start = format(today, 'yyyy-MM-dd');
+        end = format(today, 'yyyy-MM-dd');
         break;
-      case 'week':
-        start = subWeeks(today, 1);
+      case 'weekly':
+        start = format(new Date(today.setDate(today.getDate() - 7)), 'yyyy-MM-dd');
+        end = format(new Date(), 'yyyy-MM-dd');
         break;
-      case 'month':
-        start = subMonths(today, 1);
+      case 'monthly':
+        start = format(new Date(today.setMonth(today.getMonth() - 1)), 'yyyy-MM-dd');
+        end = format(new Date(), 'yyyy-MM-dd');
+        break;
+      case 'yearly':
+        start = format(new Date(today.setFullYear(today.getFullYear() - 1)), 'yyyy-MM-dd');
+        end = format(new Date(), 'yyyy-MM-dd');
         break;
       default:
-        // Keep custom dates
-        setFilterType('custom');
         return;
     }
-    
-    setStartDate(format(start, 'yyyy-MM-dd'));
-    setEndDate(format(today, 'yyyy-MM-dd'));
-    setFilterType(type);
-    
-    dispatch(getSalesReport({
-      startDate: format(start, 'yyyy-MM-dd'),
-      endDate: format(today, 'yyyy-MM-dd'),
-    }));
+
+    setStartDate(start);
+    setEndDate(end);
+    fetchReport(start, end, 1, false, true);
   };
 
-  const handleSubmitFilter = (e) => {
-    e.preventDefault();
-    
-    if (!startDate || !endDate) {
+  const fetchReport = (start, end, page = 1, isPageChange = false, isPeriodChange = false) => {
+    // Validate dates
+    if (!start || !end) {
       toast.error('Please select both start and end dates');
       return;
     }
     
-    if (new Date(startDate) > new Date(endDate)) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    if (startDate > endDate) {
       toast.error('Start date cannot be after end date');
       return;
     }
     
-    dispatch(getSalesReport({ startDate, endDate }));
-  };
-
-  const exportToPDF = () => {
-    try {
-      // Create table body data
-      const tableBody = [];
-      
-      // Add header row
-      tableBody.push([
-        { text: 'Order ID', style: 'tableHeader' },
-        { text: 'Date', style: 'tableHeader' },
-        { text: 'Customer', style: 'tableHeader' },
-        { text: 'Amount', style: 'tableHeader' },
-        { text: 'Discount', style: 'tableHeader' },
-        { text: 'Payment Method', style: 'tableHeader' }
-      ]);
-      
-      // Add data rows
-      reports?.orders?.forEach(order => {
-        tableBody.push([
-          // Use the custom orderId if available (like ZK-123456)
-          order.orderId || (typeof order._id === 'string' ? order._id : order._id?.toString()),
-          format(new Date(order.createdAt), 'dd/MM/yyyy'),
-          order.user?.name || 'Guest',
-          `₹${order.totalPrice.toFixed(2)}`,
-          `₹${(order.couponDiscount || 0).toFixed(2)}`,
-          order.paymentMethod
-        ]);
-      });
-      
-      // Define the document definition
-      const docDefinition = {
-        content: [
-          { text: 'Zekoya Sales Report', style: 'header' },
-          { text: `Period: ${format(new Date(startDate), 'dd/MM/yyyy')} - ${format(new Date(endDate), 'dd/MM/yyyy')}`, style: 'subheader' },
-          { text: ' ', margin: [0, 10] }, // Spacer
-          {
-            columns: [
-              {
-                width: '33%',
-                text: `Total Orders: ${reports?.summary?.totalOrders || 0}`
-              },
-              {
-                width: '33%',
-                text: `Total Revenue: ₹${reports?.summary?.totalRevenue?.toFixed(2) || 0}`
-              },
-              {
-                width: '33%',
-                text: `Total Discount: ₹${reports?.summary?.totalDiscount?.toFixed(2) || 0}`
-              }
-            ],
-            margin: [0, 0, 0, 20]
-          },
-          {
-            table: {
-              headerRows: 1,
-              widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto'],
-              body: tableBody
-            },
-            layout: {
-              fillColor: function(rowIndex) {
-                return (rowIndex === 0) ? '#CCCCCC' : null;
-              }
-            }
-          }
-        ],
-        styles: {
-          header: {
-            fontSize: 18,
-            bold: true,
-            margin: [0, 0, 0, 10]
-          },
-          subheader: {
-            fontSize: 14,
-            bold: true,
-            margin: [0, 10, 0, 5]
-          },
-          tableHeader: {
-            bold: true,
-            fontSize: 12,
-            color: 'black'
-          }
-        },
-        defaultStyle: {
-          fontSize: 10
+    const filters = {
+      startDate: start,
+      endDate: end,
+      page,
+      limit
+    };
+    
+    console.log('Fetching report with filters:', filters);
+    
+    dispatch(getSalesReport(filters))
+      .unwrap()
+      .then((response) => {
+        console.log('Report data received:', response);
+        if (response.data && response.data.orders) {
+          console.log('Orders received:', response.data.orders.length);
+        } else {
+          console.warn('No orders data in response:', response);
         }
-      };
-      
-      // Generate and download the PDF
-      pdfMake.createPdf(docDefinition).download(`Zekoya_Sales_Report_${format(new Date(), 'dd-MM-yyyy')}.pdf`);
-      toast.success('PDF report downloaded successfully');
-    } catch (error) {
-      console.error('PDF export error:', error);
-      toast.error('Failed to generate PDF report');
-    }
+        
+        if (!isPageChange && !isPeriodChange) {
+          toast.success('Report generated successfully');
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching report:', error);
+        toast.error(error || 'Failed to generate report');
+      });
   };
 
-  const exportToExcel = () => {
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setCurrentPage(newPage);
+    fetchReport(startDate, endDate, newPage, true);
+  };
+
+  const handleDownload = async (format) => {
     try {
-      if (!reports || !reports.orders) {
-        toast.error('No report data available');
-        return;
-      }
-      
-      // Create a new workbook
-      const wb = XLSX.utils.book_new();
-      
-      // Create summary worksheet
-      const summaryData = [
-        ['Zekoya Sales Report'],
-        [`Period: ${format(new Date(startDate), 'dd/MM/yyyy')} - ${format(new Date(endDate), 'dd/MM/yyyy')}`],
-        [],
-        ['Summary Statistics'],
-        ['Total Orders', reports.summary?.totalOrders || 0],
-        ['Total Revenue', `₹${(reports.summary?.totalRevenue || 0).toFixed(2)}`],
-        ['Total Discount', `₹${(reports.summary?.totalDiscount || 0).toFixed(2)}`],
-        []
-      ];
-      
-      // Add payment method breakdown if available
-      if (reports.summary?.paymentMethodCounts) {
-        summaryData.push(['Payment Method Breakdown']);
-        summaryData.push(['Method', 'Count', 'Percentage']);
-        
-        Object.entries(reports.summary.paymentMethodCounts).forEach(([method, count]) => {
-          const percentage = (count / reports.summary.totalOrders * 100).toFixed(2);
-          summaryData.push([method, count, `${percentage}%`]);
-        });
-      }
-      
-      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-      
-      // Create orders worksheet
-      const ordersData = [
-        ['Order ID', 'Date', 'Customer', 'Amount', 'Discount', 'Payment Method', 'Status']
-      ];
-      
-      reports.orders.forEach(order => {
-        ordersData.push([
-          order.orderId || (typeof order._id === 'string' ? order._id : order._id?.toString()),
-          format(new Date(order.createdAt), 'dd/MM/yyyy'),
-          order.user?.name || 'Guest',
-          order.totalPrice.toFixed(2),
-          (order.couponDiscount || 0).toFixed(2),
-          order.paymentMethod,
-          order.orderStatus || order.status || 'Unknown'
-        ]);
-      });
-      
-      const ordersWs = XLSX.utils.aoa_to_sheet(ordersData);
-      XLSX.utils.book_append_sheet(wb, ordersWs, 'Orders');
-      
-      // Create daily sales worksheet if available
-      if (reports.dailySales && reports.dailySales.length > 0) {
-        const dailyData = [
-          ['Date', 'Orders', 'Revenue', 'Discount', 'Net Revenue']
-        ];
-        
-        reports.dailySales.forEach(day => {
-          dailyData.push([
-            day.date,
-            day.count,
-            day.revenue.toFixed(2),
-            day.discount.toFixed(2),
-            (day.revenue - day.discount).toFixed(2)
-          ]);
-        });
-        
-        const dailyWs = XLSX.utils.aoa_to_sheet(dailyData);
-        XLSX.utils.book_append_sheet(wb, dailyWs, 'Daily Sales');
-      }
-      
-      // Create category sales worksheet if available
-      if (reports.categorySales && reports.categorySales.length > 0) {
-        const categoryData = [
-          ['Category', 'Items Sold', 'Revenue']
-        ];
-        
-        reports.categorySales.forEach(cat => {
-          categoryData.push([
-            cat.category,
-            cat.count,
-            cat.revenue.toFixed(2)
-          ]);
-        });
-        
-        const categoryWs = XLSX.utils.aoa_to_sheet(categoryData);
-        XLSX.utils.book_append_sheet(wb, categoryWs, 'Category Sales');
-      }
-      
-      // Generate Excel file
-      XLSX.writeFile(wb, `Zekoya_Sales_Report_${startDate}_to_${endDate}.xlsx`);
-      
-      toast.success('Excel report downloaded successfully');
+      const filters = {
+        startDate,
+        endDate,
+      };
+      await dispatch(downloadReport({ filters, format })).unwrap();
+      toast.success(`Report downloaded successfully in ${format.toUpperCase()} format`);
     } catch (error) {
-      console.error('Error generating Excel report:', error);
-      toast.error('Failed to generate Excel report');
+      toast.error('Failed to download report');
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Sales Report</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={exportToExcel}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            disabled={isLoading || !reports}
-          >
-            <FaFileExcel className="mr-2" />
-            Excel
-          </button>
-          <button
-            onClick={exportToPDF}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            disabled={isLoading || !reports}
-          >
-            <FaFilePdf className="mr-2" />
-            PDF
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            <FaFilter className="mr-2" />
-            Filters
-          </button>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-          <div className="flex flex-wrap items-center mb-4">
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold mb-4">Sales Report</h1>
+        
+        {/* Filter Controls */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <div className="flex flex-wrap gap-4 mb-4">
             <button
-              onClick={() => handleFilterChange('day')}
-              className={`mr-2 mb-2 px-4 py-2 rounded-md ${
-                filterType === 'day' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+              onClick={() => handleFilterChange('daily')}
+              className={`px-4 py-2 rounded ${
+                filterType === 'daily'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
               }`}
             >
-              Today
+              Daily
             </button>
             <button
-              onClick={() => handleFilterChange('week')}
-              className={`mr-2 mb-2 px-4 py-2 rounded-md ${
-                filterType === 'week' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+              onClick={() => handleFilterChange('weekly')}
+              className={`px-4 py-2 rounded ${
+                filterType === 'weekly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
               }`}
             >
-              This Week
+              Weekly
             </button>
             <button
-              onClick={() => handleFilterChange('month')}
-              className={`mr-2 mb-2 px-4 py-2 rounded-md ${
-                filterType === 'month' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+              onClick={() => handleFilterChange('monthly')}
+              className={`px-4 py-2 rounded ${
+                filterType === 'monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
               }`}
             >
-              This Month
+              Monthly
+            </button>
+            <button
+              onClick={() => handleFilterChange('yearly')}
+              className={`px-4 py-2 rounded ${
+                filterType === 'yearly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              Yearly
             </button>
           </div>
-          
-          <form onSubmit={handleSubmitFilter} className="flex flex-wrap items-end">
-            <div className="mr-4 mb-2">
+
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                <FaCalendarAlt className="inline mr-1" /> Start Date
+                Start Date
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border rounded-md px-3 py-2"
+                className="border rounded px-3 py-2"
               />
             </div>
-            <div className="mr-4 mb-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                <FaCalendarAlt className="inline mr-1" /> End Date
+                End Date
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border rounded-md px-3 py-2"
+                className="border rounded px-3 py-2"
               />
             </div>
             <button
-              type="submit"
-              className="mb-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              onClick={() => fetchReport(startDate, endDate)}
+              className={`flex items-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${
+                (!startDate || !endDate) ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={!startDate || !endDate || isLoading}
             >
-              <FaSearch className="inline mr-1" /> Apply Filter
+              {isLoading ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FaSearch className="mr-2" />
+                  Generate Report
+                </>
+              )}
             </button>
-          </form>
+          </div>
         </div>
-      )}
 
-      {isLoading ? (
-        <div className="flex justify-center my-12">
-          <Spinner />
-        </div>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Orders</h3>
-              <p className="text-3xl font-bold text-indigo-600">{reports?.summary?.totalOrders || 0}</p>
+        {/* Summary Cards */}
+        {!isLoading && data && data.summary && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Total Orders</h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {data.summary.totalOrders}
+              </p>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Revenue</h3>
-              <p className="text-3xl font-bold text-green-600">₹{reports?.summary?.totalRevenue?.toFixed(2) || 0}</p>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Total Revenue</h3>
+              <p className="text-3xl font-bold text-green-600">
+                ₹{data.summary.totalRevenue?.toFixed(2)}
+              </p>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Discount</h3>
-              <p className="text-3xl font-bold text-orange-600">₹{reports?.summary?.totalDiscount?.toFixed(2) || 0}</p>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Total Discount</h3>
+              <p className="text-3xl font-bold text-red-600">
+                ₹{data.summary.totalDiscount?.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Average Order Value</h3>
+              <p className="text-3xl font-bold text-purple-600">
+                ₹{data.summary.averageOrderValue?.toFixed(2)}
+              </p>
             </div>
           </div>
+        )}
 
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Payment Method Pie Chart */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                <FaChartPie className="mr-2 text-indigo-600" />
-                Payment Method Distribution
-              </h3>
-              {reports?.summary?.paymentMethodCounts && Object.keys(reports.summary.paymentMethodCounts).length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={Object.entries(reports.summary.paymentMethodCounts).map(([name, value], index) => ({
-                          name,
-                          value,
-                        }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {Object.keys(reports.summary.paymentMethodCounts).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE'][index % 5]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} orders`, 'Count']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="flex justify-center items-center h-64 text-gray-500">
-                  No payment data available for the selected period
-                </div>
-              )}
-            </div>
+        {/* Download Buttons */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => handleDownload('pdf')}
+            disabled={isDownloading || !data}
+            className="flex items-center bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400"
+          >
+            <FaFileDownload className="mr-2" />
+            Download PDF
+          </button>
+          <button
+            onClick={() => handleDownload('excel')}
+            disabled={isDownloading || !data}
+            className="flex items-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+          >
+            <FaFileDownload className="mr-2" />
+            Download Excel
+          </button>
+        </div>
 
-            {/* Daily Sales Bar Chart */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                <FaChartBar className="mr-2 text-indigo-600" />
-                Daily Sales
-              </h3>
-              {reports?.dailySales && Object.keys(reports.dailySales).length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={reports.dailySales.map(day => ({
-                        date: format(new Date(day.date), 'dd/MM'),
-                        revenue: day.revenue,
-                        orders: day.count
-                      }))}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                      <Tooltip formatter={(value, name) => [
-                        name === 'revenue' ? `₹${value.toFixed(2)}` : value,
-                        name === 'revenue' ? 'Revenue' : 'Orders'
-                      ]} />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="revenue" name="Revenue (₹)" fill="#8884d8" />
-                      <Bar yAxisId="right" dataKey="orders" name="Orders" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="flex justify-center items-center h-64 text-gray-500">
-                  No daily sales data available for the selected period
-                </div>
-              )}
-            </div>
+        {/* Sales Table */}
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <FaSpinner className="animate-spin text-4xl text-blue-600" />
           </div>
-
-          {/* Orders Table */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Discount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Method
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {reports?.orders?.length > 0 ? (
-                  reports.orders.map((order) => (
-                    <tr key={order._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order.orderId || order._id.substring(order._id.length - 8)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format(new Date(order.createdAt), 'dd/MM/yyyy')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.user?.name || 'Guest'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ₹{order.totalPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ₹{(order.couponDiscount || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.paymentMethod}
-                      </td>
+        ) : data?.orders ? (
+          <>
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Order ID
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Customer
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Items
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Payment
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">
+                        Total
+                      </th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No orders found for the selected period
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {console.log('Rendering orders table with data:', data.orders)}
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center">
+                          <div className="flex justify-center">
+                            <FaSpinner className="animate-spin h-5 w-5 text-blue-500" />
+                          </div>
+                        </td>
+                      </tr>
+                    ) : data?.orders?.length > 0 ? (
+                      data.orders.map((order) => (
+                        <tr key={order._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {order.orderId}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{order.user?.name || 'Guest'}</div>
+                            <div className="text-sm text-gray-500">{order.user?.email || ''}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{order.itemCount || 0} items</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              order.paymentMethod === 'cod' ? 'bg-yellow-100 text-yellow-800' :
+                              order.paymentMethod === 'razorpay' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.paymentMethod?.toUpperCase() || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              order.orderStatus === 'delivered' ? 'bg-green-100 text-green-800' :
+                              order.orderStatus === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                              order.orderStatus === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.orderStatus?.toUpperCase() || 'PENDING'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ₹{order.totalPrice?.toFixed(2) || '0.00'}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
+                          {data?.orders ? 'No orders found for the selected period' : 'Error loading orders'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-b-lg shadow">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{(currentPage - 1) * limit + 1}</span> to{' '}
+                    <span className="font-medium">
+                      {Math.min(currentPage * limit, totalOrders)}
+                    </span>{' '}
+                    of <span className="font-medium">{totalOrders}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      &larr;
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // Calculate page numbers to show (current page in the middle when possible)
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      if (pageNum < 1 || pageNum > totalPages) return null;
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      &rarr;
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <p className="text-gray-500">No sales data available for the selected period</p>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 };

@@ -6,7 +6,6 @@ const getProducts = async (params, token) => {
   const queryParams = { ...params, limit: params.limit || 10 };
   const config = token ? { headers: { Authorization: `Bearer ${token}` }, params: queryParams } : { params: queryParams };
   const response = await axios.get(API_URL, config);
-  console.log('products object' , response.data);
   return response.data;
 };
 

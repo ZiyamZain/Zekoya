@@ -9,12 +9,11 @@ const BlockedUserChecker = () => {
   const { userInfo } = useSelector((state) => state.userAuth);
   const intervalRef = useRef(null);
   
-  // Check interval in milliseconds (e.g., every 2 minutes)
   const CHECK_INTERVAL = 2 * 60 * 1000;
   
   useEffect(() => {
     const checkBlockedStatus = async () => {
-      // Only check if user is logged in
+  
       if (userInfo && userInfo.token) {
         try {
           const { isBlocked } = await userAuthService.checkUserStatus();
@@ -41,15 +40,15 @@ const BlockedUserChecker = () => {
       }
     };
     
-    // Check immediately on component mount
+
     if (userInfo) {
       checkBlockedStatus();
     }
     
-    // Set up interval for periodic checks
+
     intervalRef.current = setInterval(checkBlockedStatus, CHECK_INTERVAL);
     
-    // Clean up interval on component unmount
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);

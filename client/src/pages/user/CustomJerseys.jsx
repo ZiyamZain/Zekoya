@@ -7,7 +7,6 @@ import { FaTshirt, FaRulerHorizontal, FaFont } from 'react-icons/fa';
 const CustomJerseys = () => {
   const [activeJersey, setActiveJersey] = useState(0);
   
-  // Sample jersey designs
   const jerseyDesigns = [
     { color: 'bg-blue-600', accent: 'bg-white', name: 'Blue Strike' },
     { color: 'bg-red-600', accent: 'bg-white', name: 'Red Victory' },
@@ -15,7 +14,6 @@ const CustomJerseys = () => {
     { color: 'bg-green-600', accent: 'bg-white', name: 'Green Machine' },
   ];
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -38,6 +36,8 @@ const CustomJerseys = () => {
     { icon: FaRulerHorizontal, title: 'Perfect Fit', description: 'Available in all sizes from XS to 3XL' },
     { icon: FiAward, title: 'Quality Guaranteed', description: '100% satisfaction or your money back' },
   ];
+
+  
 
   return (
     <section className="py-16 md:py-24 relative overflow-hidden">
@@ -122,7 +122,7 @@ const CustomJerseys = () => {
             </motion.div>
 
             <Link
-              to="/custom-jerseys"
+              to="/coming-soon"
               className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm uppercase tracking-wider mt-4 transition-all duration-300 hover:bg-gray-200 group shadow-lg"
             >
               <span>Coming soon</span>

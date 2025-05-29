@@ -46,6 +46,12 @@ const requestReturnItem = async (data) => {
   return response.data;
 };
 
+// Update order to paid status
+const updateOrderToPaid = async (orderId) => {
+  const response = await API.put(`${API_URL}/${orderId}/pay`);
+  return response.data;
+};
+
 // Generate invoice
 const generateInvoice = async (orderId) => {
   try {
@@ -88,7 +94,8 @@ const orderService = {
   cancelOrder,
   cancelOrderItem,
   requestReturnItem,
-  generateInvoice
+  generateInvoice,
+  updateOrderToPaid
 };
 
 export default orderService;

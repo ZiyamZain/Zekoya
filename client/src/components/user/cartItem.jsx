@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateCartItem, removeFromCart, resetCart } from "../../features/cart/cartSlice";
-import { toast } from "react-toastify";
 import { FaTag } from "react-icons/fa";
 import axios from "axios";
 
-// Memoized CartItem component to prevent unnecessary re-renders
+
 const CartItem = memo(({ item }) => {
   const dispatch = useDispatch();
   const { isError, message, isLoading } = useSelector((state) => state.cart);
@@ -16,7 +15,6 @@ const CartItem = memo(({ item }) => {
   const [activeCategoryOffer, setActiveCategoryOffer] = useState(null);
   const [isLoadingOffer, setIsLoadingOffer] = useState(false);
   
-  // Extract product and size from item to use in effects
   const product = item.product;
   const size = item.size;
   
@@ -28,38 +26,55 @@ const CartItem = memo(({ item }) => {
   // Fetch active offer for this product
   useEffect(() => {
     const fetchOffers = async () => {
-      // Enhanced validation to prevent API calls with invalid product IDs
-      if (!product || !product._id || product._id === 'undefined' || product._id === 'null') {
+      if (!product) {
         setActiveOffer(null);
         setActiveCategoryOffer(null);
         setIsLoadingOffer(false);
         return;
       }
-      
+
       setIsLoadingOffer(true);
       try {
-        // Fetch product offer
-        const productOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/product/active/${product._id}`);
-        if (productOfferResponse.data) {
+        try {
+          const productOfferResponse = await axios.get(
+            `${
+              import.meta.env.VITE_API_URL || "http://localhost:5001"
+            }/api/offers/product/active/${product._id}`
+          );
           setActiveOffer(productOfferResponse.data);
-        } else {
-          setActiveOffer(null);
+        } catch (error) {
+          // If it's a 404, just means no offers available
+          if (error.response && error.response.status === 404) {
+            setActiveOffer(null);
+          } else {
+            console.error("Error fetching product offer:", error);
+          }
         }
-        
+
         // Fetch category offer if product has a category
         if (product.category) {
-          const categoryId = typeof product.category === 'object' ? product.category._id : product.category;
-          const categoryOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/category/active/${categoryId}`);
-          if (categoryOfferResponse.data) {
+          const categoryId =
+            typeof product.category === "object"
+              ? product.category._id
+              : product.category;
+          try {
+            const categoryOfferResponse = await axios.get(
+              `${
+                import.meta.env.VITE_API_URL || "http://localhost:5001"
+              }/api/offers/category/active/${categoryId}`
+            );
             setActiveCategoryOffer(categoryOfferResponse.data);
-          } else {
-            setActiveCategoryOffer(null);
+          } catch (error) {
+            // If it's a 404, just means no category offers available
+            if (error.response && error.response.status === 404) {
+              setActiveCategoryOffer(null);
+            } else {
+              console.error("Error fetching category offer:", error);
+            }
           }
         }
       } catch (error) {
-        // Silently fail - no offer available is a normal state
-        // Don't log errors for 404s as they're expected when no offer exists
-        console.log('Error fetching offers:', error);
+        console.error("Error in fetchOffers:", error);
       } finally {
         setIsLoadingOffer(false);
       }
@@ -83,7 +98,7 @@ const CartItem = memo(({ item }) => {
 
   const isOutOfStock = maxStock === 0;
   
-  // Function to calculate discount amount for comparison
+
   const calculateDiscountAmount = (price, offer) => {
     if (!offer) return 0;
     
@@ -94,7 +109,7 @@ const CartItem = memo(({ item }) => {
     }
   };
 
-  // Determine which offer gives the best discount
+ //for the better discountt
   const productOfferDiscount = calculateDiscountAmount(product?.price || 0, activeOffer);
   const categoryOfferDiscount = calculateDiscountAmount(product?.price || 0, activeCategoryOffer);
   
@@ -103,7 +118,6 @@ const CartItem = memo(({ item }) => {
   // Track the source of the best offer for display purposes
   const isBestOfferFromCategory = bestOffer === activeCategoryOffer && bestOffer !== null;
   
-  // Calculate discounted price if there's an active offer
   const calculateDiscountedPrice = () => {
     if (!bestOffer || !product) return product?.price;
     
@@ -117,7 +131,6 @@ const CartItem = memo(({ item }) => {
   
   const discountedPrice = calculateDiscountedPrice();
   
-  // Format the discount text
   const formatDiscountText = () => {
     if (!bestOffer) return '';
     
@@ -128,20 +141,18 @@ const CartItem = memo(({ item }) => {
     }
   };
   
-  // Clear quantity error when cart state changes
   useEffect(() => {
     if (!isError) {
       setQuantityError(null);
     }
   }, [isError]);
 
-  // Memoized quantity change handler with optimistic updates
+
+
   const handleQuantityChange = useCallback((newQuantity) => {
     try {
-      // Clear any previous quantity errors
       setQuantityError(null);
       
-      // Basic validation before sending to server
       if (newQuantity < 1) {
         setQuantityError('Quantity cannot be less than 1');
         return;
@@ -166,15 +177,12 @@ const CartItem = memo(({ item }) => {
         })
       )
       .then(() => {
-        // Success - clear any errors
         setQuantityError(null);
       })
       .catch((error) => {
         console.error('Error updating cart item:', error);
-        // Revert to previous quantity on error
         setLocalQuantity(item.quantity);
         
-        // Handle specific error types
         if (error && error.errorType === 'maxQuantity') {
           setQuantityError(`Maximum available quantity is ${error.maxQuantity || maxStock}`);
         } else if (error && error.message) {
@@ -183,11 +191,11 @@ const CartItem = memo(({ item }) => {
           setQuantityError('Could not update quantity. Please try again.');
         }
         
-        // Reset cart state to clear the global error
         setTimeout(() => {
           dispatch(resetCart());
         }, 100);
       });
+      
     } catch (err) {
       console.error('Unexpected error in handleQuantityChange:', err);
       // Revert to previous quantity on error

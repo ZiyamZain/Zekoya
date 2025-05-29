@@ -14,7 +14,7 @@ import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
 import { createSelector } from "@reduxjs/toolkit";
 
-// Define the backend URL at the top of the file
+
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
 
 const CategoriesPage = () => {
@@ -26,7 +26,6 @@ const CategoriesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Create a memoized selector
   const selectCategoriesData = createSelector(
     (state) => state.adminCategories,
     (adminCategories) => ({
@@ -39,7 +38,7 @@ const CategoriesPage = () => {
     })
   );
 
-  // Use the memoized selector
+
   const {
     categories,
     total,
@@ -58,7 +57,7 @@ const CategoriesPage = () => {
   useEffect(() => {
     if (isError) {
       toast.error(message);
-      // Reset the error state after showing the toast
+
       dispatch({ type: 'categories/reset' });
     }
   }, [isError, message, dispatch]);

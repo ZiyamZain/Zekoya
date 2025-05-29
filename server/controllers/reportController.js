@@ -1,1218 +1,1300 @@
 import asyncHandler from 'express-async-handler';
 import Order from '../models/orderModel.js';
+import User from '../models/userModel.js';
+import Product from '../models/productModel.js';
+import Category from '../models/categoryModel.js';
 import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { 
+  startOfDay, endOfDay, 
+  startOfWeek, endOfWeek, 
+  startOfMonth, endOfMonth, 
+  startOfYear, endOfYear, 
+  format as formatDate, 
+  subDays, subWeeks, subMonths, subYears,
+  parseISO, isValid
+} from 'date-fns';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// @desc    Get sales report
-// @route   GET /api/admin/reports/sales
-// @access  Private/Admin
+/**
+ * Get sales report with filtering options
+ * @route GET /api/reports/sales
+ * @access Private/Admin
+ */
 export const getSalesReport = asyncHandler(async (req, res) => {
   try {
-    // For Excel exports, the token might be in the query parameters instead of the header
-    // This is a workaround for direct file downloads where setting headers is difficult
-    if (req.query.format === 'excel' && req.query.token && !req.headers.authorization) {
-      req.headers.authorization = `Bearer ${req.query.token}`;
-    }
-    const { startDate, endDate, format } = req.query;
-    
-    // Validate date parameters
-    if (!startDate || !endDate) {
+    const { startDate, endDate, period, format, page } = req.query;
+
+    // Validate required parameters
+    if ((!startDate || !endDate) && !period) {
       return res.status(400).json({
         success: false,
-        message: 'Start date and end date are required',
+        message: "Either date range or period filter is required",
       });
     }
-    
-    // Create date range filter
-    const dateFilter = {
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(`${endDate}T23:59:59.999Z`), // Include the entire end date
+
+    // Determine date range based on period or custom dates
+    let dateFilter = {};
+    const now = new Date();
+
+    if (period) {
+      switch (period) {
+        case "daily":
+          dateFilter = {
+            createdAt: {
+              $gte: startOfDay(now),
+              $lte: endOfDay(now),
+            },
+          };
+          break;
+        case "weekly":
+          dateFilter = {
+            createdAt: {
+              $gte: startOfWeek(now, { weekStartsOn: 1 }),
+              $lte: endOfWeek(now, { weekStartsOn: 1 }),
+            },
+          };
+          break;
+        case "monthly":
+          dateFilter = {
+            createdAt: {
+              $gte: startOfMonth(now),
+              $lte: endOfMonth(now),
+            },
+          };
+          break;
+        case "yearly":
+          dateFilter = {
+            createdAt: {
+              $gte: startOfYear(now),
+              $lte: endOfYear(now),
+            },
+          };
+          break;
+        case "last7days":
+          dateFilter = {
+            createdAt: {
+              $gte: subDays(now, 7),
+              $lte: now,
+            },
+          };
+          break;
+        case "last30days":
+          dateFilter = {
+            createdAt: {
+              $gte: subDays(now, 30),
+              $lte: now,
+            },
+          };
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            message: "Invalid period specified",
+          });
+      }
+    } else {
+      // Custom date range
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(startDate),
+          $lte: new Date(`${endDate}T23:59:59.999Z`),
+        },
+      };
+    }
+
+    // Calculate pagination parameters
+    const pageValue = parseInt(page) || 1;
+    const limit = 7; // Fixed at 7 orders per page
+    const skip = (pageValue - 1) * limit;
+
+    // Get total count of orders for pagination
+    const totalOrders = await Order.countDocuments(dateFilter);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    // Aggregate overall summary statistics for the entire period
+    const summaryPipeline = [
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: null,
+          totalItemsAgg: { $sum: { $sum: "$orderItems.quantity" } },
+          subtotalAmountAgg: { $sum: { $ifNull: ["$itemsPrice", 0] } },
+          totalTaxAgg: { $sum: { $ifNull: ["$taxPrice", 0] } },
+          totalShippingAgg: { $sum: { $ifNull: ["$shippingPrice", 0] } },
+          totalCouponDiscountAgg: { $sum: { $ifNull: ["$couponDiscount", 0] } },
+          // Assuming order.discountPrice is product/category offer discount, separate from coupon.
+          totalProductOfferDiscountAgg: {
+            $sum: { $ifNull: ["$discountPrice", 0] },
+          },
+          totalRevenueAgg: { $sum: { $ifNull: ["$totalPrice", 0] } },
+        },
       },
-    };
-    
-    // Get orders within date range
+    ];
+    const summaryResultsArray = await Order.aggregate(summaryPipeline);
+    const periodSummary =
+      summaryResultsArray.length > 0
+        ? summaryResultsArray[0]
+        : {
+            totalItemsAgg: 0,
+            subtotalAmountAgg: 0,
+            totalTaxAgg: 0,
+            totalShippingAgg: 0,
+            totalCouponDiscountAgg: 0,
+            totalProductOfferDiscountAgg: 0,
+            totalRevenueAgg: 0,
+          };
+
+    // Aggregate payment method statistics for the entire period
+    const paymentMethodStatsAgg = await Order.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: "$paymentMethod",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$totalPrice" },
+        },
+      },
+    ]);
+    const paymentMethodCounts = {};
+    const paymentMethodAmounts = {};
+    paymentMethodStatsAgg.forEach((stat) => {
+      if (stat._id) {
+        // Ensure _id is not null/undefined
+        paymentMethodCounts[stat._id] = stat.count;
+        paymentMethodAmounts[stat._id] = stat.totalAmount;
+      }
+    });
+
+    const newPaymentMethodsArray = Object.keys(paymentMethodCounts).map(
+      (method) => ({
+        method,
+        count: paymentMethodCounts[method],
+        amount: paymentMethodAmounts[method] || 0,
+        percentage:
+          totalOrders > 0
+            ? ((paymentMethodCounts[method] / totalOrders) * 100).toFixed(2)
+            : "0.00",
+      })
+    );
+
+    // Get orders within date range with detailed population (for the table)
     const orders = await Order.find(dateFilter)
-      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: 'user',
+        select: 'name email',
+      })
       .populate({
         path: 'orderItems.product',
-        select: 'name price category'
+        select: 'name price category brand image countInStock',
+        populate: {
+          path: 'category',
+          select: 'name',
+        },
       })
-      .sort({ createdAt: -1 });
-      
-    // Log the first order to debug
-    if (orders.length > 0) {
-      console.log('First order in report:', {
-        _id: orders[0]._id,
-        orderId: orders[0].orderId,
-        totalPrice: orders[0].totalPrice
-      });
-    }
-    
-    // Calculate summary statistics
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
-    const totalDiscount = orders.reduce((sum, order) => sum + (order.couponDiscount || 0), 0);
-    
-    // Group orders by payment method
-    const paymentMethodCounts = {};
-    orders.forEach(order => {
-      const method = order.paymentMethod;
-      paymentMethodCounts[method] = (paymentMethodCounts[method] || 0) + 1;
-    });
-    
-    // Group orders by date
+      .lean();
+
+    // Analyze daily sales
     const dailySales = {};
-    orders.forEach(order => {
-      const date = new Date(order.createdAt).toISOString().split('T')[0];
+
+    orders.forEach((order) => {
+      const date = formatDate(new Date(order.createdAt), "yyyy-MM-dd");
+
       if (!dailySales[date]) {
         dailySales[date] = {
           count: 0,
+          items: 0,
           revenue: 0,
           discount: 0,
+          couponDiscount: 0,
+          productDiscount: 0,
+          tax: 0,
+          shipping: 0,
         };
       }
+
       dailySales[date].count += 1;
+      dailySales[date].items += order.orderItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+      );
       dailySales[date].revenue += order.totalPrice;
-      dailySales[date].discount += (order.couponDiscount || 0);
+      dailySales[date].discount += order.discountPrice || 0;
+      dailySales[date].couponDiscount += order.couponDiscount || 0;
+      dailySales[date].productDiscount +=
+        (order.discountPrice || 0) - (order.couponDiscount || 0);
+      dailySales[date].tax += order.taxPrice || 0;
+      dailySales[date].shipping += order.shippingPrice || 0;
     });
 
-    // Group orders by product category
-    const categorySales = {};
-    orders.forEach(order => {
-      // Skip if orderItems array is not available
-      if (!Array.isArray(order.orderItems)) {
-        console.log('Order missing orderItems array:', order._id);
-        return;
-      }
-      
-      order.orderItems.forEach(item => {
-        // Check if product exists and has category
-        if (item.product) {
-          // Get category - handle both string and object cases
-          let category;
-          if (typeof item.product.category === 'string') {
-            category = item.product.category;
-          } else if (item.product.category && item.product.category.toString) {
-            category = item.product.category.toString();
-          } else {
-            // If category is not available, use 'Uncategorized'
-            category = 'Uncategorized';
-          }
-          
-          if (!categorySales[category]) {
-            categorySales[category] = {
-              count: 0,
-              revenue: 0,
-            };
-          }
-          categorySales[category].count += item.quantity;
-          categorySales[category].revenue += item.price * item.quantity;
-        }
-      });
-    });
-    
-    // If format is excel, generate and return Excel file
-    if (format === 'excel') {
-      // Create a new Excel workbook
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = 'Zekoya E-commerce';
-      workbook.lastModifiedBy = 'Admin';
-      workbook.created = new Date();
-      workbook.modified = new Date();
-      
-      // Add a summary sheet
-      const summarySheet = workbook.addWorksheet('Summary');
-      
-      // Add title with date range
-      summarySheet.mergeCells('A1:F1');
-      const titleCell = summarySheet.getCell('A1');
-      titleCell.value = `Sales Report (${startDate} to ${endDate})`;
-      titleCell.font = {
-        size: 16,
-        bold: true,
-        color: { argb: '4F33FF' }
-      };
-      titleCell.alignment = { horizontal: 'center' };
-      
-      // Add company info
-      summarySheet.mergeCells('A2:F2');
-      const companyCell = summarySheet.getCell('A2');
-      companyCell.value = 'Zekoya E-commerce Platform';
-      companyCell.font = {
-        size: 12,
-        bold: true
-      };
-      companyCell.alignment = { horizontal: 'center' };
-      
-      // Add report generation date
-      summarySheet.mergeCells('A3:F3');
-      const dateCell = summarySheet.getCell('A3');
-      dateCell.value = `Report Generated: ${new Date().toLocaleString()}`;
-      dateCell.font = {
-        italic: true
-      };
-      dateCell.alignment = { horizontal: 'center' };
-      
-      // Add summary section
-      summarySheet.addRow([]);
-      summarySheet.addRow(['Summary Statistics']);
-      summarySheet.getRow(5).font = { bold: true, size: 14 };
-      
-      summarySheet.addRow(['Total Orders', totalOrders]);
-      summarySheet.addRow(['Total Revenue', `₹${totalRevenue.toFixed(2)}`]);
-      summarySheet.addRow(['Total Discounts', `₹${totalDiscount.toFixed(2)}`]);
-      summarySheet.addRow(['Net Revenue', `₹${(totalRevenue - totalDiscount).toFixed(2)}`]);
-      
-      // Format the summary section
-      for (let i = 6; i <= 9; i++) {
-        summarySheet.getRow(i).getCell(1).font = { bold: true };
-        if (i >= 7 && i <= 9) {
-          summarySheet.getRow(i).getCell(2).numFmt = '₹#,##0.00';
-        }
-      }
-      
-      // Add payment method breakdown
-      summarySheet.addRow([]);
-      summarySheet.addRow(['Payment Method Breakdown']);
-      summarySheet.getRow(11).font = { bold: true, size: 14 };
-      
-      summarySheet.addRow(['Payment Method', 'Count', 'Percentage']);
-      summarySheet.getRow(12).font = { bold: true };
-      
-      let rowIndex = 13;
-      Object.entries(paymentMethodCounts).forEach(([method, count]) => {
-        const percentage = (count / totalOrders * 100).toFixed(2);
-        summarySheet.addRow([method, count, `${percentage}%`]);
-        rowIndex++;
-      });
-      
-      // Style the payment method table
-      for (let i = 12; i < rowIndex; i++) {
-        ['A', 'B', 'C'].forEach(col => {
-          summarySheet.getCell(`${col}${i}`).border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-        });
-      }
-      
-      // Set column widths
-      summarySheet.getColumn('A').width = 25;
-      summarySheet.getColumn('B').width = 15;
-      summarySheet.getColumn('C').width = 15;
-      
-      // Add daily sales sheet
-      const dailySheet = workbook.addWorksheet('Daily Sales');
-      
-      // Add headers
-      dailySheet.addRow(['Date', 'Orders', 'Revenue', 'Discounts', 'Net Revenue']);
-      dailySheet.getRow(1).font = { bold: true };
-      dailySheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-      
-      // Add data
-      Object.entries(dailySales)
-        .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-        .forEach(([date, data]) => {
-          dailySheet.addRow([
-            date,
-            data.count,
-            data.revenue,
-            data.discount,
-            data.revenue - data.discount
-          ]);
-        });
-      
-      // Format the daily sales sheet
-      dailySheet.getColumn('A').width = 15;
-      dailySheet.getColumn('B').width = 10;
-      dailySheet.getColumn('C').width = 15;
-      dailySheet.getColumn('D').width = 15;
-      dailySheet.getColumn('E').width = 15;
-      
-      // Format currency columns
-      for (let i = 2; i <= dailySheet.rowCount; i++) {
-        ['C', 'D', 'E'].forEach(col => {
-          dailySheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-        });
-      }
-      
-      // Add category sales sheet
-      const categorySheet = workbook.addWorksheet('Category Sales');
-      
-      // Add headers
-      categorySheet.addRow(['Category', 'Items Sold', 'Revenue', 'Percentage of Total Revenue']);
-      categorySheet.getRow(1).font = { bold: true };
-      categorySheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-      
-      // Add data
-      Object.entries(categorySales)
-        .sort(([, dataA], [, dataB]) => dataB.revenue - dataA.revenue)
-        .forEach(([category, data]) => {
-          const percentage = (data.revenue / totalRevenue * 100).toFixed(2);
-          categorySheet.addRow([
-            category,
-            data.count,
-            data.revenue,
-            `${percentage}%`
-          ]);
-        });
-      
-      // Format the category sales sheet
-      categorySheet.getColumn('A').width = 30;
-      categorySheet.getColumn('B').width = 15;
-      categorySheet.getColumn('C').width = 15;
-      categorySheet.getColumn('D').width = 20;
-      
-      // Format currency columns
-      for (let i = 2; i <= categorySheet.rowCount; i++) {
-        categorySheet.getCell(`C${i}`).numFmt = '₹#,##0.00';
-      }
-      
-      // Add detailed orders sheet
-      const ordersSheet = workbook.addWorksheet('Order Details');
-      
-      // Add headers
-      ordersSheet.addRow([
-        'Order ID',
-        'Date',
-        'Customer',
-        'Email',
-        'Items',
-        'Payment Method',
-        'Status',
-        'Coupon',
-        'Discount',
-        'Total'
-      ]);
-      ordersSheet.getRow(1).font = { bold: true };
-      ordersSheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-      
-      // Add order data
-      orders.forEach(order => {
-        try {
-          // Use orderItems array
-          const itemCount = Array.isArray(order.orderItems) 
-            ? order.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0) 
-            : 0;
-          
-          // Get order status - handle different property names
-          const status = order.status || order.orderStatus || 'Unknown';
-          
-          ordersSheet.addRow([
-            order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-            new Date(order.createdAt).toLocaleDateString(),
-            order.user?.name || 'Guest',
-            order.user?.email || 'N/A',
-            itemCount,
-            order.paymentMethod || 'Unknown',
-            status,
-            order.couponCode || 'None',
-            order.couponDiscount || 0,
-            order.totalPrice || 0
-          ]);
-        } catch (err) {
-          console.error(`Error adding order to Excel: ${err.message}`, {
-            orderId: order.orderId || (order._id ? order._id.toString() : 'Unknown')
-          });
-          // Add a row with error information
-          ordersSheet.addRow([
-            order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-            'Error processing order data',
-            '', '', '', '', '', '', '', ''
-          ]);
-        }
-      });
-      
-      // Format the orders sheet
-      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((col, index) => {
-        const widths = [20, 15, 20, 25, 10, 20, 15, 15, 15, 15];
-        ordersSheet.getColumn(col).width = widths[index];
-      });
-      
-      // Format currency columns
-      for (let i = 2; i <= ordersSheet.rowCount; i++) {
-        ['I', 'J'].forEach(col => {
-          ordersSheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-        });
-      }
-      
-      // Set the response headers
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename=Zekoya_Sales_Report_${startDate}_to_${endDate}.xlsx`);
-      
-      // Write the workbook to the response
-      await workbook.xlsx.write(res);
-      
-      return;
-    }
-    
-    // Prepare JSON response (for non-Excel format)
-    const report = {
-      summary: {
-        totalOrders,
-        totalRevenue,
-        totalDiscount,
-        paymentMethodCounts,
-      },
-      dailySales: Object.entries(dailySales).map(([date, data]) => ({
+    // Convert to array and sort by date
+    const dailySalesArray = Object.entries(dailySales)
+      .map(([date, data]) => ({
         date,
         ...data,
-      })),
-      categorySales: Object.entries(categorySales).map(([category, data]) => ({
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Group orders by product category
+    const categorySales = {};
+    const brandSales = {};
+    const productSales = {};
+
+    orders.forEach((order) => {
+      if (!Array.isArray(order.orderItems)) {
+        console.log("Order missing orderItems array:", order._id);
+        return;
+      }
+
+      order.orderItems.forEach((item) => {
+        if (item.product) {
+          // Process category sales
+          let category;
+          if (typeof item.product.category === "string") {
+            category = item.product.category;
+          } else if (item.product.category && item.product.category.toString) {
+            category = item.product.category.toString();
+          } else {
+            category = "Uncategorized";
+          }
+
+          if (!categorySales[category]) {
+            categorySales[category] = {
+              count: 0,
+              revenue: 0,
+              items: 0,
+            };
+          }
+          categorySales[category].count += 1;
+          categorySales[category].items += item.quantity;
+          categorySales[category].revenue += item.price * item.quantity;
+
+          // Process brand sales
+          let brand;
+          if (typeof item.product.brand === "string") {
+            brand = item.product.brand;
+          } else if (item.product.brand && item.product.brand.toString) {
+            brand = item.product.brand.toString();
+          } else {
+            brand = "Unbranded";
+          }
+
+          if (!brandSales[brand]) {
+            brandSales[brand] = {
+              count: 0,
+              revenue: 0,
+              items: 0,
+            };
+          }
+          brandSales[brand].count += 1;
+          brandSales[brand].items += item.quantity;
+          brandSales[brand].revenue += item.price * item.quantity;
+
+          // Process product sales
+          const productId = item.product._id.toString();
+          if (!productSales[productId]) {
+            productSales[productId] = {
+              name: item.product.name,
+              count: 0,
+              revenue: 0,
+              items: 0,
+            };
+          }
+          productSales[productId].count += 1;
+          productSales[productId].items += item.quantity;
+          productSales[productId].revenue += item.price * item.quantity;
+        }
+      });
+    });
+
+    // Convert objects to arrays for the response
+    const categorySalesArray = Object.entries(categorySales)
+      .map(([category, data]) => ({
         category,
         ...data,
-      })),
-      orders,
-      dateRange: {
-        startDate,
-        endDate,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    const brandSalesArray = Object.entries(brandSales)
+      .map(([brand, data]) => ({
+        brand,
+        ...data,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    const productSalesArray = Object.entries(productSales)
+      .map(([id, data]) => ({
+        id,
+        ...data,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    // Process orders for response
+    const processedOrders = orders.map(order => ({
+      _id: order._id,
+      orderId: order.orderId || order._id.toString().substring(0, 8) + '...',
+      user: order.user ? {
+        _id: order.user._id,
+        name: order.user.name,
+        email: order.user.email
+      } : { name: 'Guest', email: 'N/A' },
+      createdAt: order.createdAt,
+      paymentMethod: order.paymentMethod || 'N/A',
+      paymentStatus: order.paymentStatus || 'pending',
+      orderStatus: order.orderStatus || 'pending',
+      isPaid: order.isPaid || false,
+      paidAt: order.paidAt,
+      isDelivered: order.isDelivered || false,
+      deliveredAt: order.deliveredAt,
+      itemsPrice: order.itemsPrice || 0,
+      taxPrice: order.taxPrice || 0,
+      shippingPrice: order.shippingPrice || 0,
+      discountPrice: order.discountPrice || 0,
+      couponDiscount: order.couponDiscount || 0,
+      totalPrice: order.totalPrice || 0,
+      itemCount: (order.orderItems || []).reduce((sum, item) => sum + (item.quantity || 0), 0)
+    }));
+
+    // Prepare response data
+    const responseData = {
+      summary: {
+        totalOrders,
+        totalItems: periodSummary.totalItemsAgg || 0,
+        subtotalAmount: periodSummary.subtotalAmountAgg || 0,
+        totalTax: periodSummary.totalTaxAgg || 0,
+        totalShipping: periodSummary.totalShippingAgg || 0,
+        totalCouponDiscount: periodSummary.totalCouponDiscountAgg || 0,
+        totalProductDiscount: periodSummary.totalProductOfferDiscountAgg || 0,
+        totalDiscount: (periodSummary.totalProductOfferDiscountAgg || 0) + (periodSummary.totalCouponDiscountAgg || 0),
+        totalRevenue: periodSummary.totalRevenueAgg || 0,
+        averageOrderValue: totalOrders > 0 ? (periodSummary.totalRevenueAgg / totalOrders) : 0,
+        paymentMethods: newPaymentMethodsArray
       },
+      dailySales: dailySalesArray,
+      categorySales: categorySalesArray,
+      brandSales: brandSalesArray,
+      productSales: productSalesArray,
+      orders: processedOrders,
+      pagination: {
+        total: totalOrders,
+        pages: totalPages,
+        totalPages: totalPages, // Add totalPages to match frontend expectation
+        page: pageValue,
+        hasNextPage: pageValue < totalPages,
+        hasPreviousPage: pageValue > 1
+      }
     };
-    
-    res.status(200).json(report);
+
+    // Handle different response formats
+    if (format === "excel") {
+      console.log('Generating Excel report...');
+      // Create a new workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sales Report");
+
+      // Add headers with styling
+      const headerRow = worksheet.addRow([
+        'Order ID', 'Date', 'Customer', 'Items', 'Amount', 'Discount', 'Total', 'Status', 'Payment Method'
+      ]);
+      
+      // Style header row
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF2c3e50' }
+      };
+      headerRow.eachCell((cell) => {
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      // Add summary section
+      worksheet.addRow([]);
+      const summaryHeaderRow = worksheet.addRow(['Summary']);
+      summaryHeaderRow.font = { bold: true, size: 14 };
+      
+      worksheet.addRow(['Total Orders', responseData.summary.totalOrders]);
+      worksheet.addRow(['Total Revenue', `₹${responseData.summary.totalRevenue.toFixed(2)}`]);
+      worksheet.addRow(['Total Discount', `₹${responseData.summary.totalDiscount.toFixed(2)}`]);
+      worksheet.addRow(['Average Order Value', `₹${responseData.summary.averageOrderValue.toFixed(2)}`]);
+      
+      worksheet.addRow([]);
+      worksheet.addRow(['Orders']);
+      worksheet.addRow([]);
+
+      // Add data rows
+      responseData.orders.forEach((order) => {
+        const row = worksheet.addRow([
+          order.orderId || order._id,
+          formatDate(new Date(order.createdAt), "yyyy-MM-dd"),
+          order.user?.name || "Guest",
+          order.itemCount,
+          order.itemsPrice || 0,
+          (order.discountPrice || 0) + (order.couponDiscount || 0),
+          order.totalPrice || 0,
+          order.orderStatus || 'N/A',
+          order.paymentMethod || 'N/A'
+        ]);
+        
+        // Format numbers with 2 decimal places
+        row.getCell(5).numFmt = '0.00';
+        row.getCell(6).numFmt = '0.00';
+        row.getCell(7).numFmt = '0.00';
+      });
+      
+      // Auto-fit columns
+      worksheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 0;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = Math.min(maxLength + 2, 30);
+      });
+
+      // Set response headers for Excel download
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=sales-report-${Date.now()}.xlsx`
+      );
+
+      try {
+        // Write the workbook to the response
+        console.log('Writing Excel buffer...');
+        const buffer = await workbook.xlsx.writeBuffer();
+        console.log('Excel buffer created, size:', buffer.length);
+        return res.send(buffer);
+      } catch (error) {
+        console.error('Error generating Excel:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Error generating Excel report'
+        });
+      }
+    } else if (format === "pdf") {
+      console.log('Generating PDF report...');
+      try {
+        // Create a new PDF document with better margins
+        const doc = new PDFDocument({
+          margin: 40,
+          size: "A4",
+          layout: "portrait",
+          bufferPages: true
+        });
+
+        // Set response headers for PDF download
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename=sales-report-${Date.now()}.pdf`
+        );
+
+        // Create a buffer to collect the PDF data
+        const chunks = [];
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => {
+          const result = Buffer.concat(chunks);
+          console.log('PDF buffer created, size:', result.length);
+          res.end(result);
+        });
+        
+        // Pipe the PDF to the response
+        doc.pipe(res);
+
+      // Add logo and header
+      doc
+        .fontSize(24)
+        .font("Helvetica-Bold")
+        .fillColor("#2c3e50")
+        .text("SALES REPORT", { align: "center" });
+
+      // Add date range
+      doc
+        .fontSize(10)
+        .fillColor("#7f8c8d")
+        .text(
+          `Date Range: ${formatDate(
+            new Date(startDate),
+            "dd MMM yyyy"
+          )} - ${formatDate(new Date(endDate), "dd MMM yyyy")}`,
+          { align: "center", lineGap: 20 }
+        );
+
+      // Add summary section with better styling
+      doc
+        .fontSize(14)
+        .fillColor("#2c3e50")
+        .text("SUMMARY", { underline: true });
+
+      // Summary box
+      const summaryY = doc.y + 10;
+      doc.roundedRect(40, summaryY, doc.page.width - 80, 80, 5).fill("#f8f9fa");
+
+      // Summary content
+      const summaryItems = [
+        { label: "Total Orders", value: responseData.summary.totalOrders },
+        {
+          label: "Total Revenue",
+          value: `₹${responseData.summary.totalRevenue.toFixed(2)}`,
+        },
+        {
+          label: "Total Discount",
+          value: `₹${responseData.summary.totalDiscount.toFixed(2)}`,
+        },
+        {
+          label: "Avg. Order Value",
+          value: `₹${responseData.summary.averageOrderValue.toFixed(2)}`,
+        },
+      ];
+
+      const summaryCol1X = 60;
+      const summaryCol2X = 250;
+      let currentY = summaryY + 20;
+
+      summaryItems.forEach((item, index) => {
+        const x = index % 2 === 0 ? summaryCol1X : summaryCol2X;
+        if (index % 2 === 0 && index > 0) currentY += 25;
+
+        doc
+          .fontSize(10)
+          .fillColor("#7f8c8d")
+          .text(`${item.label}:`, x, currentY);
+
+        doc
+          .fontSize(12)
+          .fillColor("#2c3e50")
+          .text(item.value, x + 100, currentY);
+      });
+
+      // Orders section
+      const ordersY = currentY + 30;
+      doc
+        .fontSize(14)
+        .font("Helvetica-Bold")
+        .fillColor("#2c3e50")
+        .text("ORDER DETAILS", 40, ordersY, {
+          underline: false,
+          align: "left",
+          lineGap: 10,
+        });
+
+      // Table headers and layout
+      const tableTop = ordersY + 20;
+      const leftMargin = 40;
+      const rowHeight = 20;
+      const colWidths = [90, 70, 150, 80, 80];
+      const headerHeight = 25;
+      const footerHeight = 30;
+
+      // Calculate available rows per page
+      const availableHeight =
+        doc.page.height - tableTop - headerHeight - footerHeight - 20;
+      const rowsPerPage = 7; // Match the limit for consistency
+
+      // Split orders into chunks that fit on each page
+      const allOrders = responseData.orders;
+      const orderChunks = [];
+      for (let i = 0; i < allOrders.length; i += rowsPerPage) {
+        orderChunks.push(allOrders.slice(i, i + rowsPerPage));
+      }
+
+      // If no orders, add an empty chunk to show the table header
+      if (orderChunks.length === 0) {
+        orderChunks.push([]);
+      }
+
+      // Process each page of orders
+      orderChunks.forEach((tableRows, pageIndex) => {
+        // Add new page for all chunks after the first one
+        if (pageIndex > 0) {
+          doc.addPage();
+          // Reset Y position for the new page
+          currentY = 50;
+          
+          // Add header for subsequent pages
+          doc
+            .fontSize(24)
+            .font('Helvetica-Bold')
+            .fillColor('#2c3e50')
+            .text('SALES REPORT (CONTINUED)', { align: 'center' });
+            
+          // Add date range for subsequent pages
+          doc
+            .fontSize(10)
+            .fillColor('#7f8c8d')
+            .text(
+              `Date Range: ${formatDate(new Date(startDate), 'dd MMM yyyy')} - ${formatDate(new Date(endDate), 'dd MMM yyyy')}`,
+              { align: 'center', lineGap: 20 }
+            );
+        }
+
+        // Draw table header
+        doc
+          .roundedRect(leftMargin, currentY, doc.page.width - 80, rowHeight, 3)
+          .fill("#2c3e50");
+
+        let currentX = leftMargin + 5;
+        const headers = ["Order ID", "Date", "Customer", "Amount", "Status"];
+        headers.forEach((header, i) => {
+          doc
+            .fontSize(10)
+            .fillColor("#ffffff")
+            .text(header, currentX, currentY + 5, { width: colWidths[i] - 10 });
+          currentX += colWidths[i];
+        });
+
+        // Draw table rows for current page
+        let currentTableY = currentY + rowHeight;
+        tableRows.forEach((order, index) => {
+          const rowY = currentTableY + index * rowHeight;
+
+          // Alternate row colors
+          if (index % 2 === 0) {
+            doc
+              .fillColor("#f8f9fa")
+              .rect(leftMargin, rowY, doc.page.width - 80, rowHeight)
+              .fill();
+          }
+
+          // Draw cell borders
+          doc
+            .strokeColor("#e0e0e0")
+            .lineWidth(0.5)
+            .moveTo(leftMargin, rowY + rowHeight)
+            .lineTo(leftMargin + doc.page.width - 80, rowY + rowHeight)
+            .stroke();
+
+          // Order ID
+          doc
+            .fontSize(8)
+            .fillColor("#2c3e50")
+            .text(
+              (order.orderId || order._id).toString().substring(0, 8) + "...",
+              leftMargin + 5,
+              rowY + 5,
+              { width: colWidths[0] - 10, lineGap: 2 }
+            );
+
+          // Date
+          doc
+            .fontSize(8)
+            .fillColor("#2c3e50")
+            .text(
+              formatDate(new Date(order.createdAt), "dd MMM yy"),
+              leftMargin + colWidths[0] + 5,
+              rowY + 5,
+              { width: colWidths[1] - 10 }
+            );
+
+          // Customer
+          doc
+            .fontSize(8)
+            .fillColor("#2c3e50")
+            .text(
+              order.user?.name || "Guest",
+              leftMargin + colWidths[0] + colWidths[3] + 10,
+              rowY + 10,
+              { width: colWidths[3] - 10, ellipsis: true }
+            );
+
+          // Amount - Show final amount after all discounts
+          const finalAmount =
+            (order.totalPrice || 0) - (order.discountPrice || 0);
+          doc
+            .fontSize(8)
+            .fillColor("#2c3e50")
+            .text(
+              `₹${finalAmount.toFixed(2)}`,
+              leftMargin + colWidths[0] + colWidths[1] + colWidths[2] - 5,
+              rowY + 5,
+              { width: colWidths[3] + 10, align: "left" }
+            );
+
+          // Status with colored pill - Adjust positioning
+          const status = order.orderStatus.toLowerCase();
+          const statusColors = {
+            completed: "#2ecc71",
+            processing: "#3498db",
+            shipped: "#9b59b6",
+            delivered: "#27ae60",
+            cancelled: "#e74c3c",
+            pending: "#f39c12",
+          };
+
+          const statusBg = statusColors[status] || "#95a5a6";
+          const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+
+          doc
+            .roundedRect(
+              leftMargin +
+                colWidths[0] +
+                colWidths[1] +
+                colWidths[2] +
+                colWidths[3] +
+                10,
+              rowY + 2,
+              colWidths[4] - 20,
+              15,
+              7.5
+            )
+            .fill(statusBg);
+
+          doc
+            .fontSize(7)
+            .fillColor("#ffffff")
+            .text(
+              statusText,
+              leftMargin +
+                colWidths[0] +
+                colWidths[1] +
+                colWidths[2] +
+                colWidths[3] +
+                10,
+              rowY + 5.5,
+              { width: colWidths[4] - 20, align: "center" }
+            );
+        });
+      });
+
+      // Add page numbers to all pages
+      const pageCount = orderChunks.length;
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+        doc
+          .fontSize(8)
+          .fillColor("#95a5a6")
+          .text(
+            `Page ${i + 1} of ${pageCount}`,
+            doc.page.width - 50,
+            doc.page.height - 20
+          );
+      }
+
+      // Add pagination footer to PDF
+      const totalOrders = responseData.pagination.total;
+      const totalPages = responseData.pagination.totalPages;
+      const currentPage = responseData.pagination.currentPage;
+
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i);
+
+        // Current page indicator
+        doc
+          .fontSize(10)
+          .fillColor("#666")
+          .text(
+            `Page ${currentPage} of ${totalPages}`,
+            doc.page.width / 2 - 30,
+            doc.page.height - 20,
+            { align: "center" }
+          );
+
+        // Pagination info
+        const startItem = (currentPage - 1) * rowsPerPage + 1;
+        const endItem = Math.min(currentPage * rowsPerPage, totalOrders);
+
+        doc
+          .fontSize(10)
+          .fillColor("#666")
+          .text(
+            `Showing ${startItem}-${endItem} of ${totalOrders} orders`,
+            doc.page.width - 50,
+            doc.page.height - 20,
+            { align: "right" }
+          );
+
+        // Add navigation text if there are more pages
+        if (currentPage < totalPages) {
+          doc
+            .fontSize(10)
+            .fillColor("#3498db")
+            .text("Next Page", doc.page.width - 50, doc.page.height - 40, {
+              align: "right",
+              link: `?page=${parseInt(currentPage) + 1}`,
+            });
+        }
+
+        if (currentPage > 1) {
+          doc
+            .fontSize(10)
+            .fillColor("#3498db")
+            .text("Previous Page", 50, doc.page.height - 40, {
+              align: "left",
+              link: `?page=${parseInt(currentPage) - 1}`,
+            });
+        }
+      }
+
+      // Finalize the PDF and end the stream
+      doc.end();
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Error generating PDF report'
+        });
+      }
+    } else {
+      // Return JSON response
+      return res.status(200).json({
+        success: true,
+        data: responseData,
+      });
+    }
   } catch (error) {
     console.error('Error generating sales report:', error);
-    
-    // Log more detailed error information for debugging
-    if (error.stack) {
-      console.error('Error stack:', error.stack);
-    }
-    
-    // Check if headers have already been sent (for Excel export)
-    if (res.headersSent) {
-      console.error('Headers already sent, cannot send error response');
-      return;
-    }
-    
-    // Send detailed error response
     res.status(500).json({
       success: false,
-      message: 'Error generating sales report',
-      error: error.message,
-      details: error.stack ? error.stack.split('\n')[0] : 'No additional details',
+      message: error.message || 'Error generating sales report',
     });
   }
+
 });
 
-// @desc    Export sales report as Excel
-// @route   POST /api/admin/reports/excel
-// @access  Private/Admin
-export const exportSalesReportExcel = asyncHandler(async (req, res) => {
-  try {
-    const { startDate, endDate } = req.body;
-    
-    // Validate date parameters
-    if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
-    }
-    
-    // Create date range filter
-    const dateFilter = {
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(`${endDate}T23:59:59.999Z`), // Include the entire end date
-      },
-    };
-    
-    // Get orders within date range
-    const orders = await Order.find(dateFilter)
-      .populate('user', 'name email')
-      .populate({
-        path: 'orderItems.product',
-        select: 'name price category'
-      })
-      .sort({ createdAt: -1 });
-      
-    // Log the first order to debug
-    if (orders.length > 0) {
-      console.log('First order in Excel export:', {
-        _id: orders[0]._id,
-        orderId: orders[0].orderId,
-        totalPrice: orders[0].totalPrice
-      });
-    }
-    
-    // Calculate summary statistics
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
-    const totalDiscount = orders.reduce((sum, order) => sum + (order.couponDiscount || 0), 0);
-    
-    // Group orders by payment method
-    const paymentMethodCounts = {};
-    orders.forEach(order => {
-      const method = order.paymentMethod;
-      paymentMethodCounts[method] = (paymentMethodCounts[method] || 0) + 1;
-    });
-    
-    // Group orders by date
-    const dailySales = {};
-    orders.forEach(order => {
-      const date = new Date(order.createdAt).toISOString().split('T')[0];
-      if (!dailySales[date]) {
-        dailySales[date] = {
-          count: 0,
-          revenue: 0,
-          discount: 0,
-        };
-      }
-      dailySales[date].count += 1;
-      dailySales[date].revenue += order.totalPrice;
-      dailySales[date].discount += (order.couponDiscount || 0);
-    });
-
-    // Group orders by product category
-    const categorySales = {};
-    orders.forEach(order => {
-      // Skip if orderItems array is not available
-      if (!Array.isArray(order.orderItems)) {
-        console.log('Order missing orderItems array:', order._id);
-        return;
-      }
-      
-      order.orderItems.forEach(item => {
-        // Check if product exists and has category
-        if (item.product) {
-          // Get category - handle both string and object cases
-          let category;
-          if (typeof item.product.category === 'string') {
-            category = item.product.category;
-          } else if (item.product.category && item.product.category.toString) {
-            category = item.product.category.toString();
-          } else {
-            // If category is not available, use 'Uncategorized'
-            category = 'Uncategorized';
-          }
-          
-          if (!categorySales[category]) {
-            categorySales[category] = {
-              count: 0,
-              revenue: 0,
-            };
-          }
-          categorySales[category].count += item.quantity;
-          categorySales[category].revenue += item.price * item.quantity;
-        }
-      });
-    });
-    
-    // Create a new Excel workbook
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Zekoya E-commerce';
-    workbook.lastModifiedBy = 'Admin';
-    workbook.created = new Date();
-    workbook.modified = new Date();
-    
-    // Add a summary sheet
-    const summarySheet = workbook.addWorksheet('Summary');
-    
-    // Add title with date range
-    summarySheet.mergeCells('A1:F1');
-    const titleCell = summarySheet.getCell('A1');
-    titleCell.value = `Sales Report (${startDate} to ${endDate})`;
-    titleCell.font = {
-      size: 16,
-      bold: true,
-      color: { argb: '4F33FF' }
-    };
-    titleCell.alignment = { horizontal: 'center' };
-    
-    // Add company info
-    summarySheet.mergeCells('A2:F2');
-    const companyCell = summarySheet.getCell('A2');
-    companyCell.value = 'Zekoya E-commerce Platform';
-    companyCell.font = {
-      size: 12,
-      bold: true
-    };
-    companyCell.alignment = { horizontal: 'center' };
-    
-    // Add date generated
-    summarySheet.mergeCells('A3:F3');
-    const dateCell = summarySheet.getCell('A3');
-    dateCell.value = `Generated on: ${new Date().toLocaleString()}`;
-    dateCell.font = {
-      italic: true
-    };
-    dateCell.alignment = { horizontal: 'center' };
-    
-    // Add summary section
-    summarySheet.addRow([]);
-    summarySheet.addRow(['Summary Statistics']);
-    summarySheet.getRow(5).font = { bold: true, size: 14 };
-    
-    summarySheet.addRow(['Total Orders', totalOrders]);
-    summarySheet.addRow(['Total Revenue', `₹${totalRevenue.toFixed(2)}`]);
-    summarySheet.addRow(['Total Discount', `₹${totalDiscount.toFixed(2)}`]);
-    
-    // Add payment method breakdown
-    summarySheet.addRow([]);
-    summarySheet.addRow(['Payment Method Breakdown']);
-    summarySheet.getRow(9).font = { bold: true, size: 14 };
-    
-    // Add payment method header
-    summarySheet.addRow(['Payment Method', 'Count', 'Percentage']);
-    summarySheet.getRow(10).font = { bold: true };
-    summarySheet.getRow(10).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add payment method data
-    let rowIndex = 11;
-    Object.entries(paymentMethodCounts).forEach(([method, count]) => {
-      const percentage = (count / totalOrders * 100).toFixed(2);
-      summarySheet.addRow([method, count, `${percentage}%`]);
-      rowIndex++;
-    });
-    
-    // Style the payment method table
-    for (let i = 10; i < rowIndex; i++) {
-      ['A', 'B', 'C'].forEach(col => {
-        summarySheet.getCell(`${col}${i}`).border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-      });
-    }
-    
-    // Add daily sales sheet
-    const dailySheet = workbook.addWorksheet('Daily Sales');
-    
-    // Add headers
-    dailySheet.addRow(['Date', 'Orders', 'Revenue', 'Discount', 'Net Revenue']);
-    dailySheet.getRow(1).font = { bold: true };
-    dailySheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add daily sales data
-    Object.entries(dailySales)
-      .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-      .forEach(([date, data]) => {
-        dailySheet.addRow([
-          date,
-          data.count,
-          data.revenue,
-          data.discount,
-          data.revenue - data.discount
-        ]);
-      });
-    
-    // Format the daily sales sheet
-    dailySheet.getColumn('A').width = 15;
-    dailySheet.getColumn('B').width = 10;
-    dailySheet.getColumn('C').width = 15;
-    dailySheet.getColumn('D').width = 15;
-    dailySheet.getColumn('E').width = 15;
-    
-    // Format currency columns
-    for (let i = 2; i <= dailySheet.rowCount; i++) {
-      ['C', 'D', 'E'].forEach(col => {
-        dailySheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-      });
-    }
-    
-    // Add category sales sheet
-    const categorySheet = workbook.addWorksheet('Category Sales');
-    
-    // Add headers
-    categorySheet.addRow(['Category', 'Items Sold', 'Revenue']);
-    categorySheet.getRow(1).font = { bold: true };
-    categorySheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add category sales data
-    Object.entries(categorySales)
-      .sort(([, dataA], [, dataB]) => dataB.revenue - dataA.revenue)
-      .forEach(([category, data]) => {
-        categorySheet.addRow([category, data.count, data.revenue]);
-      });
-    
-    // Format the category sheet
-    categorySheet.getColumn('A').width = 30;
-    categorySheet.getColumn('B').width = 15;
-    categorySheet.getColumn('C').width = 15;
-    
-    // Format currency columns
-    for (let i = 2; i <= categorySheet.rowCount; i++) {
-      categorySheet.getCell(`C${i}`).numFmt = '₹#,##0.00';
-    }
-    
-    // Add detailed orders sheet
-    const ordersSheet = workbook.addWorksheet('Order Details');
-    
-    // Add headers
-    ordersSheet.addRow([
-      'Order ID',
-      'Date',
-      'Customer',
-      'Email',
-      'Items',
-      'Payment Method',
-      'Status',
-      'Coupon',
-      'Discount',
-      'Total'
-    ]);
-    
-    // Style the header row
-    ordersSheet.getRow(1).font = { bold: true };
-    ordersSheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add order data
-    orders.forEach(order => {
-      try {
-        // Use orderItems array
-        const itemCount = Array.isArray(order.orderItems) 
-          ? order.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0) 
-          : 0;
-        
-        // Get order status - handle different property names
-        const status = order.status || order.orderStatus || 'Unknown';
-        
-        ordersSheet.addRow([
-          order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-          new Date(order.createdAt).toLocaleDateString(),
-          order.user?.name || 'Guest',
-          order.user?.email || 'N/A',
-          itemCount,
-          order.paymentMethod || 'Unknown',
-          status,
-          order.couponCode || 'None',
-          order.couponDiscount || 0,
-          order.totalPrice || 0
-        ]);
-      } catch (err) {
-        console.error(`Error adding order to Excel: ${err.message}`, {
-          orderId: order.orderId || (order._id ? order._id.toString() : 'Unknown')
-        });
-        // Add a row with error information
-        ordersSheet.addRow([
-          order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-          'Error processing order data',
-          '', '', '', '', '', '', '', ''
-        ]);
-      }
-    });
-    
-    // Format the orders sheet
-    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((col, index) => {
-      const widths = [20, 15, 20, 25, 10, 20, 15, 15, 15, 15];
-      ordersSheet.getColumn(col).width = widths[index];
-    });
-    
-    // Format currency columns
-    for (let i = 2; i <= ordersSheet.rowCount; i++) {
-      ['I', 'J'].forEach(col => {
-        ordersSheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-      });
-    }
-    
-    // Set the response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Zekoya_Sales_Report_${startDate}_to_${endDate}.xlsx`);
-    
-    // Write the workbook to the response
-    await workbook.xlsx.write(res);
-    
-  } catch (error) {
-    console.error('Error generating Excel sales report:', error);
-    
-    // Log more detailed error information for debugging
-    if (error.stack) {
-      console.error('Error stack:', error.stack);
-    }
-    
-    // Check if headers have already been sent
-    if (res.headersSent) {
-      console.error('Headers already sent, cannot send error response');
-      return;
-    }
-    
-    // Send detailed error response
-    res.status(500).json({
-      success: false,
-      message: 'Error generating Excel sales report',
-      error: error.message,
-      details: error.stack ? error.stack.split('\n')[0] : 'No additional details',
-    });
-  }
-});
-
-// @desc    Download Excel report
-// @route   GET /api/admin/reports/download-excel
-// @access  Private/Admin
-export const downloadExcelReport = asyncHandler(async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-    
-    // Validate date parameters
-    if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date and end date are required',
-      });
-    }
-    
-    // Create date range filter
-    const dateFilter = {
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(`${endDate}T23:59:59.999Z`), // Include the entire end date
-      },
-    };
-    
-    // Get orders within date range
-    const orders = await Order.find(dateFilter)
-      .populate('user', 'name email')
-      .populate({
-        path: 'orderItems.product',
-        select: 'name price category'
-      })
-      .sort({ createdAt: -1 });
-    
-    // Calculate summary statistics
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
-    const totalDiscount = orders.reduce((sum, order) => sum + (order.couponDiscount || 0), 0);
-    
-    // Group orders by payment method
-    const paymentMethodCounts = {};
-    orders.forEach(order => {
-      const method = order.paymentMethod;
-      paymentMethodCounts[method] = (paymentMethodCounts[method] || 0) + 1;
-    });
-    
-    // Group orders by date
-    const dailySales = {};
-    orders.forEach(order => {
-      const date = new Date(order.createdAt).toISOString().split('T')[0];
-      if (!dailySales[date]) {
-        dailySales[date] = {
-          count: 0,
-          revenue: 0,
-          discount: 0,
-        };
-      }
-      dailySales[date].count += 1;
-      dailySales[date].revenue += order.totalPrice;
-      dailySales[date].discount += (order.couponDiscount || 0);
-    });
-
-    // Group orders by product category
-    const categorySales = {};
-    orders.forEach(order => {
-      // Skip if orderItems array is not available
-      if (!Array.isArray(order.orderItems)) {
-        console.log('Order missing orderItems array:', order._id);
-        return;
-      }
-      
-      order.orderItems.forEach(item => {
-        // Check if product exists and has category
-        if (item.product) {
-          // Get category - handle both string and object cases
-          let category;
-          if (typeof item.product.category === 'string') {
-            category = item.product.category;
-          } else if (item.product.category && item.product.category.toString) {
-            category = item.product.category.toString();
-          } else {
-            // If category is not available, use 'Uncategorized'
-            category = 'Uncategorized';
-          }
-          
-          if (!categorySales[category]) {
-            categorySales[category] = {
-              count: 0,
-              revenue: 0,
-            };
-          }
-          categorySales[category].count += item.quantity;
-          categorySales[category].revenue += item.price * item.quantity;
-        }
-      });
-    });
-    
-    // Create a new Excel workbook
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Zekoya E-commerce';
-    workbook.lastModifiedBy = 'Admin';
-    workbook.created = new Date();
-    workbook.modified = new Date();
-    
-    // Add a summary sheet
-    const summarySheet = workbook.addWorksheet('Summary');
-    
-    // Add title with date range
-    summarySheet.mergeCells('A1:F1');
-    const titleCell = summarySheet.getCell('A1');
-    titleCell.value = `Sales Report (${startDate} to ${endDate})`;
-    titleCell.font = {
-      size: 16,
-      bold: true,
-      color: { argb: '4F33FF' }
-    };
-    titleCell.alignment = { horizontal: 'center' };
-    
-    // Add company info
-    summarySheet.mergeCells('A2:F2');
-    const companyCell = summarySheet.getCell('A2');
-    companyCell.value = 'Zekoya E-commerce Platform';
-    companyCell.font = {
-      size: 12,
-      bold: true
-    };
-    companyCell.alignment = { horizontal: 'center' };
-    
-    // Add date generated
-    summarySheet.mergeCells('A3:F3');
-    const dateCell = summarySheet.getCell('A3');
-    dateCell.value = `Generated on: ${new Date().toLocaleString()}`;
-    dateCell.font = {
-      italic: true
-    };
-    dateCell.alignment = { horizontal: 'center' };
-    
-    // Add summary section
-    summarySheet.addRow([]);
-    summarySheet.addRow(['Summary Statistics']);
-    summarySheet.getRow(5).font = { bold: true, size: 14 };
-    
-    summarySheet.addRow(['Total Orders', totalOrders]);
-    summarySheet.addRow(['Total Revenue', `₹${totalRevenue.toFixed(2)}`]);
-    summarySheet.addRow(['Total Discount', `₹${totalDiscount.toFixed(2)}`]);
-    
-    // Add payment method breakdown
-    summarySheet.addRow([]);
-    summarySheet.addRow(['Payment Method Breakdown']);
-    summarySheet.getRow(9).font = { bold: true, size: 14 };
-    
-    // Add payment method header
-    summarySheet.addRow(['Payment Method', 'Count', 'Percentage']);
-    summarySheet.getRow(10).font = { bold: true };
-    summarySheet.getRow(10).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add payment method data
-    let rowIndex = 11;
-    Object.entries(paymentMethodCounts).forEach(([method, count]) => {
-      const percentage = (count / totalOrders * 100).toFixed(2);
-      summarySheet.addRow([method, count, `${percentage}%`]);
-      rowIndex++;
-    });
-    
-    // Style the payment method table
-    for (let i = 10; i < rowIndex; i++) {
-      ['A', 'B', 'C'].forEach(col => {
-        summarySheet.getCell(`${col}${i}`).border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-      });
-    }
-    
-    // Add daily sales sheet
-    const dailySheet = workbook.addWorksheet('Daily Sales');
-    
-    // Add headers
-    dailySheet.addRow(['Date', 'Orders', 'Revenue', 'Discount', 'Net Revenue']);
-    dailySheet.getRow(1).font = { bold: true };
-    dailySheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add daily sales data
-    Object.entries(dailySales)
-      .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-      .forEach(([date, data]) => {
-        dailySheet.addRow([
-          date,
-          data.count,
-          data.revenue,
-          data.discount,
-          data.revenue - data.discount
-        ]);
-      });
-    
-    // Format the daily sales sheet
-    dailySheet.getColumn('A').width = 15;
-    dailySheet.getColumn('B').width = 10;
-    dailySheet.getColumn('C').width = 15;
-    dailySheet.getColumn('D').width = 15;
-    dailySheet.getColumn('E').width = 15;
-    
-    // Format currency columns
-    for (let i = 2; i <= dailySheet.rowCount; i++) {
-      ['C', 'D', 'E'].forEach(col => {
-        dailySheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-      });
-    }
-    
-    // Add category sales sheet
-    const categorySheet = workbook.addWorksheet('Category Sales');
-    
-    // Add headers
-    categorySheet.addRow(['Category', 'Items Sold', 'Revenue']);
-    categorySheet.getRow(1).font = { bold: true };
-    categorySheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add category sales data
-    Object.entries(categorySales)
-      .sort(([, dataA], [, dataB]) => dataB.revenue - dataA.revenue)
-      .forEach(([category, data]) => {
-        categorySheet.addRow([category, data.count, data.revenue]);
-      });
-    
-    // Format the category sheet
-    categorySheet.getColumn('A').width = 30;
-    categorySheet.getColumn('B').width = 15;
-    categorySheet.getColumn('C').width = 15;
-    
-    // Format currency columns
-    for (let i = 2; i <= categorySheet.rowCount; i++) {
-      categorySheet.getCell(`C${i}`).numFmt = '₹#,##0.00';
-    }
-    
-    // Add detailed orders sheet
-    const ordersSheet = workbook.addWorksheet('Order Details');
-    
-    // Add headers
-    ordersSheet.addRow([
-      'Order ID',
-      'Date',
-      'Customer',
-      'Email',
-      'Items',
-      'Payment Method',
-      'Status',
-      'Coupon',
-      'Discount',
-      'Total'
-    ]);
-    
-    // Style the header row
-    ordersSheet.getRow(1).font = { bold: true };
-    ordersSheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
-    
-    // Add order data
-    orders.forEach(order => {
-      try {
-        // Use orderItems array
-        const itemCount = Array.isArray(order.orderItems) 
-          ? order.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0) 
-          : 0;
-        
-        // Get order status - handle different property names
-        const status = order.status || order.orderStatus || 'Unknown';
-        
-        ordersSheet.addRow([
-          order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-          new Date(order.createdAt).toLocaleDateString(),
-          order.user?.name || 'Guest',
-          order.user?.email || 'N/A',
-          itemCount,
-          order.paymentMethod || 'Unknown',
-          status,
-          order.couponCode || 'None',
-          order.couponDiscount || 0,
-          order.totalPrice || 0
-        ]);
-      } catch (err) {
-        console.error(`Error adding order to Excel: ${err.message}`, {
-          orderId: order.orderId || (order._id ? order._id.toString() : 'Unknown')
-        });
-        // Add a row with error information
-        ordersSheet.addRow([
-          order.orderId || (order._id ? order._id.toString() : 'Unknown'),
-          'Error processing order data',
-          '', '', '', '', '', '', '', ''
-        ]);
-      }
-    });
-    
-    // Format the orders sheet
-    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((col, index) => {
-      const widths = [20, 15, 20, 25, 10, 20, 15, 15, 15, 15];
-      ordersSheet.getColumn(col).width = widths[index];
-    });
-    
-    // Format currency columns
-    for (let i = 2; i <= ordersSheet.rowCount; i++) {
-      ['I', 'J'].forEach(col => {
-        ordersSheet.getCell(`${col}${i}`).numFmt = '₹#,##0.00';
-      });
-    }
-    
-    // Set the response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Zekoya_Sales_Report_${startDate}_to_${endDate}.xlsx`);
-    
-    // Write the workbook to the response
-    await workbook.xlsx.write(res);
-    
-  } catch (error) {
-    console.error('Error generating Excel sales report:', error);
-    
-    // Log more detailed error information for debugging
-    if (error.stack) {
-      console.error('Error stack:', error.stack);
-    }
-    
-    // Check if headers have already been sent
-    if (res.headersSent) {
-      console.error('Headers already sent, cannot send error response');
-      return;
-    }
-    
-    // Send detailed error response
-    res.status(500).json({
-      success: false,
-      message: 'Error generating Excel sales report',
-      error: error.message,
-      details: error.stack ? error.stack.split('\n')[0] : 'No additional details',
-    });
-  }
-});
-
-// @desc    Get dashboard statistics
-// @route   GET /api/admin/reports/dashboard
-// @access  Private/Admin
+/**
+ * Get dashboard statistics
+ * @route GET /api/reports/dashboard
+ * @access Private/Admin
+ */
 export const getDashboardStats = asyncHandler(async (req, res) => {
   try {
-    // Get current date
-    const today = new Date();
-    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-    const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+    const { timeFilter = 'yearly' } = req.query;
     
-    // Get start of current week (Sunday)
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Determine date range based on time filter
+    const now = new Date();
+    let startDate, endDate;
     
-    // Get start of current month
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    // Get today's orders
-    const todayOrders = await Order.find({
-      createdAt: { $gte: startOfToday, $lte: endOfToday },
-    });
-    
-    // Get this week's orders
-    const weekOrders = await Order.find({
-      createdAt: { $gte: startOfWeek, $lte: endOfToday },
-    });
-    
-    // Get this month's orders
-    const monthOrders = await Order.find({
-      createdAt: { $gte: startOfMonth, $lte: endOfToday },
-    });
-    
-    // Get pending orders count
-    const pendingOrders = await Order.countDocuments({
-      status: 'pending'
-    });
-    
-    // Get total user count
-    const User = await import('../models/userModel.js').then(module => module.default);
-    const userCount = await User.countDocuments({ isBlocked: false });
-    
-    // Calculate statistics
-    const todayRevenue = todayOrders.reduce((sum, order) => sum + order.totalPrice, 0);
-    const weekRevenue = weekOrders.reduce((sum, order) => sum + order.totalPrice, 0);
-    const monthRevenue = monthOrders.reduce((sum, order) => sum + order.totalPrice, 0);
-    
-    // Get recent orders
-    const recentOrders = await Order.find()
-      .populate('user', 'name email')
-      // No need to use select() to ensure we get all fields including orderId
-      .sort({ createdAt: -1 })
-      .limit(5);
-      
-    // Log the first recent order to debug
-    if (recentOrders.length > 0) {
-      console.log('First recent order:', {
-        _id: recentOrders[0]._id,
-        orderId: recentOrders[0].orderId,
-        totalPrice: recentOrders[0].totalPrice
-      });
+    switch (timeFilter) {
+      case 'daily':
+        startDate = startOfDay(now);
+        endDate = endOfDay(now);
+        break;
+      case 'weekly':
+        startDate = startOfWeek(now, { weekStartsOn: 1 });
+        endDate = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'monthly':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        break;
+      case 'yearly':
+      default:
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
+        break;
     }
     
-    // Prepare response
-    const stats = {
-      today: {
-        orders: todayOrders.length,
-        revenue: todayRevenue,
-      },
-      week: {
-        orders: weekOrders.length,
-        revenue: weekRevenue,
-      },
-      month: {
-        orders: monthOrders.length,
-        revenue: monthRevenue,
-      },
-      pendingOrders,
-      userCount,
-      recentOrders,
-    };
+    // Get orders within date range
+    const orders = await Order.find({
+      createdAt: { $gte: startDate, $lte: endDate },
+      orderStatus: { $ne: 'Cancelled' }
+    }).populate('user', 'name email');
     
-    res.status(200).json(stats);
+    // Calculate total sales and orders
+    const totalSales = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+    
+    // Get unique customers count
+    const uniqueCustomers = new Set();
+    orders.forEach(order => {
+      if (order.user && order.user._id) {
+        uniqueCustomers.add(order.user._id.toString());
+      }
+    });
+    const totalCustomers = uniqueCustomers.size;
+    
+    // Prepare sales data based on time filter
+    let salesData = [];
+    
+    if (timeFilter === 'daily') {
+      // Group by hour
+      const hourlyData = {};
+      
+      for (let i = 0; i < 24; i++) {
+        const hourLabel = `${i.toString().padStart(2, '0')}:00`;
+        hourlyData[hourLabel] = { date: hourLabel, amount: 0, orders: 0 };
+      }
+      
+      orders.forEach(order => {
+        const hour = new Date(order.createdAt).getHours();
+        const hourLabel = `${hour.toString().padStart(2, '0')}:00`;
+        
+        if (hourlyData[hourLabel]) {
+          hourlyData[hourLabel].amount += order.totalPrice || 0;
+          hourlyData[hourLabel].orders += 1;
+        }
+      });
+      
+      salesData = Object.values(hourlyData);
+    } else if (timeFilter === 'weekly') {
+      // Group by day of week
+      const weekdayData = {};
+      const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      
+      weekdays.forEach(day => {
+        weekdayData[day] = { date: day, amount: 0, orders: 0 };
+      });
+      
+      orders.forEach(order => {
+        const weekday = weekdays[new Date(order.createdAt).getDay()];
+        
+        if (weekdayData[weekday]) {
+          weekdayData[weekday].amount += order.totalPrice || 0;
+          weekdayData[weekday].orders += 1;
+        }
+      });
+      
+      // Reorder to start with Monday
+      const orderedWeekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      salesData = orderedWeekdays.map(day => weekdayData[day]);
+    } else if (timeFilter === 'monthly') {
+      // Group by day of month
+      const daysInMonth = endOfMonth(now).getDate();
+      const dailyData = {};
+      
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayLabel = `Day ${i}`;
+        dailyData[dayLabel] = { date: dayLabel, amount: 0, orders: 0 };
+      }
+      
+      orders.forEach(order => {
+        const day = new Date(order.createdAt).getDate();
+        const dayLabel = `Day ${day}`;
+        
+        if (dailyData[dayLabel]) {
+          dailyData[dayLabel].amount += order.totalPrice || 0;
+          dailyData[dayLabel].orders += 1;
+        }
+      });
+      
+      salesData = Object.values(dailyData);
+    } else {
+      // Group by month for yearly view
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthlyData = {};
+      
+      monthNames.forEach(month => {
+        monthlyData[month] = { date: month, amount: 0, orders: 0 };
+      });
+      
+      orders.forEach(order => {
+        const month = new Date(order.createdAt).getMonth();
+        const monthName = monthNames[month];
+        
+        if (monthlyData[monthName]) {
+          monthlyData[monthName].amount += order.totalPrice || 0;
+          monthlyData[monthName].orders += 1;
+        }
+      });
+      
+      salesData = Object.values(monthlyData);
+    }
+    
+    // Return the dashboard data
+    res.status(200).json({
+      success: true,
+      data: {
+        totalSales,
+        totalOrders,
+        totalCustomers,
+        averageOrderValue,
+        salesData
+      }
+    });
   } catch (error) {
     console.error('Error generating dashboard stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Error generating dashboard statistics',
-      error: error.message,
+      message: error.message || 'Error generating dashboard statistics'
+    });
+  }
+});
+
+/**
+ * Get payment statistics
+ * @route GET /api/reports/payment-stats
+ * @access Private/Admin
+ */
+export const getPaymentStats = asyncHandler(async (req, res) => {
+  try {
+    const { timeFilter = 'yearly' } = req.query; // Default to yearly, similar to getDashboardStats
+
+    const now = new Date();
+    let dateRangeFilter = {};
+
+    switch (timeFilter) {
+      case 'daily':
+        dateRangeFilter = { $gte: startOfDay(now), $lte: endOfDay(now) };
+        break;
+      case 'weekly':
+        dateRangeFilter = { $gte: startOfWeek(now, { weekStartsOn: 1 }), $lte: endOfWeek(now, { weekStartsOn: 1 }) };
+        break;
+      case 'monthly':
+        dateRangeFilter = { $gte: startOfMonth(now), $lte: endOfMonth(now) };
+        break;
+      case 'yearly':
+      default:
+        dateRangeFilter = { $gte: startOfYear(now), $lte: endOfYear(now) };
+        break;
+    }
+
+    const initialMatchConditions = {
+      createdAt: dateRangeFilter,
+      paymentMethod: { $exists: true, $ne: null }, // Changed from paymentType
+      isPaid: true
+    };
+
+    const aggregationResult = await Order.aggregate([
+      { $match: initialMatchConditions },
+      {
+        $facet: {
+          paymentMethodDetails: [
+            {
+              $group: {
+                _id: '$paymentMethod',
+                count: { $sum: 1 },
+                totalAmount: { $sum: '$totalPrice' }
+              }
+            },
+            { $sort: { count: -1 } } // Sort by count descending
+          ],
+          totalMatchingOrders: [
+            { $count: 'total' }
+          ]
+        }
+      },
+      {
+        $project: {
+          stats: {
+            $ifNull: [ // Handle case where totalMatchingOrders might be empty (no orders match)
+              {
+                $map: {
+                  input: '$paymentMethodDetails',
+                  as: 'method',
+                  in: {
+                    _id: '$$method._id',
+                    count: '$$method.count',
+                    totalAmount: { $round: ['$$method.totalAmount', 2] },
+                    percentage: {
+                      $cond: {
+                        if: { $gt: [{ $ifNull: [{ $arrayElemAt: ['$totalMatchingOrders.total', 0] }, 0] }, 0] }, // Check if total > 0
+                        then: {
+                          $round: [
+                            { $multiply: [{ $divide: ['$$method.count', { $arrayElemAt: ['$totalMatchingOrders.total', 0] }] }, 100] },
+                            2
+                          ]
+                        },
+                        else: 0 // Avoid division by zero if no matching orders
+                      }
+                    }
+                  }
+                }
+              },
+              [] // Default to empty array if no paymentMethodDetails or totalMatchingOrders
+            ]
+          }
+        }
+      }
+    ]);
+
+    // The result of the aggregation is an array, potentially empty.
+    // If not empty, it contains one document with a 'stats' field.
+    const paymentStats = aggregationResult.length > 0 && aggregationResult[0].stats ? aggregationResult[0].stats : [];
+
+    res.status(200).json({
+      success: true,
+      data: paymentStats
+    });
+
+  } catch (error) {
+    console.error('Error getting payment statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error getting payment statistics'
+    });
+  }
+});
+
+/**
+ * Get best sellers (products, categories, or brands)
+ * @route GET /api/reports/bestsellers
+ * @access Private/Admin
+ */
+export const getBestSellers = asyncHandler(async (req, res) => {
+  try {
+    const { category = 'products', limit = 5 } = req.query;
+    console.log(`Getting best sellers for category: ${category}, limit: ${limit}`);
+    
+    // Validate category parameter
+    if (!['products', 'categories', 'brands'].includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid category parameter. Must be one of: products, categories, brands'
+      });
+    }
+    
+    let result = [];
+    
+    if (category === 'products') {
+      // Get best selling products
+      result = await Order.aggregate([
+        // Include all orders except cancelled ones
+        { $match: { orderStatus: { $nin: ['Cancelled'] } } },
+        // Unwind the order items array
+        { $unwind: '$orderItems' },
+        // Group by product ID
+        {
+          $group: {
+            _id: '$orderItems.product',
+            name: { $first: '$orderItems.name' },
+            price: { $first: '$orderItems.price' },
+            totalSold: { $sum: '$orderItems.quantity' },
+            totalRevenue: { $sum: { $multiply: ['$orderItems.price', '$orderItems.quantity'] } },
+            totalOrders: { $sum: 1 }
+          }
+        },
+        // Sort by total sold
+        { $sort: { totalSold: -1 } },
+        // Limit results
+        { $limit: parseInt(limit) }
+      ]);
+      
+      // Populate with additional product info if needed
+      for (let i = 0; i < result.length; i++) {
+        if (result[i]._id) {
+          const product = await Product.findById(result[i]._id).select('name price image');
+          if (product) {
+            result[i].name = product.name || result[i].name;
+            result[i].price = product.price || result[i].price;
+            result[i].image = product.image;
+          }
+        }
+      }
+    } else if (category === 'categories') {
+      // Get best selling categories
+      result = await Order.aggregate([
+        // Include all orders except cancelled ones
+        { $match: { orderStatus: { $nin: ['Cancelled'] } } },
+        // Unwind the order items array
+        { $unwind: '$orderItems' },
+        // Lookup to get product details
+        {
+          $lookup: {
+            from: 'products',
+            localField: 'orderItems.product',
+            foreignField: '_id',
+            as: 'productInfo'
+          }
+        },
+        // Unwind the product info array
+        { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
+        // Group by category
+        {
+          $group: {
+            _id: '$productInfo.category',
+            totalSold: { $sum: '$orderItems.quantity' },
+            totalRevenue: { $sum: { $multiply: ['$orderItems.price', '$orderItems.quantity'] } },
+            totalOrders: { $sum: 1 }
+          }
+        },
+        // Sort by total revenue
+        { $sort: { totalRevenue: -1 } },
+        // Limit results
+        { $limit: parseInt(limit) }
+      ]);
+      
+      // Populate with category names
+      for (let i = 0; i < result.length; i++) {
+        if (result[i]._id) {
+          try {
+            const category = await Category.findById(result[i]._id).select('name');
+            if (category) {
+              result[i].name = category.name;
+            } else {
+              result[i].name = 'Unknown Category';
+            }
+          } catch (err) {
+            result[i].name = 'Unknown Category';
+          }
+        } else {
+          result[i].name = 'Uncategorized';
+        }
+      }
+    } else if (category === 'brands') {
+      // Get best selling brands
+      result = await Order.aggregate([
+        // Include all orders except cancelled ones
+        { $match: { orderStatus: { $nin: ['Cancelled'] } } },
+        // Unwind the order items array
+        { $unwind: '$orderItems' },
+        // Lookup to get product details
+        {
+          $lookup: {
+            from: 'products',
+            localField: 'orderItems.product',
+            foreignField: '_id',
+            as: 'productInfo'
+          }
+        },
+        // Unwind the product info array
+        { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
+        // Group by brand
+        {
+          $group: {
+            _id: '$productInfo.brand',
+            totalSold: { $sum: '$orderItems.quantity' },
+            totalRevenue: { $sum: { $multiply: ['$orderItems.price', '$orderItems.quantity'] } },
+            totalOrders: { $sum: 1 }
+          }
+        },
+        // Sort by total revenue
+        { $sort: { totalRevenue: -1 } },
+        // Limit results
+        { $limit: parseInt(limit) }
+      ]);
+      
+      // Add brand names
+      for (let i = 0; i < result.length; i++) {
+        if (result[i]._id) {
+          result[i].name = result[i]._id;
+        } else {
+          result[i].name = 'Unbranded';
+        }
+      }
+    }
+    
+    console.log(`Returning ${result.length} items for ${category}`);
+    
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error getting best sellers:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error getting best sellers'
     });
   }
 });

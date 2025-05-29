@@ -7,12 +7,24 @@ import {
   createOrder,
   clearOrder,
   getOrderDetails,
+
 } from "../../features/order/orderSlice";
+
+// Import clearActiveCoupon from coupon slice
+import { clearActiveCoupon } from "../../features/coupons/couponSlice";
+
+
+
+
 import { getAddresses } from "../../features/userProfile/userProfileSlice";
 import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
 import API from "../../utils/axiosConfig";
 import axios from "axios";
+import { getActiveOfferForProduct } from "../../features/offers/offerSlice";
+
+
+
 
 const Checkout = () => {
   const dispatch = useDispatch();
@@ -33,6 +45,10 @@ const Checkout = () => {
     message,
   } = useSelector((state) => state.order);
 
+
+
+
+
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -49,7 +65,7 @@ const Checkout = () => {
   const [categoryOffers, setCategoryOffers] = useState({});
   const [totalPrice, setTotalPrice] = useState(0);
 
-  // Function to fetch active offers for products in the cart
+
   const fetchProductOffers = async (cartItems) => {
     if (!cartItems || cartItems.length === 0) return;
     
@@ -58,7 +74,6 @@ const Checkout = () => {
       const categoryOffers = {};
       let totalOfferDiscount = 0;
       
-      // Fetch offers for each product in the cart
       for (const item of cartItems) {
         if (!item.product || !item.product._id) continue;
         
@@ -66,13 +81,12 @@ const Checkout = () => {
         const productPrice = item.product.price * item.quantity;
         let bestDiscountForProduct = 0;
         
-        // Fetch product offer
+
         try {
           const productOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/product/active/${productId}`);
           if (productOfferResponse.data) {
             productOffers[productId] = productOfferResponse.data;
             
-            // Calculate product offer discount
             let productDiscountValue = 0;
             if (productOfferResponse.data.discountType === 'percentage') {
               productDiscountValue = productPrice * (productOfferResponse.data.discountValue / 100);
@@ -83,10 +97,9 @@ const Checkout = () => {
             bestDiscountForProduct = productDiscountValue;
           }
         } catch (error) {
-          // No product offer available
+       
         }
         
-        // Fetch category offer if product has a category
         if (item.product.category) {
           try {
             const categoryId = typeof item.product.category === 'object' ? item.product.category._id : item.product.category;
@@ -94,24 +107,21 @@ const Checkout = () => {
             
             if (categoryOfferResponse.data) {
               categoryOffers[categoryId] = categoryOfferResponse.data;
-              
-              // Calculate category offer discount
+       
               let categoryDiscountValue = 0;
               if (categoryOfferResponse.data.discountType === 'percentage') {
                 categoryDiscountValue = productPrice * (categoryOfferResponse.data.discountValue / 100);
               } else {
                 categoryDiscountValue = Math.min(productPrice, categoryOfferResponse.data.discountValue * item.quantity);
               }
-              
-              // Use the best discount (either product or category)
               bestDiscountForProduct = Math.max(bestDiscountForProduct, categoryDiscountValue);
             }
           } catch (error) {
-            // No category offer available
+    
           }
         }
         
-        // Add the best discount for this product to the total
+        //best discounntt
         totalOfferDiscount += bestDiscountForProduct;
       }
       
@@ -124,6 +134,10 @@ const Checkout = () => {
       return 0;
     }
   };
+
+  
+  const coupons = useSelector((state) => state.coupons);
+
   
   useEffect(() => {
     if (!userInfo) {
@@ -132,6 +146,9 @@ const Checkout = () => {
     }
 
     dispatch(getAddresses());
+    dispatch(clearActiveCoupon());
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
     return () => {};
   }, [dispatch, navigate, userInfo]);
 
@@ -170,56 +187,47 @@ const Checkout = () => {
       setTaxPrice(Math.round(itemsPriceCalc * 0.18));
       setShippingPrice(itemsPriceCalc > 1000 ? 0 : 100);
 
-      const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-      setDiscountAmount(discount);
+      // This will be handled in a separate useEffect to ensure proper dependency tracking
     }
-  }, [cart, appliedCoupon]);
+  }, [cart]);
 
-  // Separate useEffect to calculate total price after offer discounts are fetched
+  // Separate useEffect to handle discount amount changes
+  useEffect(() => {
+    if (appliedCoupon && appliedCoupon.discountAmount) {
+      console.log('Setting discount amount:', appliedCoupon.discountAmount);
+      setDiscountAmount(parseFloat(appliedCoupon.discountAmount));
+    } else {
+      setDiscountAmount(0);
+    }
+  }, [appliedCoupon]);
+
+  // Separate useEffect to calculate total price
   useEffect(() => {
     if (itemsPrice > 0) {
-      setTotalPrice(
+      console.log('Calculating total price with discount:', discountAmount);
+      const calculatedTotal = 
         itemsPrice +
-          taxPrice +
-          shippingPrice -
-          discountAmount -
-          offerDiscountAmount
-      );
+        taxPrice +
+        shippingPrice -
+        discountAmount -
+        offerDiscountAmount;
+      
+      setTotalPrice(calculatedTotal);
+      console.log('New total price:', calculatedTotal);
     }
   }, [itemsPrice, taxPrice, shippingPrice, discountAmount, offerDiscountAmount]);
 
-  // Fetch user wallet balance
-  useEffect(() => {
-    const fetchWalletBalance = async () => {
-      try {
-        const config = {
-          headers: {
-            Authorization: `Bearer ${userInfo.token}`,
-          },
-        };
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/users/profile/wallet`,
-          config
-        );
-        setWalletBalance(response.data.walletBalance);
-      } catch (error) {
-        console.error("Error fetching wallet balance:", error);
-      }
-    };
-
-    if (userInfo && userInfo.token) {
-      fetchWalletBalance();
-    }
-  }, [userInfo]);
-
-  // Check if wallet has sufficient funds
-  useEffect(() => {
-    if (paymentMethod === "Wallet") {
-      setInsufficientWalletFunds(walletBalance < totalPrice);
+  const handleCouponApplied = (couponData) => {
+    console.log('Coupon applied in checkout:', couponData);
+    
+    if (couponData) {
+      setAppliedCoupon(couponData);
+      // The discount amount will be set in the useEffect that watches appliedCoupon
     } else {
-      setInsufficientWalletFunds(false);
+      setAppliedCoupon(null);
+      setDiscountAmount(0);
     }
-  }, [paymentMethod, walletBalance, totalPrice]);
+  };
 
   const loadRazorpayScript = useCallback(() => {
     return new Promise((resolve) => {
@@ -228,7 +236,6 @@ const Checkout = () => {
           'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
         )
       ) {
-        console.log("Razorpay script already loaded");
         resolve(true);
         return;
       }
@@ -237,7 +244,6 @@ const Checkout = () => {
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
       script.onload = () => {
-        console.log("Razorpay script loaded successfully");
         resolve(true);
       };
       script.onerror = () => {
@@ -300,9 +306,9 @@ const Checkout = () => {
 
               if (verifyResponse.data.success) {
                 await dispatch(getOrderDetails(orderId));
-                dispatch(clearCart()); // Clear cart only after successful payment
+                dispatch(clearCart()); 
                 localStorage.removeItem("razorpay_payment_pending");
-                navigate(`/order-success/${orderId}`); // Navigate to success page
+                navigate(`/order-success/${orderId}`); 
               } else {
                 throw new Error("Payment verification failed");
               }
@@ -322,7 +328,6 @@ const Checkout = () => {
           },
           modal: {
             ondismiss: function () {
-              console.log("Payment modal dismissed");
               localStorage.removeItem("razorpay_payment_pending");
               navigate(`/payment-failed/${orderId}`);
             },
@@ -340,10 +345,6 @@ const Checkout = () => {
     [dispatch, navigate, totalPrice, userInfo, loadRazorpayScript]
   );
 
-  const handleCouponApplied = (couponData) => {
-    setAppliedCoupon(couponData);
-  };
-
   const placeOrderHandler = async () => {
     if (hasUnavailableItems) {
       toast.error("Please remove unavailable items from your cart");
@@ -355,25 +356,37 @@ const Checkout = () => {
       return;
     }
 
+    // Add COD restriction for orders above Rs 1000
+    if (paymentMethod === "Cash on Delivery" && totalPrice > 1000) {
+      toast.error("Cash on Delivery is not available for orders above ₹1,000. Please choose online payment.");
+      return;
+    }
+
     if (paymentMethod === "Wallet" && insufficientWalletFunds) {
       toast.error("Insufficient wallet balance for this order");
       return;
     }
 
+    // Create order object with all necessary information
     const orderData = {
+      orderItems: cart.items.map((item) => ({
+        product: item.product._id,
+        quantity: item.quantity,
+        size: item.size,
+        price: item.product.price,
+      })),
       addressId: selectedAddressId,
       paymentMethod,
       itemsPrice,
       taxPrice,
       shippingPrice,
-      discountPrice: discountAmount,
-      offerDiscountPrice: offerDiscountAmount,
       totalPrice,
-      productOffers,
+      discountPrice: discountAmount + offerDiscountAmount,
     };
 
-    if (appliedCoupon) {
-      orderData.couponCode = appliedCoupon.code;
+    // Add coupon information if a coupon is applied
+    if (appliedCoupon && appliedCoupon.coupon) {
+      orderData.couponCode = appliedCoupon.coupon.code;
       orderData.couponDiscount = appliedCoupon.discountAmount;
     }
 
@@ -381,6 +394,11 @@ const Checkout = () => {
       .unwrap()
       .then((result) => {
         setCreatedOrderId(result._id);
+        // Clear the coupon state after successful order creation
+        dispatch(clearActiveCoupon());
+        setAppliedCoupon(null);
+        setDiscountAmount(0);
+        
         if (paymentMethod === "Razorpay") {
           initializeRazorpayPayment(result._id);
         } else {
@@ -527,24 +545,60 @@ const Checkout = () => {
                       <p className="text-sm text-gray-500">
                         Qty: {item.quantity}
                       </p>
-                      {(productOffers[item.product._id] || categoryOffers[item.product.category]) && (
+                      {(productOffers[item.product._id] ||
+                        categoryOffers[item.product.category]) && (
                         <div className="flex items-center mt-1 text-xs text-green-600">
                           <FaTag className="mr-1" />
                           <span>
-                            {(productOffers[item.product._id] || categoryOffers[item.product.category]).discountType === 'percentage' 
-                              ? `${(productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue}% off` 
-                              : `₹${(productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue} off`}
+                            {(
+                              productOffers[item.product._id] ||
+                              categoryOffers[item.product.category]
+                            ).discountType === "percentage"
+                              ? `${
+                                  (
+                                    productOffers[item.product._id] ||
+                                    categoryOffers[item.product.category]
+                                  ).discountValue
+                                }% off`
+                              : `₹${
+                                  (
+                                    productOffers[item.product._id] ||
+                                    categoryOffers[item.product.category]
+                                  ).discountValue
+                                } off`}
                           </span>
                         </div>
                       )}
                     </div>
                     <div className="text-right">
-                      {(productOffers[item.product._id] || categoryOffers[item.product.category]) ? (
+                      {productOffers[item.product._id] ||
+                      categoryOffers[item.product.category] ? (
                         <>
                           <p className="font-medium text-green-600">
-                            {(productOffers[item.product._id] || categoryOffers[item.product.category]).discountType === 'percentage' 
-                              ? `₹${(item.product.price * item.quantity * (1 - (productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue / 100)).toFixed(2)}` 
-                              : `₹${(item.product.price * item.quantity - Math.min((productOffers[item.product._id] || categoryOffers[item.product.category]).discountValue * item.quantity, item.product.price * item.quantity)).toFixed(2)}`}
+                            {(
+                              productOffers[item.product._id] ||
+                              categoryOffers[item.product.category]
+                            ).discountType === "percentage"
+                              ? `₹${(
+                                  item.product.price *
+                                  item.quantity *
+                                  (1 -
+                                    (
+                                      productOffers[item.product._id] ||
+                                      categoryOffers[item.product.category]
+                                    ).discountValue /
+                                      100)
+                                ).toFixed(2)}`
+                              : `₹${(
+                                  item.product.price * item.quantity -
+                                  Math.min(
+                                    (
+                                      productOffers[item.product._id] ||
+                                      categoryOffers[item.product.category]
+                                    ).discountValue * item.quantity,
+                                    item.product.price * item.quantity
+                                  )
+                                ).toFixed(2)}`}
                           </p>
                           <p className="text-xs text-gray-500 line-through">
                             ₹{(item.product.price * item.quantity).toFixed(2)}
@@ -656,22 +710,31 @@ const Checkout = () => {
                       : "Free"}
                   </span>
                 </div>
+
                 {offerDiscountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Offer Discount</span>
+                    <span className="flex items-center">
+                      <FaTag className="mr-1" /> Offer Discount
+                    </span>
                     <span>-₹{offerDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
+
+                {/* Enhanced CouponApply component that includes available coupons */}
                 <CouponApply
-                  orderTotal={itemsPrice - offerDiscountAmount}
+                  orderTotal={itemsPrice}
                   onCouponApplied={handleCouponApplied}
                 />
+
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Coupon Discount</span>
+                  <div className="flex justify-between text-green-600 font-semibold">
+                    <span className="flex items-center">
+                      <FaTag className="mr-1" /> Coupon Discount
+                    </span>
                     <span>-₹{discountAmount.toFixed(2)}</span>
                   </div>
                 )}
+
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
@@ -690,8 +753,16 @@ const Checkout = () => {
                       checked={paymentMethod === "Cash on Delivery"}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="form-radio"
+                      disabled={totalPrice > 1000}
                     />
-                    <span>Cash on Delivery</span>
+                    <span className="flex items-center">
+                      Cash on Delivery
+                      {totalPrice > 1000 && (
+                        <span className="ml-2 text-xs text-red-500">
+                          (Not available for orders above ₹1,000)
+                        </span>
+                      )}
+                    </span>
                   </label>
                   <label className="flex items-center space-x-2">
                     <input
@@ -717,29 +788,43 @@ const Checkout = () => {
                       <FaWallet className="mr-1 text-blue-600" /> Wallet
                     </span>
                   </label>
-                  
+
                   {paymentMethod === "Wallet" && (
                     <div className="mt-2 pl-6">
                       <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Available Balance:</span>
-                          <span className="font-medium text-blue-700">₹{walletBalance.toFixed(2)}</span>
+                          <span className="text-sm text-gray-600">
+                            Available Balance:
+                          </span>
+                          <span className="font-medium text-blue-700">
+                            ₹{walletBalance.toFixed(2)}
+                          </span>
                         </div>
-                        
+
                         {insufficientWalletFunds && (
                           <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
                             <p>Insufficient wallet balance for this order.</p>
                             <p>Order Total: ₹{totalPrice.toFixed(2)}</p>
-                            <p>Missing: ₹{(totalPrice - walletBalance).toFixed(2)}</p>
+                            <p>
+                              Missing: ₹
+                              {(totalPrice - walletBalance).toFixed(2)}
+                            </p>
                           </div>
                         )}
-                        
-                        {!insufficientWalletFunds && walletBalance >= totalPrice && (
-                          <div className="mt-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
-                            <p>Your wallet has sufficient balance for this order.</p>
-                            <p>Remaining after purchase: ₹{(walletBalance - totalPrice).toFixed(2)}</p>
-                          </div>
-                        )}
+
+                        {!insufficientWalletFunds &&
+                          walletBalance >= totalPrice && (
+                            <div className="mt-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                              <p>
+                                Your wallet has sufficient balance for this
+                                order.
+                              </p>
+                              <p>
+                                Remaining after purchase: ₹
+                                {(walletBalance - totalPrice).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
                       </div>
                     </div>
                   )}
@@ -747,7 +832,10 @@ const Checkout = () => {
               </div>
               <button
                 onClick={placeOrderHandler}
-                disabled={orderLoading || (paymentMethod === "Wallet" && insufficientWalletFunds)}
+                disabled={
+                  orderLoading ||
+                  (paymentMethod === "Wallet" && insufficientWalletFunds)
+                }
                 className="w-full mt-6 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {orderLoading ? "Processing..." : "Place Order"}

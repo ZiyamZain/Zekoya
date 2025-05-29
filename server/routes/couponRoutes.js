@@ -6,7 +6,8 @@ import {
     getCouponById,
     updateCoupon,
     deleteCoupon,
-    validateCoupon
+    validateCoupon,
+    getAvailableCoupons
 } from '../controllers/couponController.js';
 
 import protectAdmin from '../middlewares/authMiddleware.js';
@@ -23,7 +24,8 @@ router.route('/:id')
     .delete(protectAdmin , deleteCoupon)
 
 
-//user routes
-router.post('/validate' , protect, validateCoupon);
+//user routes 
+router.post('/validate', protect, validateCoupon);
+router.get('/available', protect, getAvailableCoupons);
 
 export default router;
