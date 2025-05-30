@@ -9,7 +9,6 @@ import {
 
 const router = express.Router();
 
-// Admin routes
 router.get('/sales', protectAdmin, getSalesReport);
 router.get('/dashboard', protectAdmin, getDashboardStats);
 router.get('/bestsellers', protectAdmin, getBestSellers);

@@ -21,6 +21,5 @@ router.post("/forgot-password/verify-otp", verifyForgotPasswordOtp);
 router.post("/forgot-password/change-password", changePassword);
 router.post("/resend-otp", resendOTP);
 
-// Profile routes are now handled in userProfileRoutes.js
 
 export default router;

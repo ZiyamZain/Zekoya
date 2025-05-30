@@ -16,7 +16,7 @@ const SalesChart = ({ salesData, timeFilter }) => {
   useEffect(() => {
     if (!salesData || salesData.length === 0) return;
 
-    console.log('Raw sales data:', salesData);
+   
 
     // Add previous periods for comparison
     const formattedData = [];
@@ -72,7 +72,6 @@ const SalesChart = ({ salesData, timeFilter }) => {
       }
     }
 
-    console.log('Formatted chart data:', formattedData);
     setChartData(formattedData);
   }, [salesData, timeFilter]);
 

@@ -21,11 +21,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Get sales report with filtering options
- * @route GET /api/reports/sales
- * @access Private/Admin
- */
+
 export const getSalesReport = asyncHandler(async (req, res) => {
   try {
     const { startDate, endDate, period, format, page } = req.query;
@@ -250,7 +246,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
 
     orders.forEach((order) => {
       if (!Array.isArray(order.orderItems)) {
-        console.log("Order missing orderItems array:", order._id);
+       
         return;
       }
 
@@ -393,9 +389,9 @@ export const getSalesReport = asyncHandler(async (req, res) => {
       }
     };
 
-    // Handle different response formats
+    
     if (format === "excel") {
-      console.log('Generating Excel report...');
+     
       // Create a new workbook and worksheet
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sales Report");
@@ -480,9 +476,9 @@ export const getSalesReport = asyncHandler(async (req, res) => {
 
       try {
         // Write the workbook to the response
-        console.log('Writing Excel buffer...');
+        
         const buffer = await workbook.xlsx.writeBuffer();
-        console.log('Excel buffer created, size:', buffer.length);
+       
         return res.send(buffer);
       } catch (error) {
         console.error('Error generating Excel:', error);
@@ -492,7 +488,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
         });
       }
     } else if (format === "pdf") {
-      console.log('Generating PDF report...');
+      
       try {
         // Create a new PDF document with better margins
         const doc = new PDFDocument({
@@ -514,7 +510,7 @@ export const getSalesReport = asyncHandler(async (req, res) => {
         doc.on('data', chunk => chunks.push(chunk));
         doc.on('end', () => {
           const result = Buffer.concat(chunks);
-          console.log('PDF buffer created, size:', result.length);
+    
           res.end(result);
         });
         
@@ -1144,7 +1140,7 @@ export const getPaymentStats = asyncHandler(async (req, res) => {
 export const getBestSellers = asyncHandler(async (req, res) => {
   try {
     const { category = 'products', limit = 5 } = req.query;
-    console.log(`Getting best sellers for category: ${category}, limit: ${limit}`);
+   
     
     // Validate category parameter
     if (!['products', 'categories', 'brands'].includes(category)) {
@@ -1284,7 +1280,6 @@ export const getBestSellers = asyncHandler(async (req, res) => {
       }
     }
     
-    console.log(`Returning ${result.length} items for ${category}`);
     
     res.status(200).json({
       success: true,

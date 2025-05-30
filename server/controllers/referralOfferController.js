@@ -4,7 +4,7 @@ import User from '../models/userModel.js';
 import Coupon from '../models/couponModel.js';
 import mongoose from 'mongoose';
 
-// Get all referral offers
+
 export const getAllReferralOffers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;

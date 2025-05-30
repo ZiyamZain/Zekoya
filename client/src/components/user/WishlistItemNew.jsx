@@ -2,17 +2,15 @@ import React from "react";
 import { useDispatch } from "react-redux";
 import { removeFromWishlist } from "../../features/wishlist/wishlistSlice";
 import { addToCart } from "../../features/cart/cartSlice";
-
+import { toast } from "react-toastify";
 const WishlistItemNew = ({ product }) => {
   const dispatch = useDispatch();
 
-  // Check if product has stock
   const hasStock = product.sizes.some((size) => size.stock > 0);
 
   // Get available sizes with stock
   const availableSizes = product.sizes.filter((size) => size.stock > 0);
 
-  // Handle add to cart
   const handleAddToCart = (size) => {
     dispatch(
       addToCart({
@@ -23,8 +21,18 @@ const WishlistItemNew = ({ product }) => {
         name: product.name,
         image: product.images[0],
       })
-    );
+    )
+    .unwrap()
+    .then(() => {
+      toast.success("Added to cart successfully")
+      dispatch(removeFromWishlist(product._id));
+    })
+    .catch((error) => {
+      toast.error("Failed to add to cart")
+    })
+
   };
+
 
   // Handle remove from wishlist
   const handleRemoveFromWishlist = () => {
@@ -37,7 +45,7 @@ const WishlistItemNew = ({ product }) => {
         {/* Product Image */}
         <div className="md:w-1/3 p-4">
           <img
-            src={product.images[0]}
+            src={`http://localhost:5001${product.images[0]}`}
             alt={product.name}
             className="w-full h-48 object-cover rounded-md"
           />
@@ -51,26 +59,6 @@ const WishlistItemNew = ({ product }) => {
             </h3>
             <p className="text-gray-600 mb-2">{product.description}</p>
             <p className="text-indigo-600 font-bold mb-2">₹{product.price}</p>
-
-            {/* Available Sizes */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-500 mb-1">Available Sizes:</p>
-              <div className="flex flex-wrap gap-2">
-                {hasStock ? (
-                  availableSizes.map((size) => (
-                    <button
-                      key={size._id}
-                      onClick={() => handleAddToCart(size.size)}
-                      className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full transition"
-                    >
-                      {size.size} ({size.stock})
-                    </button>
-                  ))
-                ) : (
-                  <span className="text-red-500 text-sm">Out of Stock</span>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Action Buttons */}

@@ -43,11 +43,11 @@ const SalesReportPage = () => {
     dispatch(getSalesReport(filters))
       .unwrap()
       .then(response => {
-        console.log('Sales report data:', response);
+     
         if (response.data && response.data.orders) {
-          console.log('Orders count:', response.data.orders.length);
+        
           if (response.data.orders.length > 0) {
-            console.log('Sample order:', response.data.orders[0]);
+         
           }
         } else {
           console.error('No orders data found in response');
@@ -59,7 +59,7 @@ const SalesReportPage = () => {
   // Update pagination when data changes
   useEffect(() => {
     if (data) {
-      console.log('Pagination data:', data.pagination);
+    
       setTotalPages(data.pagination?.totalPages || data.pagination?.pages || 1);
       setTotalOrders(data.pagination?.total || 0);
       // Update current page if it's out of bounds
@@ -142,14 +142,14 @@ const SalesReportPage = () => {
       limit
     };
     
-    console.log('Fetching report with filters:', filters);
+    
     
     dispatch(getSalesReport(filters))
       .unwrap()
       .then((response) => {
-        console.log('Report data received:', response);
+
         if (response.data && response.data.orders) {
-          console.log('Orders received:', response.data.orders.length);
+    
         } else {
           console.warn('No orders data in response:', response);
         }
@@ -364,7 +364,7 @@ const SalesReportPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {console.log('Rendering orders table with data:', data.orders)}
+               
                     {isLoading ? (
                       <tr>
                         <td colSpan="7" className="px-6 py-4 text-center">

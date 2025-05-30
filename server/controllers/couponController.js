@@ -49,7 +49,7 @@ export const getAllCoupons = asyncHandler(async (req,res) =>{
 
 export const validateCoupon = asyncHandler(async(req,res)=>{
     const {code , orderAmount} = req.body;
-    console.log(code)
+ 
     const coupon = await Coupon.findOne({code:code.toUpperCase()});
     if(!coupon) {
         res.status(404);

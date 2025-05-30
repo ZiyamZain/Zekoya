@@ -19,10 +19,10 @@ const getSalesReport = async (filters, token) => {
     params: filters,
   };
 
-  console.log('Fetching sales report with filters:', filters);
+
   try {
     const response = await axios.get(`${API_URL}/api/admin/reports/sales`, config);
-    console.log('Sales report response:', response.data);
+  
     return response.data;
   } catch (error) {
     return handleApiError(error, 'getSalesReport');
@@ -38,13 +38,13 @@ const getDashboardStats = async (timeFilter, token) => {
     },
   };
 
-  console.log(`Fetching dashboard stats with timeFilter: ${timeFilter}`);
+
   try {
     const response = await axios.get(
       `${API_URL}/api/admin/reports/dashboard?timeFilter=${timeFilter}`, 
       config
     );
-    console.log('Dashboard stats response:', response.data);
+
     return response.data;
   } catch (error) {
     return handleApiError(error, 'getDashboardStats');
@@ -54,7 +54,7 @@ const getDashboardStats = async (timeFilter, token) => {
 // Download sales report
 const downloadReport = async (filters, format, token) => {
   try {
-    console.log(`Downloading ${format} report with filters:`, filters);
+  
     
     const config = {
       headers: {
@@ -68,11 +68,11 @@ const downloadReport = async (filters, format, token) => {
       responseType: 'blob', // Always use blob for downloads
     };
 
-    console.log('Download request config:', config);
+
     
     // Make the API request
     const response = await axios.get(`${API_URL}/api/admin/reports/sales`, config);
-    console.log('Download response received, type:', response.data.type);
+
     
     // Create a clean filename
     const startDate = filters.startDate ? new Date(filters.startDate).toISOString().split('T')[0] : 'all';
@@ -117,16 +117,16 @@ const getBestSellers = async (params, token) => {
     },
   };
 
-  console.log(`Fetching best sellers for category: ${category}, limit: ${limit}`);
+
   try {
     const response = await axios.get(
       `${API_URL}/api/admin/reports/bestsellers?category=${category}&limit=${limit}`,
       config
     );
-    console.log(`Best sellers response for ${category}:`, response.data);
+
     
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
-      console.log(`Found ${response.data.data.length} ${category} in response`);
+    
     } else {
       console.warn(`Unexpected response structure for ${category}:`, response.data);
     }
@@ -147,7 +147,7 @@ const getPaymentStats = async (token) => {
     },
   };
 
-  console.log('Fetching payment statistics');
+ 
   try {
     const response = await axios.get(
       `${API_URL}/api/admin/reports/payment-stats`,

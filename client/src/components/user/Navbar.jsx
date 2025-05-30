@@ -25,10 +25,9 @@ const Navbar = () => {
   const mainNavItems = [
     { name: "Home", path: "/" },
     { name: "Featured", path: "/featured" },
-    { name: "Offers", path: "/offers" },
     { name: "About Us", path: "/about-us" },
     { name: "Clubs", path: "/products/category/club jerseys"},
-    { name: "Retro", path: "/retro-jerseys" },
+    { name: "Retro", path: "/products/category/retro jerseys" },
   ];
 
   const handleLogout = () => {

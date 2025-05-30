@@ -170,11 +170,10 @@ const reportSlice = createSlice({
       .addCase(getBestSellers.fulfilled, (state, action) => {
         state.bestSellers.loading = false;
         
-        // Extract the category parameter from the meta arg
+    
         const category = action.meta.arg.category || 'products';
         
-        // Log the received data for debugging
-        console.log(`getBestSellers fulfilled for ${category}:`, action.payload);
+    
         
         // Check if the response has the expected structure
         if (action.payload && action.payload.success && Array.isArray(action.payload.data)) {
@@ -193,15 +192,14 @@ const reportSlice = createSlice({
           // Replace the entire data object to ensure React detects the change
           state.bestSellers.data = newData;
           
-          console.log(`Updated ${category} with ${action.payload.data.length} items`);
+          
         } else {
           console.error(`Invalid response structure for ${category}:`, action.payload);
         }
         
         state.bestSellers.lastFetched = Date.now();
         
-        // Log the updated state for debugging
-        console.log(`Updated bestSellers.data after ${category} update:`, state.bestSellers.data);
+       
       })
       .addCase(getBestSellers.rejected, (state, action) => {
         state.bestSellers.loading = false;

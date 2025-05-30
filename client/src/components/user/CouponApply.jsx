@@ -13,7 +13,7 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
     state => state.coupon
   );
 
-  // Fetch available coupons when component mounts or orderTotal changes
+
   useEffect(() => {
     if (orderTotal > 0) {
       dispatch(getAvailableCoupons(orderTotal));
@@ -27,17 +27,15 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
 
     if (isSuccess && activeCoupon) {
       toast.success(`Coupon ${activeCoupon.coupon.code} applied successfully`);
-      
-      // Ensure discount amount is a number before passing it up
+
       const discountAmount = parseFloat(activeCoupon.discountAmount);
       
-      // Pass the complete coupon data with proper numeric discount amount
       onCouponApplied({
         coupon: activeCoupon.coupon,
         discountAmount: discountAmount
       });
       
-      setIsOpen(false); // Close dropdown after applying
+      setIsOpen(false); 
     }
 
     return () => {
@@ -52,7 +50,6 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
       return;
     }
     
-    // Make sure to parse orderTotal as a number for proper discount calculation
     dispatch(validateCoupon({ 
       code: couponCode, 
       orderAmount: parseFloat(orderTotal) 
@@ -73,13 +70,12 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
     toast.info('Coupon removed');
   };
 
-  // Format the date to a readable format
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  // If a coupon is already applied, show the applied coupon
+
   if (activeCoupon) {
     const { coupon, discountAmount } = activeCoupon;
     return (
@@ -115,7 +111,7 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
   return (
     <div className="mt-4 mb-4">
       <div className="relative">
-        {/* Dropdown toggle button */}
+
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex justify-between items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-md text-blue-600 font-medium hover:bg-blue-100"
@@ -126,8 +122,7 @@ const CouponApply = ({ orderTotal, onCouponApplied }) => {
           </span>
           {isOpen ? <FaChevronUp /> : <FaChevronDown />}
         </button>
-        
-        {/* Dropdown content */}
+
         {isOpen && (
           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg">
             {/* Manual coupon entry */}

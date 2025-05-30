@@ -7,7 +7,6 @@ import {
 
 import protect from '../middlewares/userProtect.js';
 
-// User coupon routes
 router.post('/validate', protect, validateCoupon);
 router.get('/available', protect, getAvailableCoupons);
 

@@ -186,17 +186,7 @@ const ProductCard = ({ product }) => {
           >
             <FaHeart className="w-4 h-4 text-red-500" />
           </button>
-          <button
-            className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors border border-gray-200 z-10"
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-          >
-            {isOutOfStock ? (
-              "Out of stock"
-            ) : (
-              <FaShoppingCart className="w-4 h-4 text-blue-500" />
-            )}
-          </button>
+          
         </div>
       </div>
     </Link>

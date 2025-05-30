@@ -35,7 +35,7 @@ const OrderDetails = () => {
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
         script.onload = () => {
-          console.log('Razorpay SDK loaded successfully');
+         
           setIsRazorpayLoaded(true);
           resolve(true);
         };
@@ -127,7 +127,7 @@ const OrderDetails = () => {
     }
   };
 
-  // Move loadRazorpay function outside to be accessible in handleRetryPayment
+  
   const loadRazorpay = useCallback(() => {
     return new Promise((resolve) => {
       if (window.Razorpay) {
@@ -139,7 +139,7 @@ const OrderDetails = () => {
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
       script.onload = () => {
-        console.log('Razorpay SDK loaded successfully');
+
         setIsRazorpayLoaded(true);
         resolve(true);
       };
@@ -160,15 +160,15 @@ const OrderDetails = () => {
     }
     
     try {
-      console.log('Starting payment retry process for order:', order._id);
+    
       setIsRetryingPayment(true);
       
       // 1. Get Razorpay key
-      console.log('Fetching Razorpay key...');
+
       let keyResponse;
       try {
         keyResponse = await dispatch(getRazorpayKey()).unwrap();
-        console.log('Razorpay key response:', keyResponse);
+        
       } catch (keyError) {
         console.error('Error getting Razorpay key:', {
           error: keyError,
@@ -185,7 +185,7 @@ const OrderDetails = () => {
       // 2. Create a new Razorpay order
       // Note: Backend will handle the conversion to paise
       const amount = Math.round(order.totalPrice);
-      console.log('Creating payment order with amount:', amount, 'INR');
+     
       
       let orderResponse;
       // Generate a shorter receipt ID to stay within Razorpay's 40-char limit
@@ -204,18 +204,13 @@ const OrderDetails = () => {
         }
       };
       
-      console.log('Creating payment order with data:', JSON.stringify(paymentOrderData, null, 2));
+      
       
       try {
         const actionResult = dispatch(createPaymentOrder(paymentOrderData));
-        console.log('Dispatch result:', {
-          type: actionResult?.type,
-          payload: actionResult?.payload,
-          meta: actionResult?.meta
-        });
         
         orderResponse = await actionResult.unwrap();
-        console.log('Payment order created successfully:', JSON.stringify(orderResponse, null, 2));
+       
       } catch (orderError) {
         console.error('Error creating payment order:', {
           name: orderError.name,
@@ -274,7 +269,7 @@ const OrderDetails = () => {
         order_id: orderResponse.order.id,
         handler: async function (response) {
           try {
-            console.log('Payment successful, verifying...', response);
+            
             
             // 4. Verify the payment
             const verifyResult = await dispatch(verifyPayment({
@@ -284,7 +279,7 @@ const OrderDetails = () => {
               orderId: order._id
             })).unwrap();
             
-            console.log('Payment verified:', verifyResult);
+           
             
             // 5. Refresh order details to get the updated status
             await dispatch(getOrderDetails(id));
@@ -311,13 +306,12 @@ const OrderDetails = () => {
         },
         modal: {
           ondismiss: function() {
-            console.log('Payment modal dismissed');
+   
             setIsRetryingPayment(false);
           }
         }
       };
 
-      console.log('Opening Razorpay checkout with options:', options);
       
       try {
         const rzp = new window.Razorpay(options);
@@ -686,15 +680,10 @@ const OrderDetails = () => {
               <p className="text-gray-600">Shipping</p>
               <p className="font-medium">₹{order.shippingPrice.toFixed(2)}</p>
             </div>
-            {order.offerDiscountPrice > 0 && (
-              <div className="flex justify-between py-2">
-                <p className="text-gray-600">Offer Discount</p>
-                <p className="font-medium text-green-600">-₹{order.offerDiscountPrice.toFixed(2)}</p>
-              </div>
-            )}
+            
             {order.discountPrice > 0 && (
               <div className="flex justify-between py-2">
-                <p className="text-gray-600">Coupon Discount</p>
+                <p className="text-gray-600">Discount</p>
                 <p className="font-medium text-green-600">-₹{order.discountPrice.toFixed(2)}</p>
               </div>
             )}

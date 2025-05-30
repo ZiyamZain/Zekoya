@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import couponService from './couponService.js';
 
-// Simplified user coupon slice - only handles validation
+
 const initialState = {
     activeCoupon: null,
     availableCoupons: [],

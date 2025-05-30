@@ -48,7 +48,8 @@ const Products = () => {
   useEffect(() => {
   
     if (categoryName) {
-      dispatch(getProductsByCategory({ category: categoryName, page, limit }));
+      setPage(1);
+      dispatch(getProductsByCategory({ category: categoryName, page: 1, limit }));
       setFilters((prev) => ({ ...prev, selectedCategory: categoryName }));
       
       // Find the category ID to fetch active offers
@@ -57,11 +58,19 @@ const Products = () => {
         dispatch(getActiveOfferForCategory(selectedCategory._id));
       }
     } else {
-      dispatch(getProducts({ page, limit }));
+      setPage(1);
+      dispatch(getProducts({ page: 1, limit }));
       setFilters((prev) => ({ ...prev, selectedCategory: '' }));
     }
-  }, [dispatch, categoryName, page, limit]);
-
+  }, [dispatch, categoryName, limit, categories]);
+  
+  useEffect(() => {
+    if (categoryName) {
+      dispatch(getProductsByCategory({ category: categoryName, page, limit }));
+    } else {
+      dispatch(getProducts({ page, limit }));
+    }
+  }, [page, dispatch, categoryName, limit]);
 
   useEffect(() => {
     if (
@@ -90,6 +99,7 @@ const Products = () => {
 
   const handleCategoryChange = (event) => {
     const selectedCategory = event.target.value;
+    setPage(1); // Reset to first page when changing categories
     setFilters((prev) => ({ ...prev, selectedCategory }));
   };
 
@@ -118,10 +128,18 @@ const Products = () => {
 
 
   const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
+    const newPage = Math.max(1, page - 1);
+    if (newPage !== page) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    const newPage = Math.min(totalPages, page + 1);
+    if (newPage !== page) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const filterProducts = (productsList) => {
@@ -352,7 +370,7 @@ const Products = () => {
               </div>
             ) : (
               <div ref={productsGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedProducts.slice((page - 1) * limit, page * limit).map((product) => (
+                {sortedProducts.map((product) => (
                   <ProductCard key={product._id} product={product} />
                 ))}
               </div>

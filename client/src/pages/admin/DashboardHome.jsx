@@ -97,7 +97,7 @@ const DashboardHome = () => {
           dispatch(getPaymentStats())
         ]);
         
-        console.log('All dashboard data fetched successfully');
+  
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -115,7 +115,7 @@ const DashboardHome = () => {
         ? dashboardData.data.salesData 
         : [];
       
-      console.log('Sales data for chart:', salesData);
+
       
       const labels = salesData.map((item) => item.date || item._id || 'N/A');
       const amounts = salesData.map((item) => item.amount || item.total || 0);
@@ -134,7 +134,7 @@ const DashboardHome = () => {
         ],
       });
     } else {
-      console.log('No sales data available for chart');
+
       // Set default empty chart data
       setChartData({
         labels: ['No Data'],
@@ -304,7 +304,7 @@ const DashboardHome = () => {
     const productsData = bestSellers?.data?.products || [];
     const isLoading = bestSellers?.loading || false;
     
-    console.log('Top products data:', productsData);
+  
     
     if (isLoading) {
       return (
@@ -341,7 +341,7 @@ const DashboardHome = () => {
     const categoriesData = bestSellers?.data?.categories || [];
     const isLoading = bestSellers?.loading || false;
     
-    console.log('Top categories data:', categoriesData);
+
     
     if (isLoading) {
       return (

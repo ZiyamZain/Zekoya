@@ -28,7 +28,9 @@ const getMyOrders = async (params = {}) => {
 // Cancel entire order
 const cancelOrder = async (data) => {
   const { orderId, reason } = data;
-  const response = await API.post(`${API_URL}/${orderId}/cancel`, { reason });
+  const response = await API.post(`${API_URL}/${orderId}/cancel`, { 
+    reason: reason || "Cancelled by customer" 
+  });
   return response.data;
 };
 

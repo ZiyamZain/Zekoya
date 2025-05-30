@@ -10,18 +10,13 @@ import {
 
 } from "../../features/order/orderSlice";
 
-// Import clearActiveCoupon from coupon slice
+
 import { clearActiveCoupon } from "../../features/coupons/couponSlice";
-
-
-
-
-import { getAddresses } from "../../features/userProfile/userProfileSlice";
+import { getAddresses, getUserProfile } from "../../features/userProfile/userProfileSlice";
 import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
 import API from "../../utils/axiosConfig";
 import axios from "axios";
-import { getActiveOfferForProduct } from "../../features/offers/offerSlice";
 
 
 
@@ -31,12 +26,12 @@ const Checkout = () => {
   const navigate = useNavigate();
 
   const { userInfo } = useSelector((state) => state.userAuth);
+  const { addresses, user } = useSelector((state) => state.userProfile);
   const {
     cart,
     hasUnavailableItems,
     isLoading: cartLoading,
   } = useSelector((state) => state.cart);
-  const { addresses } = useSelector((state) => state.userProfile);
   const {
     order,
     isLoading: orderLoading,
@@ -44,9 +39,6 @@ const Checkout = () => {
     isError,
     message,
   } = useSelector((state) => state.order);
-
-
-
 
 
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
@@ -187,24 +179,22 @@ const Checkout = () => {
       setTaxPrice(Math.round(itemsPriceCalc * 0.18));
       setShippingPrice(itemsPriceCalc > 1000 ? 0 : 100);
 
-      // This will be handled in a separate useEffect to ensure proper dependency tracking
     }
   }, [cart]);
 
-  // Separate useEffect to handle discount amount changes
+
   useEffect(() => {
     if (appliedCoupon && appliedCoupon.discountAmount) {
-      console.log('Setting discount amount:', appliedCoupon.discountAmount);
+
       setDiscountAmount(parseFloat(appliedCoupon.discountAmount));
     } else {
       setDiscountAmount(0);
     }
   }, [appliedCoupon]);
-
   // Separate useEffect to calculate total price
   useEffect(() => {
     if (itemsPrice > 0) {
-      console.log('Calculating total price with discount:', discountAmount);
+     
       const calculatedTotal = 
         itemsPrice +
         taxPrice +
@@ -213,16 +203,26 @@ const Checkout = () => {
         offerDiscountAmount;
       
       setTotalPrice(calculatedTotal);
-      console.log('New total price:', calculatedTotal);
+
     }
   }, [itemsPrice, taxPrice, shippingPrice, discountAmount, offerDiscountAmount]);
 
+  useEffect(() => {
+    if (userInfo) {
+      dispatch(getUserProfile());
+    }
+  }, [dispatch, userInfo]);
+
+  useEffect(() => {
+    if (user && user.walletBalance !== undefined) {
+      setWalletBalance(parseFloat(user.walletBalance));
+      setInsufficientWalletFunds(parseFloat(user.walletBalance) < totalPrice);
+    }
+  }, [user, totalPrice]);
+
   const handleCouponApplied = (couponData) => {
-    console.log('Coupon applied in checkout:', couponData);
-    
     if (couponData) {
       setAppliedCoupon(couponData);
-      // The discount amount will be set in the useEffect that watches appliedCoupon
     } else {
       setAppliedCoupon(null);
       setDiscountAmount(0);
@@ -720,7 +720,6 @@ const Checkout = () => {
                   </div>
                 )}
 
-                {/* Enhanced CouponApply component that includes available coupons */}
                 <CouponApply
                   orderTotal={itemsPrice}
                   onCouponApplied={handleCouponApplied}

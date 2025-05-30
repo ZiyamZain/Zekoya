@@ -150,9 +150,7 @@ const OrderHistory = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
+                 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
@@ -174,11 +172,7 @@ const OrderHistory = () => {
                         {formatDate(order.createdAt)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        ₹{order.totalPrice.toFixed(2)}
-                      </div>
-                    </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(
@@ -206,13 +200,7 @@ const OrderHistory = () => {
                           </button>
                         )}
 
-                        <Link
-                          to={`/orders/${order._id}/invoice`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <FaFileInvoice className="inline mr-1" />
-                          Invoice
-                        </Link>
+                       
                       </div>
                     </td>
                   </tr>
