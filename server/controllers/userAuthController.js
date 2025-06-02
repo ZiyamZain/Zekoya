@@ -1,15 +1,79 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
-import generateToken from "../utils/generateToken.js";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/generateToken.js";
+
 import { OAuth2Client } from "google-auth-library";
 import mongoose from "mongoose";
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
 
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+
+
+
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: "Refresh token is required" });
+    }
+
+    // Verify the refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid or expired refresh token" });
+    }
+
+    // Find user by ID
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check token version
+    if ((user.tokenVersion || 0) !== decoded.tokenVersion) {
+      return res.status(401).json({ message: "Token has been revoked, please login again" });
+    }
+
+    // Check if refresh token matches and is not expired
+    if (
+      user.refreshToken !== refreshToken ||
+      !user.refreshTokenExpiry ||
+      new Date(user.refreshTokenExpiry) < new Date()
+    ) {
+      return res.status(401).json({ message: "Token has been revoked, please login again" });
+    }
+
+    // Generate new tokens (rotation)
+    const accessToken = generateAccessToken(user._id, user.tokenVersion);
+    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Update refresh token in database
+    user.refreshToken = newRefreshToken;
+    user.refreshTokenExpiry = refreshTokenExpiry;
+    await user.save();
+
+    res.status(200).json({
+      accessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    console.error("Refresh Token Error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+
+
+
 
 export const registerUser = async (req, res) => {
   try {
@@ -25,7 +89,7 @@ export const registerUser = async (req, res) => {
           "Password must be at least 6 characters and include uppercase, lowercase, and a number",
       });
     }
-    //check if user already exist
+
 
     let user = await User.findOne({ email });
     
@@ -42,7 +106,7 @@ export const registerUser = async (req, res) => {
       if (user.isVerified) {
         return res.status(400).json({ message: "User already exists" });
       } else {
-        // User exists but not verified: update info and resend OTP. ( the people who haven't completed the registration)
+
         user.name = name;
         user.password = password;
         if(referredBy){
@@ -114,13 +178,11 @@ export const verifyOTP = async (req, res) => {
     }
 
     if (!user.otp?.code) {
-
       return res.status(400).json({ message: "User already verified" });
     }
 
     // Check OTP expiry
     if (new Date() > user.otp.expiry) {
-
       return res.status(400).json({ message: "OTP expired" });
     }
 
@@ -136,55 +198,63 @@ export const verifyOTP = async (req, res) => {
     await user.save();
 
     //process referral if user was referred
-    if(user.referredBy){
-      try{
+    if (user.referredBy) {
+      try {
         //find the active referral offer
-        const ReferralOffer = mongoose.model('ReferralOffer');
-        const activeOffer = await ReferralOffer.findOne({isActive:true});
+        const ReferralOffer = mongoose.model("ReferralOffer");
+        const activeOffer = await ReferralOffer.findOne({ isActive: true });
 
         // Get the referrer user
         const referrer = await User.findById(user.referredBy);
-        if(referrer){
+        if (referrer) {
           // Update referral count regardless of active offer
           referrer.referralCount = (referrer.referralCount || 0) + 1;
-          
+
           // Default rewards if no active offer found
           const referrerReward = activeOffer?.referrerRewardValue || 100;
           const newUserReward = activeOffer?.newUserRewardValue || 50;
-          
+
           // Add reward to referrer's wallet
-          referrer.walletBalance = (referrer.walletBalance || 0) + referrerReward;
-          
+          referrer.walletBalance =
+            (referrer.walletBalance || 0) + referrerReward;
+
           // Add wallet history entry for referrer
           referrer.walletHistory.push({
-            type: 'credit',
+            type: "credit",
             amount: referrerReward,
             description: `Referral bonus for inviting ${user.name}`,
-            date: new Date()
+            date: new Date(),
           });
-          
+
           await referrer.save();
-          
+
           // Add reward to new user's wallet
           user.walletBalance = (user.walletBalance || 0) + newUserReward;
-          
+
           // Add wallet history entry for new user
           user.walletHistory.push({
-            type: 'credit',
+            type: "credit",
             amount: newUserReward,
-            description: 'Welcome bonus for joining with a referral',
-            date: new Date()
+            description: "Welcome bonus for joining with a referral",
+            date: new Date(),
           });
-          
+
           await user.save();
         }
-      }catch(error){
-        console.error( "Error processing referral : " ,error);
+      } catch (error) {
+        console.error("Error processing referral : ", error);
       }
     }
 
-    // Generate JWT
-    const token = generateToken(user._id);
+    // Generate tokens
+    const accessToken = generateAccessToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Store refresh token in database
+    user.refreshToken = refreshToken;
+    user.refreshTokenExpiry = refreshTokenExpiry;
+    await user.save();
 
     res.status(200).json({
       _id: user._id,
@@ -195,7 +265,8 @@ export const verifyOTP = async (req, res) => {
       isVerified: user.isVerified,
       walletBalance: user.walletBalance || 0,
       referralCode: user.referralCode,
-      token,
+      accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error("Verify OTP Error:", error.message);
@@ -223,7 +294,7 @@ export const loginUser = async (req, res) => {
     // Check verification status
     if (!user.isVerified && !user.isGoogle) {
       return res
-        .status(400)
+        .status(401)
         .json({ message: "Please verify your email first" });
     }
 
@@ -243,8 +314,15 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // Generate JWT
-    const token = generateToken(user._id);
+    // Generate tokens
+    const accessToken = generateAccessToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // store refresh token in database
+    user.refreshToken = refreshToken;
+    user.refreshTokenExpiry = refreshTokenExpiry;
+    await user.save();
 
     res.status(200).json({
       _id: user._id,
@@ -253,13 +331,16 @@ export const loginUser = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
-      token,
+      token : accessToken, // thsi is the access token for backward compoatibility
+      refreshToken, // new refresh token
     });
   } catch (error) {
     console.error("Login Error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -297,7 +378,14 @@ export const googleLogin = async (req, res) => {
       });
     }
 
-    const jwtToken = generateToken(user._id);
+    const accessToken = generateAccessToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Store refresh token in database
+    user.refreshToken = refreshToken;
+    user.refreshTokenExpiry = refreshTokenExpiry;
+    await user.save();
 
     res.status(200).json({
       _id: user._id,
@@ -306,7 +394,8 @@ export const googleLogin = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
-      token: jwtToken,
+      token: accessToken,
+      refreshToken,
     });
   } catch (error) {
     console.error("Google login failed:", error);
@@ -465,6 +554,67 @@ export const resendOTP = async (req, res) => {
     });
   } catch (error) {
     console.error("Resend OTP Error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const logoutUser = async (req,res) =>{
+  try{
+    const {refreshToken} = req.body;
+
+    if(!refreshToken){
+      return res.status(400).json({message:"Refresh token is required"})
+    }
+
+    //verify the refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+    if(!decoded) {
+      return res.status(200).json({message:"Logged out successfully"});
+
+    }
+
+    //Find user by ID
+    const user = await User.findById(decoded.userId);
+    if(!user) {
+      return res.status(200).json({message: "Logged out successfully"});
+
+    }
+     // Increment token version to invalidate all existing tokens
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    
+    // Clear refresh token
+    user.refreshToken = null;
+    user.refreshTokenExpiry = null;
+    
+    await user.save();
+
+    res.status(200).json({ message: "Logged out successfully" });
+
+  }catch(error){
+    console.error("Logout Error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+export const checkAuthStatus = async (req, res) => {
+  try {
+    // This endpoint will only be accessible if the user is authenticated
+    // due to the protect middleware that will be applied to this route
+
+    // Return user information without sensitive data
+    res.status(200).json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      profileImage: req.user.profileImage,
+      isGoogle: req.user.isGoogle,
+      isVerified: req.user.isVerified,
+      walletBalance: req.user.walletBalance || 0,
+      referralCode: req.user.referralCode,
+      isAuthenticated: true,
+    });
+  } catch (error) {
+    console.error("Auth Status Error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

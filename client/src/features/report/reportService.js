@@ -1,6 +1,6 @@
-import axios from 'axios';
+import adminAxios from '../../utils/adminAxiosConfig';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+// Base URL is already set in adminAxios, so we just need the path
 
 // Helper function to handle API errors
 const handleApiError = (error, context) => {
@@ -10,18 +10,14 @@ const handleApiError = (error, context) => {
 };
 
 // Get sales report with filters
-const getSalesReport = async (filters, token) => {
+const getSalesReport = async (filters) => {
   const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     params: filters,
   };
 
-
   try {
-    const response = await axios.get(`${API_URL}/api/admin/reports/sales`, config);
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get('/reports/sales', config);
   
     return response.data;
   } catch (error) {
@@ -30,19 +26,11 @@ const getSalesReport = async (filters, token) => {
 };
 
 // Get dashboard statistics
-const getDashboardStats = async (timeFilter, token) => {
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-
+const getDashboardStats = async (timeFilter) => {
   try {
-    const response = await axios.get(
-      `${API_URL}/api/admin/reports/dashboard?timeFilter=${timeFilter}`, 
-      config
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get(
+      `/reports/dashboard?timeFilter=${timeFilter}`
     );
 
     return response.data;
@@ -52,14 +40,10 @@ const getDashboardStats = async (timeFilter, token) => {
 };
 
 // Download sales report
-const downloadReport = async (filters, format, token) => {
+const downloadReport = async (filters, format) => {
   try {
-  
-    
+    // Configure the request
     const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       params: { 
         startDate: filters.startDate,
         endDate: filters.endDate,
@@ -67,11 +51,10 @@ const downloadReport = async (filters, format, token) => {
       },
       responseType: 'blob', // Always use blob for downloads
     };
-
-
     
     // Make the API request
-    const response = await axios.get(`${API_URL}/api/admin/reports/sales`, config);
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get('/reports/sales', config);
 
     
     // Create a clean filename
@@ -108,20 +91,13 @@ const downloadReport = async (filters, format, token) => {
 };
 
 // Get best sellers
-const getBestSellers = async (params, token) => {
+const getBestSellers = async (params) => {
   const { category = 'products', limit = 5 } = params;
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
 
   try {
-    const response = await axios.get(
-      `${API_URL}/api/admin/reports/bestsellers?category=${category}&limit=${limit}`,
-      config
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get(
+      `/reports/bestsellers?category=${category}&limit=${limit}`
     );
 
     
@@ -139,19 +115,11 @@ const getBestSellers = async (params, token) => {
 };
 
 // Get payment statistics
-const getPaymentStats = async (token) => {
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
- 
+const getPaymentStats = async () => {
   try {
-    const response = await axios.get(
-      `${API_URL}/api/admin/reports/payment-stats`,
-      config
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get(
+      `/reports/payment-stats`
     );
     console.log('Payment stats response:', response.data);
     return response.data;

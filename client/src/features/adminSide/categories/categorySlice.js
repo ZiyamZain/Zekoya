@@ -36,7 +36,7 @@ export const addCategory = createAsyncThunk(
   "categories/add",
   async (formData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await categoryService.addCategory(formData, token);
     } catch (error) {
       const message =
@@ -55,7 +55,7 @@ export const updateCategory = createAsyncThunk(
   "categories/update",
   async ({ id, formData }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await categoryService.updateCategory(id, formData, token);
     } catch (error) {
       const message =
@@ -74,7 +74,7 @@ export const deleteCategory = createAsyncThunk(
   "categories/delete",
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await categoryService.deleteCategory(id, token);
     } catch (error) {
       const message =
@@ -93,7 +93,7 @@ export const toggleCategoryListing = createAsyncThunk(
   "categories/toggleListing",
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await categoryService.toggleCategoryListing(id, token);
     } catch (error) {
       const message =
@@ -112,7 +112,7 @@ export const updateCategoryStatus = createAsyncThunk(
   "categories/updateStatus",
   async (updatedCategory, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await categoryService.updateCategory(updatedCategory._id, updatedCategory, token);
     } catch (error) {
       const message =

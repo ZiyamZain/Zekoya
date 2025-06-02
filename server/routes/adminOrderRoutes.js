@@ -1,5 +1,5 @@
 import express from "express";
-import protectAdmin from "../middlewares/authMiddleware.js";
+import adminProtect from "../middlewares/adminProtect.js";
 import {
   getAllOrders,
   updateOrderStatus,
@@ -11,10 +11,10 @@ import {
 const router = express.Router();
 
 // Admin-only routes
-router.get("/", protectAdmin, getAllOrders);
-router.get("/:id", protectAdmin, getOrderById);
-router.put("/:orderId/status", protectAdmin, updateOrderStatus);
-router.put("/:orderId/items/:itemId/return", protectAdmin, processReturnRequest);
-router.get("/:orderId/invoice", protectAdmin, generateInvoice);
+router.get("/", adminProtect, getAllOrders);
+router.get("/:id", adminProtect, getOrderById);
+router.put("/:orderId/status", adminProtect, updateOrderStatus);
+router.put("/:orderId/items/:itemId/return", adminProtect, processReturnRequest);
+router.get("/:orderId/invoice", adminProtect, generateInvoice);
 
 export default router;

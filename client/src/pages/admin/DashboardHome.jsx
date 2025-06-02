@@ -82,7 +82,7 @@ const DashboardHome = () => {
 
   useEffect(() => {
     // Only fetch data if admin is logged in
-    if (!adminInfo || !adminInfo.token) {
+    if (!adminInfo || !adminInfo.accessToken) {
       console.error('Admin not authenticated');
       return;
     }

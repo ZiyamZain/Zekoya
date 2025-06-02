@@ -13,7 +13,7 @@ export const getSalesReport = createAsyncThunk(
   'report/getSalesReport',
   async (filters, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await reportService.getSalesReport(filters, token);
     } catch (error) {
       return thunkAPI.rejectWithValue(getError(error));
@@ -26,7 +26,7 @@ export const getDashboardStats = createAsyncThunk(
   'report/getDashboardStats',
   async (timeFilter, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await reportService.getDashboardStats(timeFilter, token);
     } catch (error) {
       return thunkAPI.rejectWithValue(getError(error));
@@ -39,7 +39,7 @@ export const downloadReport = createAsyncThunk(
   'report/downloadReport',
   async ({ filters, format }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await reportService.downloadReport(filters, format, token);
     } catch (error) {
       return thunkAPI.rejectWithValue(getError(error));
@@ -52,7 +52,7 @@ export const getBestSellers = createAsyncThunk(
   'report/getBestSellers',
   async (params, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await reportService.getBestSellers(params, token);
     } catch (error) {
       return thunkAPI.rejectWithValue(getError(error));
@@ -65,7 +65,7 @@ export const getPaymentStats = createAsyncThunk(
   'report/getPaymentStats',
   async (_, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo.accessToken;
       return await reportService.getPaymentStats(token);
     } catch (error) {
       return thunkAPI.rejectWithValue(getError(error));

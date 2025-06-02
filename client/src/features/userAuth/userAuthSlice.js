@@ -83,24 +83,46 @@ export const googleLogin = createAsyncThunk(
     }
   }
 );
-// export const googleSignIn = createAsyncThunk(
-//   "userAuth/googleSignIn",
-//   async (userData, thunkAPI) => {
-//     try {
-//       return await userAuthService.googleSignIn(userData);
-//     } catch (error) {
-//       const message =
-//         error.response?.data?.message ||
-//         error.message ||
-//         "Google sign-in failed";
-//       return thunkAPI.rejectWithValue(message);
-//     }
-//   }
-// );
 
-export const userLogout = createAsyncThunk("userAuth/logout", async () => {
-  userAuthService.logout();
+export const userLogout = createAsyncThunk("userAuth/logout", async (_, thunkAPI) => {
+  try {
+    await userAuthService.logout();
+    return { success: true };
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || "Logout failed";
+    return thunkAPI.rejectWithValue(message);
+  }
 });
+
+export const refreshUserToken = createAsyncThunk(
+  "userAuth/refreshToken",
+  async (_, thunkAPI) => {
+    try {
+      const state = thunkAPI.getState();
+      const refreshToken = state.userAuth.userInfo?.refreshToken;
+      
+      if (!refreshToken) {
+        return thunkAPI.rejectWithValue("No refresh token available");
+      }
+      
+      const data = await userAuthService.refreshToken(refreshToken);
+      
+      // Update the user info in localStorage with new tokens
+      const updatedUserInfo = {
+        ...state.userAuth.userInfo,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken
+      };
+      
+      localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
+      
+      return updatedUserInfo;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || "Token refresh failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
 
 export const sendForgotPasswordOtp = createAsyncThunk(
   "userAuth/sendForgotPasswordOtp",
@@ -177,6 +199,9 @@ const userAuthSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.loading = false;
         state.userInfo = action.payload;
+        if (action.payload && action.payload.accessToken) {
+          localStorage.setItem("userInfo", JSON.stringify(action.payload));
+        }
         state.otpSent = false;
         state.userId = null;
         state.error = null;
@@ -277,6 +302,12 @@ const userAuthSlice = createSlice({
         state.forgotUserId = null;
         state.error = null;
         state.loading = false;
+      })
+      .addCase(refreshUserToken.fulfilled, (state, action) => {
+        state.userInfo = action.payload;
+      })
+      .addCase(refreshUserToken.rejected, (state, action) => {
+        state.error = action.payload;
       });
   },
 });

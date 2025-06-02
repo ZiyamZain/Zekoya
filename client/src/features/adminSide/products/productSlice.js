@@ -14,7 +14,7 @@ export const getProducts = createAsyncThunk(
   "adminProducts/getProducts",
   async ({ page = 1, search = "", limit = 10 }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       return await productService.getProducts({ page, search, limit }, token);
     } catch (error) {
       const message =
@@ -49,7 +49,7 @@ export const addProduct = createAsyncThunk(
   "adminProducts/addProduct",
   async (formData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       if (!token) {
         throw new Error("Please login to add products");
       }
@@ -70,7 +70,7 @@ export const editProduct = createAsyncThunk(
   "adminProducts/editProduct",
   async ({ id, productData }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       return await productService.editProduct(id, productData, token);
     } catch (error) {
       const message =
@@ -88,7 +88,7 @@ export const deleteProduct = createAsyncThunk(
   "adminProducts/deleteProduct",
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       return await productService.deleteProduct(id, token);
     } catch (error) {
       const message =
@@ -106,7 +106,7 @@ export const toggleProductListing = createAsyncThunk(
   "adminProducts/toggleProductListing",
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       return await productService.toggleProductListing(id, token);
     } catch (error) {
       const message =
@@ -124,7 +124,7 @@ export const toggleProductFeatured = createAsyncThunk(
   "adminProducts/toggleProductFeatured",
   async (id, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       return await productService.toggleProductFeatured(id, token);
     } catch (error) {
       const message =

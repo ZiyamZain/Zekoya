@@ -1,24 +1,28 @@
-import API from "../../utils/axiosConfig";
+import { cartAxios } from '../../utils/userAxiosConfig';
 
-const API_URL = "/api/cart";
+// Base URL is already set in cartAxios, so we just need the path
 
 const getCart = async () => {
-  const response = await API.get(API_URL);
+  // cartAxios will automatically add auth header
+  const response = await cartAxios.get('/');
   return response.data;
 };
 
 const addToCart = async (cartData) => {
-  const response = await API.post(API_URL, cartData);
+  // cartAxios will automatically add auth header
+  const response = await cartAxios.post('/', cartData);
   return response.data;
 };
 
 const updateCartItem = async (itemData) => {
-  const response = await API.put(API_URL, itemData);
+  // cartAxios will automatically add auth header
+  const response = await cartAxios.put('/', itemData);
   return response.data;
 };
 
 const removeFromCart = async (itemId) => {
-  const response = await API.delete(`${API_URL}/${itemId}`);
+  // cartAxios will automatically add auth header
+  const response = await cartAxios.delete(`/${itemId}`);
   return response.data;
 };
 

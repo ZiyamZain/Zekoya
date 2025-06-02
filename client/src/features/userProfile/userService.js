@@ -1,21 +1,14 @@
-import axios from "axios";
+import { userAxios } from '../../utils/userAxiosConfig';
 
-
-const API_URL = "http://localhost:5001/api/users/profile";
+// Base URL is already set in userAxios, so we just need the path
 
 
 //get user profile 
 
-const getUserProfile = async(token) =>{
-    const config ={
-        headers:{
-            Authorization:`Bearer ${token}`
-        }
-    }
-
-    
+const getUserProfile = async() =>{
     try {
-        const response = await axios.get(API_URL, config);
+        // userAxios will automatically add auth header
+        const response = await userAxios.get('/profile');
         return response.data;
     } catch (error) {
         console.error('Error in getUserProfile service:', error.response?.data || error.message);
@@ -25,131 +18,84 @@ const getUserProfile = async(token) =>{
 
 //update user profile
 
-const updateProfile = async(userData,token) =>{
-    const config = {
-        headers:{
-            Authorization:`Bearer ${token}`,
-        }
-    }
-    const response = await axios.put(API_URL, userData, config);
+const updateProfile = async(userData) =>{
+    // userAxios will automatically add auth header
+    const response = await userAxios.put('/profile', userData);
     return response.data;
 }
 
 //change email
 
-const changeEmail = async(emailData,token)=>{
-    const config ={
-        headers:{
-            Authorization:`Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/change-email`,emailData,config)
+const changeEmail = async(emailData)=>{
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/change-email', emailData)
     return response.data
 }
 
 //verify email change
 
-const verifyEmailChange = async(otpData,token)=>{
-    const config = {
-        headers:{
-            Authorization:`Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/verify-email-change`,otpData,config)
+const verifyEmailChange = async(otpData)=>{
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/verify-email-change', otpData)
     return response.data
 }
 
 // Request OTP for password change
-const requestPasswordChangeOtp = async(passwordData, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/request-password-change-otp`, passwordData, config)
+const requestPasswordChangeOtp = async(passwordData) => {
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/request-password-change-otp', passwordData)
     return response.data
 }
 
 // Verify OTP for password change
-const verifyPasswordChangeOtp = async(otpData, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/verify-password-change-otp`, otpData, config)
+const verifyPasswordChangeOtp = async(otpData) => {
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/verify-password-change-otp', otpData)
     return response.data
 }
 
 //change password
 
-const changePassword = async(passwordData, token) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/change-password`, passwordData, config)
+const changePassword = async(passwordData) => {
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/change-password', passwordData)
     return response.data
 }
 
 //get addresses
 
-const getAddresses = async(token)=>{
-    const config = {
-        headers:{
-            Authorization:`Bearer ${token}`
-        }
-    }
-    const response = await axios.get(`${API_URL}/addresses`,config)
+const getAddresses = async()=>{
+    // userAxios will automatically add auth header
+    const response = await userAxios.get('/profile/addresses')
     return response.data
 }
 
 //add address
 
-const addAddress = async(addressData,token)=>{
-    const config = {
-        headers:{
-            Authorization:`Bearer ${token}`
-        }
-    }
-    const response = await axios.post(`${API_URL}/addresses`,addressData,config)
+const addAddress = async(addressData)=>{
+    // userAxios will automatically add auth header
+    const response = await userAxios.post('/profile/addresses', addressData)
     return response.data
 }
 
 // Update address
-const updateAddress = async (addressId, addressData, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.put(`${API_URL}/addresses/${addressId}`, addressData, config);
+const updateAddress = async (addressId, addressData) => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.put(`/profile/addresses/${addressId}`, addressData);
   return response.data;
 };
 
 // Delete address
-const deleteAddress = async (addressId, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.delete(`${API_URL}/addresses/${addressId}`, config);
+const deleteAddress = async (addressId) => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.delete(`/profile/addresses/${addressId}`);
   return response.data;
 };
 
 // Set default address
-const setDefaultAddress = async (addressId, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.put(`${API_URL}/addresses/${addressId}/default`, {}, config);
+const setDefaultAddress = async (addressId) => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.put(`/profile/addresses/${addressId}/default`, {});
   return response.data;
 };
 

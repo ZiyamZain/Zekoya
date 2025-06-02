@@ -1,52 +1,48 @@
-import axios from "axios";
+import adminAxios from '../../../utils/adminAxiosConfig';
 
-const API_URL = "http://localhost:5001/api/admin/users";
+// Base URL is already set in adminAxios, so we just need the path
 
 
 const getAllUsers = async (token, page = 1, search = "") => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-
-    const response = await axios.get(
-        `${API_URL}?page=${page}&limit=10&search=${search}`,
-        config
-    );
-
-    return response.data;
+    // Token is ignored as adminAxios will automatically add the auth header
+    try {
+        const response = await adminAxios.get(
+            `/users?page=${page}&limit=10&search=${search}`
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+    }
 };
 
 
 const blockUser = async (token, userId) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-
-    const response = await axios.patch(
-        `${API_URL}/block/${userId}`,
-        {},
-        config
-    );
-    return response.data;
+    // Token is ignored as adminAxios will automatically add the auth header
+    try {
+        const response = await adminAxios.patch(
+            `/users/block/${userId}`,
+            {}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        throw error;
+    }
 };
 
 const unblockUser = async (token, userId) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    };
-
-    const response = await axios.patch(
-        `${API_URL}/unblock/${userId}`,
-        {},
-        config
-    );
-    return response.data;
+    // Token is ignored as adminAxios will automatically add the auth header
+    try {
+        const response = await adminAxios.patch(
+            `/users/unblock/${userId}`,
+            {}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        throw error;
+    }
 };
 
 const usersService = {

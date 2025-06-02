@@ -4,12 +4,12 @@ import {
   blockUser,
   unblockUser,
 } from "../controllers/adminUserControllers.js";
-import protectAdmin  from "../middlewares/authMiddleware.js";
+import adminProtect from "../middlewares/adminProtect.js";
 
 const router = express.Router();
 
-router.get("/", protectAdmin, getAllUsers);
-router.patch("/block/:id", protectAdmin, blockUser);
-router.patch("/unblock/:id", protectAdmin, unblockUser);
+router.get("/", adminProtect, getAllUsers);
+router.patch("/block/:id", adminProtect, blockUser);
+router.patch("/unblock/:id", adminProtect, unblockUser);
 
 export default router;

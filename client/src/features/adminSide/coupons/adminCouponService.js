@@ -1,16 +1,10 @@
-import axios from 'axios';
-import API from '../../../utils/axiosConfig';
+import adminAxios from '../../../utils/adminAxiosConfig';
 
 // Admin-only coupon service - handles CRUD operations
-const createCoupon = async (couponData, token) => {
+const createCoupon = async (couponData) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.post('/api/admin/coupons/create', couponData, config);
+        // adminAxios will automatically add auth header
+        const response = await adminAxios.post('/coupons/create', couponData);
         return response.data;
     } catch (error) {
         console.error('Error creating coupon:', error.response?.data || error.message);
@@ -18,15 +12,10 @@ const createCoupon = async (couponData, token) => {
     }
 };
 
-const getAllCoupons = async (token) => {
+const getAllCoupons = async () => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.get('/api/admin/coupons/all', config);
+        // adminAxios will automatically add auth header
+        const response = await adminAxios.get('/coupons/all');
         return response.data;
     } catch (error) {
         console.error('Error fetching all coupons:', error.response?.data || error.message);
@@ -34,15 +23,10 @@ const getAllCoupons = async (token) => {
     }
 };
 
-const getCouponById = async (couponId, token) => {
+const getCouponById = async (couponId) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.get(`/api/admin/coupons/${couponId}`, config);
+        // adminAxios will automatically add auth header
+        const response = await adminAxios.get(`/coupons/${couponId}`);
         return response.data;
     } catch (error) {
         console.error('Error fetching coupon by ID:', error.response?.data || error.message);
@@ -51,15 +35,10 @@ const getCouponById = async (couponId, token) => {
 };
 
 
-const updateCoupon = async (couponId, couponData, token) => {
+const updateCoupon = async (couponId, couponData) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.put(`/api/admin/coupons/${couponId}/update`, couponData, config);
+        // adminAxios will automatically add auth header
+        const response = await adminAxios.put(`/coupons/${couponId}/update`, couponData);
         return response.data;
     } catch (error) {
         console.error('Error updating coupon:', error.response?.data || error.message);
@@ -68,15 +47,10 @@ const updateCoupon = async (couponId, couponData, token) => {
 };
 
 
-const deleteCoupon = async (couponId, token) => {
+const deleteCoupon = async (couponId) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.delete(`/api/admin/coupons/${couponId}/delete`, config);
+        // adminAxios will automatically add auth header
+        const response = await adminAxios.delete(`/coupons/${couponId}/delete`);
         return response.data;
     } catch (error) {
         console.error('Error deleting coupon:', error.response?.data || error.message);

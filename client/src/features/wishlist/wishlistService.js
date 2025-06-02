@@ -1,22 +1,25 @@
-import API from "../../utils/axiosConfig";
+import { userAxios } from '../../utils/userAxiosConfig';
 
-const API_URL = "/api/wishlist";
+// Base URL is already set in userAxios, so we just need the path
 
 // Get user wishlist
-const getWishlist = async (token) => {
-  const response = await API.get(API_URL);
+const getWishlist = async () => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.get('/wishlist');
   return response.data;
 };
 
 // Add product to wishlist
-const addToWishlist = async (productId, token) => {
-  const response = await API.post(API_URL, { productId });
+const addToWishlist = async (productId) => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.post('/wishlist', { productId });
   return response.data;
 };
 
 // Remove product from wishlist
-const removeFromWishlist = async (productId, token) => {
-  const response = await API.delete(`${API_URL}/${productId}`);
+const removeFromWishlist = async (productId) => {
+  // userAxios will automatically add auth header
+  const response = await userAxios.delete(`/wishlist/${productId}`);
   return response.data;
 };
 

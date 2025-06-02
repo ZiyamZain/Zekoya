@@ -6,7 +6,7 @@ import {
   unblockUser,
   reset,
 } from "../../features/adminSide/adminUsers/usersSlice.js";
-import { refreshToken } from "../../features/adminAuth/authSlice.js";
+
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import DynamicPage from "../../components/admin/DynamicPage";
@@ -25,9 +25,7 @@ const UsersPage = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    dispatch(refreshToken());
-  }, [dispatch]);
+  
 
   useEffect(() => {
     if (isBlockUnblockSuccess) {
@@ -48,7 +46,7 @@ const UsersPage = () => {
       }
     }
 
-    if (adminInfo?.token) {
+    if (adminInfo?.accessToken) {
       dispatch(getAllUsers({ page, search }));
     } else {
       navigate("/admin/login");
@@ -58,8 +56,8 @@ const UsersPage = () => {
   useEffect(() => {
     if (isError) {
       toast.error(message);
+      dispatch(reset());
     }
-    dispatch(reset());
   }, [isError, message, dispatch]);
 
   

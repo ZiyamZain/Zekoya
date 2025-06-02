@@ -9,7 +9,7 @@ import {
   FaRedo,
   FaArrowLeft
 } from "react-icons/fa";
-import API from "../../utils/axiosConfig";
+import { userAxios } from "../../utils/userAxiosConfig";
 import { toast } from "react-toastify";
 
 const PaymentFailed = () => {
@@ -75,10 +75,10 @@ const PaymentFailed = () => {
         return;
       }
 
-      const keyResponse = await API.get("/api/payments/razorpay-key");
+      const keyResponse = await userAxios.get("/razorpay-key");
       const keyId = keyResponse.data.key_id;
 
-      const orderResponse = await API.post("/api/payments/create-order", {
+      const orderResponse = await userAxios.post("/create-order", {
         amount: order.totalPrice,
         currency: "INR",
         receipt: `order_rcpt_${id.substring(0, 8)}`,
@@ -106,7 +106,7 @@ const PaymentFailed = () => {
         handler: async (response) => {
           try {
             // Verify payment
-            await API.post("/api/payments/verify-payment", {
+            await userAxios.post("/verify-payment", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,

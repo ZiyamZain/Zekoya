@@ -15,7 +15,7 @@ export const createCoupon = createAsyncThunk(
     'adminCoupon/create',
     async (couponData, thunkAPI) => {
         try {
-            const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+            const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
             return await adminCouponService.createCoupon(couponData, token);
         } catch (error) {
             const message = error.response?.data?.message || error.message;
@@ -30,7 +30,7 @@ export const getAllCoupons = createAsyncThunk(
     'adminCoupon/getAll',
     async (_, thunkAPI) => {
         try {
-            const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+            const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
             return await adminCouponService.getAllCoupons(token);
         } catch (error) {
             const message = error.response?.data?.message || error.message;
@@ -44,7 +44,7 @@ export const getCouponById = createAsyncThunk(
     'adminCoupon/getById',
     async (couponId, thunkAPI) => {
         try {
-            const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+            const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
             return await adminCouponService.getCouponById(couponId, token);
         } catch (error) {
             const message = error.response?.data?.message || error.message;
@@ -59,7 +59,7 @@ export const updateCoupon = createAsyncThunk(
     'adminCoupon/update',
     async ({ couponId, couponData }, thunkAPI) => {
         try {
-            const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+            const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
             return await adminCouponService.updateCoupon(couponId, couponData, token);
         } catch (error) {
             const message = error.response?.data?.message || error.message;
@@ -73,7 +73,7 @@ export const deleteCoupon = createAsyncThunk(
     'adminCoupon/delete',
     async (couponId, thunkAPI) => {
         try {
-            const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+            const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
             return await adminCouponService.deleteCoupon(couponId, token);
         } catch (error) {
             const message = error.response?.data?.message || error.message;

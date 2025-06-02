@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 import sendEmail from "../utils/sendEmail.js";
-import generateToken from "../utils/generateToken.js";
+import { generateAccessToken } from "../utils/generateToken.js";
 import axios from "axios";
 
 const generateOTP = () => {

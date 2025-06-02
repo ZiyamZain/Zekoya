@@ -10,18 +10,18 @@ import {
     getAvailableCoupons
 } from '../controllers/couponController.js';
 
-import protectAdmin from '../middlewares/authMiddleware.js';
+import adminProtect from '../middlewares/adminProtect.js';
 import protect from '../middlewares/userProtect.js'
 
 
 //admin routes
 
-router.post('/',protectAdmin , createCoupon);
-router.get('/admin',protectAdmin,getAllCoupons);
+router.post('/',adminProtect , createCoupon);
+router.get('/admin',adminProtect,getAllCoupons);
 router.route('/:id')
-    .get(protectAdmin,getCouponById)
-    .put(protectAdmin,updateCoupon)
-    .delete(protectAdmin , deleteCoupon)
+    .get(adminProtect,getCouponById)
+    .put(adminProtect,updateCoupon)
+    .delete(adminProtect , deleteCoupon)
 
 
 //user routes 

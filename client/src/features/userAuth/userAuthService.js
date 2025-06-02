@@ -1,4 +1,5 @@
 import axios from "axios";
+import { userAxios } from '../../utils/userAxiosConfig';
 
 const API_URL = "http://localhost:5001/api/users";
 
@@ -36,8 +37,26 @@ const googleLogin = async (userData) => {
   return response.data;
 };
 
-const logout = () => {
-  localStorage.removeItem("userInfo");
+// Properly logout with token invalidation
+const logout = async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if (userInfo && userInfo.refreshToken) {
+      // Call the logout API to invalidate the refresh token on the server
+      await userAxios.post(`/logout`, { refreshToken: userInfo.refreshToken });
+    }
+  } catch (error) {
+    console.error("Logout error:", error);
+  } finally {
+    // Always remove from localStorage even if API call fails
+    localStorage.removeItem("userInfo");
+  }
+};
+
+// Refresh token function
+const refreshToken = async (refreshToken) => {
+  const response = await axios.post(`${API_URL}/refresh-token`, { refreshToken });
+  return response.data;
 };
 
 const sendForgotPasswordOtp = async ({ email }) => {
@@ -81,17 +100,8 @@ const checkUserStatus = async () => {
   }
   
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${userInfo.token}`,
-      },
-    };
-    
-    const response = await axios.get(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/profile/check-status`, 
-      config
-    );
-    
+    // Use the API instance with interceptors for automatic token refresh
+    const response = await userAxios.get(`/check-status`);
     return response.data;
   } catch (error) {
     console.error("Error checking user status:", error);
@@ -109,6 +119,7 @@ const userAuthService = {
   login,
   googleLogin,
   logout,
+  refreshToken,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   changePassword,

@@ -1,11 +1,12 @@
-import API from "../../utils/axiosConfig";
+import adminAxios from '../../utils/adminAxiosConfig';
 
-const ADMIN_API_URL = "/api/admin/orders";
+// Base URL is already set in adminAxios, so we just need the path
 
 
 const getAllOrders = async (params = {}) => {
   try {
-    const response = await API.get(ADMIN_API_URL, { params });
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get('/orders', { params });
     return response.data;
   } catch (error) {
     throw error;
@@ -15,7 +16,8 @@ const getAllOrders = async (params = {}) => {
 
 const getOrderDetails = async (id) => {
   try {
-    const response = await API.get(`${ADMIN_API_URL}/${id}`);
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get(`/orders/${id}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -24,15 +26,17 @@ const getOrderDetails = async (id) => {
 
 const updateOrderStatus = async (data) => {
   const { orderId, status } = data;
-  const response = await API.put(`${ADMIN_API_URL}/${orderId}/status`, { status });
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.put(`/orders/${orderId}/status`, { status });
   return response.data;
 };
 
 const processReturnRequest = async (data) => {
   const { orderId, itemId, action } = data;
   try {
-    const response = await API.put(
-      `${ADMIN_API_URL}/${orderId}/items/${itemId}/return`,
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.put(
+      `/orders/${orderId}/items/${itemId}/return`,
       { action }
     );
     return response.data;
@@ -45,7 +49,8 @@ const processReturnRequest = async (data) => {
 
 const generateInvoice = async (orderId) => {
   try {
-    const response = await API.get(`${ADMIN_API_URL}/${orderId}/invoice`, { 
+    // adminAxios will automatically add auth header
+    const response = await adminAxios.get(`/orders/${orderId}/invoice`, { 
       responseType: 'blob',
       headers: {
         'Accept': 'application/pdf'

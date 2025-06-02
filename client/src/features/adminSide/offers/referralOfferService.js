@@ -1,34 +1,39 @@
-import API from '../../../utils/axiosConfig';
+import adminAxios from '../../../utils/adminAxiosConfig';
 
-const API_URL = '/api/admin/offers/referral';
+// Base URL is already set in adminAxios, so we just need the path
 
 // Get all referral offers
 const getAllReferralOffers = async (params = {}) => {
-  const response = await API.get(API_URL, { params });
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.get('/offers/referral', { params });
   return response.data;
 };
 
 // Get referral offer by ID
 const getReferralOfferById = async (id) => {
-  const response = await API.get(`${API_URL}/${id}`);
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.get(`/offers/referral/${id}`);
   return response.data;
 };
 
 // Create a new referral offer
 const createReferralOffer = async (offerData) => {
-  const response = await API.post(API_URL, offerData);
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.post('/offers/referral', offerData);
   return response.data;
 };
 
 // Update a referral offer
 const updateReferralOffer = async (id, offerData) => {
-  const response = await API.put(`${API_URL}/${id}`, offerData);
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.put(`/offers/referral/${id}`, offerData);
   return response.data;
 };
 
 // Delete a referral offer
 const deleteReferralOffer = async (id) => {
-  const response = await API.delete(`${API_URL}/${id}`);
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.delete(`/offers/referral/${id}`);
   return response.data;
 };
 

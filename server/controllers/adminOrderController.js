@@ -166,6 +166,11 @@ export const updateOrderStatus = async (req, res) => {
 
     // Update order status
     order.orderStatus = status;
+
+    if(order.paymentMethod=== "Cash on Delivery" && status === "Delivered"){
+      order.isPaid = true;
+      order.paidAt = new Date();
+    }
     
     // Add a note to the status history if provided
     if (note) {

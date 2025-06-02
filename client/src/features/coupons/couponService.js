@@ -1,19 +1,13 @@
-import axios from 'axios';
-import API from '../../utils/axiosConfig';
+import { couponAxios } from '../../utils/userAxiosConfig';
 
 // User-only coupon service - only handles validation
-const validateCoupon = async({ code, orderAmount }, token) => {
+const validateCoupon = async({ code, orderAmount }) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.post('/api/coupons/validate', { 
+        // couponAxios will automatically add auth header
+        const response = await couponAxios.post('/validate', { 
             code, 
             orderAmount: parseFloat(orderAmount) 
-        }, config);
+        });
         
         return response.data;
     } catch (error) {
@@ -23,20 +17,13 @@ const validateCoupon = async({ code, orderAmount }, token) => {
 }
 
 // Get available coupons for a given order amount
-const getAvailableCoupons = async(orderAmount, token) => {
+const getAvailableCoupons = async(orderAmount) => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-        
-        const response = await API.get(
-            `/api/coupons/available?orderAmount=${parseFloat(orderAmount)}`,
-            config
+        // couponAxios will automatically add auth header
+        const response = await couponAxios.get(
+            `/available?orderAmount=${parseFloat(orderAmount)}`
         );
         
-
         return response.data;
     } catch (error) {
         console.error('Error fetching available coupons:', error.response?.data || error.message);

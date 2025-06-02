@@ -8,22 +8,22 @@ import {
     deleteCoupon
 } from '../controllers/couponController.js';
 
-import protectAdmin from '../middlewares/authMiddleware.js';
+import adminProtect from '../middlewares/adminProtect.js';
 
 // Admin coupon routes with multiple paths to support both old and new frontend calls
-router.post('/', protectAdmin, createCoupon);
-router.post('/create', protectAdmin, createCoupon);
+router.post('/', adminProtect, createCoupon);
+router.post('/create', adminProtect, createCoupon);
 
-router.get('/', protectAdmin, getAllCoupons);
-router.get('/all', protectAdmin, getAllCoupons);
+router.get('/', adminProtect, getAllCoupons);
+router.get('/all', adminProtect, getAllCoupons);
 
-router.get('/:id', protectAdmin, getCouponById);
-router.get('/:id/details', protectAdmin, getCouponById);
+router.get('/:id', adminProtect, getCouponById);
+router.get('/:id/details', adminProtect, getCouponById);
 
-router.put('/:id', protectAdmin, updateCoupon);
-router.put('/:id/update', protectAdmin, updateCoupon);
+router.put('/:id', adminProtect, updateCoupon);
+router.put('/:id/update', adminProtect, updateCoupon);
 
-router.delete('/:id', protectAdmin, deleteCoupon);
-router.delete('/:id/delete', protectAdmin, deleteCoupon);
+router.delete('/:id', adminProtect, deleteCoupon);
+router.delete('/:id/delete', adminProtect, deleteCoupon);
 
 export default router;

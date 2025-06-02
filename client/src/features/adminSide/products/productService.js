@@ -1,29 +1,29 @@
-import axios from "axios";
+import adminAxios from '../../../utils/adminAxiosConfig';
 
-const API_URL = "http://localhost:5001/api/admin/products";
+// Base URL is already set in adminAxios, so we just need the path
 
-const getProducts = async (params, token) => {
+const getProducts = async (params) => {
   const queryParams = { ...params, limit: params.limit || 10 };
-  const config = token ? { headers: { Authorization: `Bearer ${token}` }, params: queryParams } : { params: queryParams };
-  const response = await axios.get(API_URL, config);
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.get('/products', { params: queryParams });
   return response.data;
 };
 
 const getFeaturedProducts = async () => {
-  const response = await axios.get(`${API_URL}/featured`);
+  const response = await adminAxios.get('/products/featured');
   return response.data;
 };
 
-const addProduct = async (formData, token) => {
+const addProduct = async (formData) => {
   try {
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
+        // Authorization header is automatically added by adminAxios
         "Content-Type": "multipart/form-data",
       },
     };
 
-    const response = await axios.post(`${API_URL}/add`, formData, config);
+    const response = await adminAxios.post('/products/add', formData, config);
     return response.data;
   } catch (error) {
     console.error("Error in addProduct:", error.response?.data || error.message);
@@ -32,52 +32,31 @@ const addProduct = async (formData, token) => {
 };
 
 
-const editProduct = async (id, productData, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.put(`${API_URL}/${id}`, productData, config);
+const editProduct = async (id, productData) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.put(`/products/${id}`, productData);
   return response.data;
 };
 
-const deleteProduct = async (id, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.delete(`${API_URL}/delete/${id}`, config);
+const deleteProduct = async (id) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.delete(`/products/delete/${id}`);
   return response.data;
 };
 
 
-const toggleProductListing = async (id, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.patch(`${API_URL}/${id}/toggle-listing`, {}, config);
+const toggleProductListing = async (id) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.patch(`/products/${id}/toggle-listing`, {});
   return response.data;
 };
 
 
-const toggleProductFeatured = async (productId, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.patch(
-    `${API_URL}/${productId}/toggle-featured`,
-    {},
-    config
+const toggleProductFeatured = async (productId) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.patch(
+    `/products/${productId}/toggle-featured`,
+    {}
   );
   return response.data;
 };

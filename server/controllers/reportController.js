@@ -1138,6 +1138,7 @@ export const getPaymentStats = asyncHandler(async (req, res) => {
  * @access Private/Admin
  */
 export const getBestSellers = asyncHandler(async (req, res) => {
+  console.log('getBestSellers called. req.admin:', req.admin);
   try {
     const { category = 'products', limit = 5 } = req.query;
    

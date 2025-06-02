@@ -68,6 +68,18 @@ const userSchema = new mongoose.Schema(
     referralCount: {
       type: Number,
       default: 0
+    },
+    refreshToken: {
+      type: String,
+      default: null
+    },
+    refreshTokenExpiry: {
+      type: Date,
+      default: null
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0 // Incremented when we need to invalidate all tokens
     }
   },
   {

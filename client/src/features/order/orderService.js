@@ -1,10 +1,11 @@
-import API from "../../utils/axiosConfig";
+import { orderAxios } from '../../utils/userAxiosConfig';
 
-const API_URL = "/api/orders";
+// Base URL is already set in userAxios, so we just need the path
 // Create new order
 const createOrder = async (orderData) => {
   try {
-    const response = await API.post(API_URL, orderData);
+    // orderAxios will automatically add auth header
+    const response = await orderAxios.post('/', orderData);
     return response.data;
   } catch (error) {
     console.error('Order creation error details:', error.response?.data);
@@ -14,21 +15,24 @@ const createOrder = async (orderData) => {
 
 // Get order details
 const getOrderDetails = async (id) => {
-  const response = await API.get(`${API_URL}/${id}`);
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.get(`/${id}`);
   return response.data;
 };
 
 // Get my orders
 const getMyOrders = async (params = {}) => {
   const { page = 1, limit = 10 } = params;
-  const response = await API.get(API_URL, { params: { page, limit } });
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.get('/', { params: { page, limit } });
   return response.data;
 };
 
 // Cancel entire order
 const cancelOrder = async (data) => {
   const { orderId, reason } = data;
-  const response = await API.post(`${API_URL}/${orderId}/cancel`, { 
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.post(`/${orderId}/cancel`, { 
     reason: reason || "Cancelled by customer" 
   });
   return response.data;
@@ -37,28 +41,31 @@ const cancelOrder = async (data) => {
 // Cancel order item
 const cancelOrderItem = async (data) => {
   const { orderId, itemId, reason } = data;
-  const response = await API.post(`${API_URL}/${orderId}/items/${itemId}/cancel`, { reason });
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.post(`/${orderId}/items/${itemId}/cancel`, { reason });
   return response.data;
 };
 
 // Request return for item
 const requestReturnItem = async (data) => {
   const { orderId, itemId, reason } = data;
-  const response = await API.post(`${API_URL}/${orderId}/items/${itemId}/return`, { reason });
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.post(`/${orderId}/items/${itemId}/return`, { reason });
   return response.data;
 };
 
 // Update order to paid status
 const updateOrderToPaid = async (orderId) => {
-  const response = await API.put(`${API_URL}/${orderId}/pay`);
+  // orderAxios will automatically add auth header
+  const response = await orderAxios.put(`/${orderId}/pay`);
   return response.data;
 };
 
 // Generate invoice
 const generateInvoice = async (orderId) => {
   try {
-    // Make API request with proper authentication
-    const response = await API.get(`${API_URL}/${orderId}/invoice`, { 
+    // Make API request with proper authentication using userAxios
+    const response = await userAxios.get(`/orders/${orderId}/invoice`, { 
       responseType: 'blob',
       headers: {
         'Accept': 'application/pdf'

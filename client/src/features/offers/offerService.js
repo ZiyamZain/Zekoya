@@ -1,11 +1,11 @@
-import axios from 'axios';
+import { userAxios } from '../../utils/userAxiosConfig';
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api/offers`;
+// Base URL is already set in userAxios, so we just need the path
 
 // Get active offer for a product
 const getActiveOfferForProduct = async (productId) => {
   try {
-    const response = await axios.get(`${API_URL}/product/active/${productId}`);
+    const response = await userAxios.get(`/offers/product/active/${productId}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -15,7 +15,7 @@ const getActiveOfferForProduct = async (productId) => {
 // Get active offer for a category
 const getActiveOfferForCategory = async (categoryId) => {
   try {
-    const response = await axios.get(`${API_URL}/category/active/${categoryId}`);
+    const response = await userAxios.get(`/offers/category/active/${categoryId}`);
     return response.data;
   } catch (error) {
     throw error;

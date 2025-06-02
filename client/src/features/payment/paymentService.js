@@ -1,19 +1,22 @@
-import API from '../../utils/axiosConfig';
+import { paymentAxios } from '../../utils/userAxiosConfig';
 
-const API_URL = '/api/payments';
+// Base URL is already set in userAxios, so we just need the path
 
 const getRazorpayKey = async() =>{
-    const response = await API.get(`${API_URL}/razorpay-key`);
+    // paymentAxios will automatically add auth header
+    const response = await paymentAxios.get('/razorpay-key');
     return response.data;
 }
 
 const createOrder = async(orderData) =>{
-    const response = await API.post(`${API_URL}/create-order`, orderData);
+    // paymentAxios will automatically add auth header
+    const response = await paymentAxios.post('/create-order', orderData);
     return response.data;
 }
 
 const verifyPayment = async(paymentData) =>{
-    const response = await API.post(`${API_URL}/verify-payment`,paymentData);
+    // paymentAxios will automatically add auth header
+    const response = await paymentAxios.post('/verify-payment', paymentData);
     return response.data;
 }
 

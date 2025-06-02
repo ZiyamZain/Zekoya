@@ -15,7 +15,7 @@ import { clearActiveCoupon } from "../../features/coupons/couponSlice";
 import { getAddresses, getUserProfile } from "../../features/userProfile/userProfileSlice";
 import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
-import API from "../../utils/axiosConfig";
+import { userAxios, paymentAxios } from "../../utils/userAxiosConfig";
 import axios from "axios";
 
 
@@ -264,10 +264,10 @@ const Checkout = () => {
           return;
         }
 
-        const keyResponse = await API.get("/api/payments/razorpay-key");
+        const keyResponse = await paymentAxios.get("/razorpay-key");
         const keyId = keyResponse.data.key_id;
 
-        const orderResponse = await API.post("/api/payments/create-order", {
+        const orderResponse = await paymentAxios.post("/create-order", {
           amount: totalPrice,
           currency: "INR",
           receipt: `order_rcpt_${orderId.substring(0, 8)}`,
@@ -294,8 +294,8 @@ const Checkout = () => {
           order_id: razorpayOrder.id,
           handler: async (response) => {
             try {
-              const verifyResponse = await API.post(
-                "/api/payments/verify-payment",
+              const verifyResponse = await paymentAxios.post(
+                "/verify-payment",
                 {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,

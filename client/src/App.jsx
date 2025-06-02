@@ -22,7 +22,7 @@ import OffersPage from "./pages/admin/OffersPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import OrderDetailPage from "./pages/admin/OrderDetailPage";
 import SalesReportPage from "./pages/admin/SalesReportPage";
-import AdminAuthTest from "./pages/admin/AdminAuthTest";
+
 import UserProfile from "./pages/user/UserProfile"; 
 import ChangePassword from "./pages/user/ChangePassword";
 import ChangeEmail from "./pages/user/ChangeEmail";
@@ -169,7 +169,7 @@ function App() {
             <Route path="orders/:id" element={<OrderDetailPage />} />
             <Route path="sales-report" element={<SalesReportPage />} />
 
-            <Route path="auth-test" element={<AdminAuthTest />} />
+
 
           </Route>
 

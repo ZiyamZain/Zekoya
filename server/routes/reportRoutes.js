@@ -1,5 +1,5 @@
 import express from 'express';
-import protectAdmin from '../middlewares/authMiddleware.js';
+import adminProtect from '../middlewares/adminProtect.js';
 import { 
   getSalesReport,
   getDashboardStats,
@@ -9,10 +9,10 @@ import {
 
 const router = express.Router();
 
-router.get('/sales', protectAdmin, getSalesReport);
-router.get('/dashboard', protectAdmin, getDashboardStats);
-router.get('/bestsellers', protectAdmin, getBestSellers);
-router.get('/payment-stats', protectAdmin, getPaymentStats);
-router.get('/download', protectAdmin, getSalesReport);
+router.get('/sales', adminProtect, getSalesReport);
+router.get('/dashboard', adminProtect, getDashboardStats);
+router.get('/bestsellers', adminProtect, getBestSellers);
+router.get('/payment-stats', adminProtect, getPaymentStats);
+router.get('/download', adminProtect, getSalesReport);
 
 export default router;

@@ -24,41 +24,41 @@ import {
   getActiveReferralOffer
 } from '../controllers/referralOfferController.js';
 
-import protectAdmin from '../middlewares/authMiddleware.js'
+import adminProtect from '../middlewares/adminProtect.js'
 
 const router = express.Router();
 
 // Product Offer Routes
 router.route('/product')
-  .get(protectAdmin , getAllProductOffers)
-  .post(protectAdmin, createProductOffer);
+  .get(adminProtect , getAllProductOffers)
+  .post(adminProtect, createProductOffer);
 
 router.route('/product/:id')
-  .get(protectAdmin, getProductOfferById)
-  .put(protectAdmin, updateProductOffer)
-  .delete(protectAdmin, deleteProductOffer);
+  .get(adminProtect, getProductOfferById)
+  .put(adminProtect, updateProductOffer)
+  .delete(adminProtect, deleteProductOffer);
 
 // Category Offer Routes
 router.route('/category')
-  .get(protectAdmin, getAllCategoryOffers)
-  .post(protectAdmin, createCategoryOffer);
+  .get(adminProtect, getAllCategoryOffers)
+  .post(adminProtect, createCategoryOffer);
 
 router.route('/category/:id')
-  .get(protectAdmin, getCategoryOfferById)
-  .put(protectAdmin, updateCategoryOffer)
-  .delete(protectAdmin, deleteCategoryOffer);
+  .get(adminProtect, getCategoryOfferById)
+  .put(adminProtect, updateCategoryOffer)
+  .delete(adminProtect, deleteCategoryOffer);
 
 // Referral Offer Routes
 router.route('/referral')
-  .get(protectAdmin, getAllReferralOffers)
-  .post(protectAdmin, createReferralOffer);
+  .get(adminProtect, getAllReferralOffers)
+  .post(adminProtect, createReferralOffer);
 
 router.route('/referral/active')
-  .get(protectAdmin, getActiveReferralOffer);
+  .get(adminProtect, getActiveReferralOffer);
 
 router.route('/referral/:id')
-  .get(protectAdmin, getReferralOfferById)
-  .put(protectAdmin, updateReferralOffer)
-  .delete(protectAdmin , deleteReferralOffer);
+  .get(adminProtect, getReferralOfferById)
+  .put(adminProtect, updateReferralOffer)
+  .delete(adminProtect , deleteReferralOffer);
 
 export default router;

@@ -18,7 +18,7 @@ export const validateCoupon = createAsyncThunk(
             const token = thunkAPI.getState().userAuth.userInfo.token;
             return await couponService.validateCoupon(couponData, token);
         }
-        catch(error) {
+        catch(error) { 
             const message = error.response?.data?.message || error.message;
             return thunkAPI.rejectWithValue(message);
         }

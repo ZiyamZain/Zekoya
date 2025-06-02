@@ -1,6 +1,6 @@
-import axios from "axios";
+import adminAxios from '../../../utils/adminAxiosConfig';
 
-const API_URL = "http://localhost:5001/api/admin/categories";
+// Base URL is already set in adminAxios, so we just need the path
 
 const getCategories = async (params = {}) => {
   // Always include admin=true for admin side categories page
@@ -10,56 +10,47 @@ const getCategories = async (params = {}) => {
     search: params.search || '',
     admin: true 
   };
-  const response = await axios.get(API_URL, { params: queryParams });
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.get('/categories', { params: queryParams });
   return response.data;
 };
 
-const addCategory = async (formData, token) => {
+const addCategory = async (formData) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${token}`,
+      // Authorization header is automatically added by adminAxios
       "Content-Type": "multipart/form-data",
     },
   };
 
-  const response = await axios.post(API_URL, formData, config);
+  const response = await adminAxios.post('/categories', formData, config);
   return response.data;
 };
 
 
-const updateCategory = async (id, formData, token) => {
+const updateCategory = async (id, formData) => {
   const config = {
     headers: {
-      Authorization: `Bearer ${token}`,
+      // Authorization header is automatically added by adminAxios
       "Content-Type": "multipart/form-data",
     },
   };
 
-  const response = await axios.put(`${API_URL}/${id}`, formData, config);
+  const response = await adminAxios.put(`/categories/${id}`, formData, config);
   return response.data;
 };
 
 
-const deleteCategory = async (id, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.delete(`${API_URL}/${id}`, config);
+const deleteCategory = async (id) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.delete(`/categories/${id}`);
   return response.data;
 };
 
 
-const toggleCategoryListing = async (id, token) => {
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  const response = await axios.patch(`${API_URL}/${id}/toggle-listing`, {}, config);
+const toggleCategoryListing = async (id) => {
+  // adminAxios will automatically add the auth header
+  const response = await adminAxios.patch(`/categories/${id}/toggle-listing`, {});
   return response.data;
 };
 

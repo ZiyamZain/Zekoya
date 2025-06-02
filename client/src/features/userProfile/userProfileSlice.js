@@ -17,7 +17,7 @@ const initialState ={
 
 export const getUserProfile = createAsyncThunk("userProfile/getUserProfile",async(_,thunkAPI)=>{
     try {
-        const token = thunkAPI.getState().userAuth.userInfo.token;
+        const token = thunkAPI.getState().userAuth.userInfo.accessToken;
 
         return await userProfileService.getUserProfile(token);
         
@@ -35,7 +35,7 @@ export const getUserProfile = createAsyncThunk("userProfile/getUserProfile",asyn
 
 export const updateUserProfile = createAsyncThunk("useProfile/updateUserProfile",async(userData,thunkAPI)=>{
     try{
-        const token = thunkAPI.getState().userAuth.userInfo.token;
+        const token = thunkAPI.getState().userAuth.userInfo.accessToken;
 
         return await userProfileService.updateProfile(userData,token);
         
@@ -52,7 +52,7 @@ export const updateUserProfile = createAsyncThunk("useProfile/updateUserProfile"
 
 export const changeEmail = createAsyncThunk("userProfile/changeEmail",async(emailData,thunkAPI)=>{
     try{
-        const token = thunkAPI.getState().userAuth.userInfo.token;
+        const token = thunkAPI.getState().userAuth.userInfo.accessToken;
 
         return await userProfileService.changeEmail(emailData,token);
 
@@ -70,7 +70,7 @@ export const verifyEmailChange = createAsyncThunk(
   "userProfile/verifyEmailChange",
   async (otpData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.verifyEmailChange(otpData, token);
     } catch (error) {
       const message =
@@ -87,7 +87,7 @@ export const sendPasswordChangeOtp = createAsyncThunk(
   "userProfile/sendPasswordChangeOtp",
   async (passwordData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.requestPasswordChangeOtp(passwordData, token);
     } catch (error) {
       const message =
@@ -104,7 +104,7 @@ export const verifyPasswordChangeOtp = createAsyncThunk(
   "userProfile/verifyPasswordChangeOtp",
   async (otpData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.verifyPasswordChangeOtp(otpData, token);
     } catch (error) {
       const message =
@@ -121,7 +121,7 @@ export const changePassword = createAsyncThunk(
   "userProfile/changePassword",
   async (passwordData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.changePassword(passwordData, token);
     } catch (error) {
       const message =
@@ -138,7 +138,7 @@ export const getAddresses = createAsyncThunk(
   "userProfile/getAddresses",
   async (_, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.getAddresses(token);
     } catch (error) {
       const message =
@@ -155,7 +155,7 @@ export const addAddress = createAsyncThunk(
   "userProfile/addAddress",
   async (addressData, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.addAddress(addressData, token);
     } catch (error) {
       const message =
@@ -172,7 +172,7 @@ export const updateAddress = createAsyncThunk(
   "userProfile/updateAddress",
   async ({ addressId, addressData }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.updateAddress(addressId, addressData, token);
     } catch (error) {
       const message =
@@ -189,7 +189,7 @@ export const deleteAddress = createAsyncThunk(
   "userProfile/deleteAddress",
   async (addressId, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.deleteAddress(addressId, token);
     } catch (error) {
       const message =
@@ -206,7 +206,7 @@ export const setDefaultAddress = createAsyncThunk(
   "userProfile/setDefaultAddress",
   async (addressId, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().userAuth.userInfo.token;
+      const token = thunkAPI.getState().userAuth.userInfo.accessToken;
       return await userProfileService.setDefaultAddress(addressId, token);
     } catch (error) {
       const message =

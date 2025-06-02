@@ -17,7 +17,7 @@ export const getAllUsers = createAsyncThunk(
 
   async ({ page, search }, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
 
       if (!token) {
         throw new Error("No admin token found");
@@ -35,7 +35,7 @@ export const blockUser = createAsyncThunk(
   "adminUsers/block",
   async (userId, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       if (!token) {
         throw new Error("No admin token found");
       }
@@ -52,7 +52,7 @@ export const unblockUser = createAsyncThunk(
   "adminUsers/unblock",
   async (userId, thunkAPI) => {
     try {
-      const token = thunkAPI.getState().adminAuth.adminInfo?.token;
+      const token = thunkAPI.getState().adminAuth.adminInfo?.accessToken;
       if (!token) {
         throw new Error("No admin token found");
       }
