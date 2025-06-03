@@ -5,7 +5,7 @@ import {
   getWishlist,
   resetWishlist,
 } from "../../features/wishlist/wishlistSlice";
-import WishlistItem from "../../components/user/WishlistItemNew";
+import WishlistItemNew from "../../components/user/WishlistItemNew";
 
 const Wishlist = () => {
   const dispatch = useDispatch();
@@ -77,7 +77,7 @@ const Wishlist = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {wishlist.products.map((product) => (
-              <WishlistItem key={product._id} product={product} />
+              <WishlistItemNew key={product._id} product={product} />
             ))}
           </div>
         )}
