@@ -41,7 +41,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Offers from "./pages/Offers";
 import Cart from "./pages/user/Cart";
-import Wishlist from "./pages/user/Wishlist";
+import Wishlist from "./pages/user/WishList";
 import OrderHistory from "./pages/user/OrderHistory";
 import OrderDetails from "./pages/user/OrderDetails";
 import Checkout from "./pages/user/Checkout";
