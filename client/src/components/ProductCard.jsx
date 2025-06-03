@@ -11,10 +11,16 @@ import axios from 'axios';
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
+  if (typeof imagePath !== 'string') return '';
   if (imagePath.startsWith('http')) return imagePath;
-  const base = import.meta.env.VITE_API_URL.replace(/\/$/, '');
-  const path = imagePath.replace(/^\/+/, '');
-  return `${base}/${path}`;
+  try {
+    const base = import.meta.env.VITE_API_URL.replace(/\/$/, '');
+    const path = imagePath.replace(/^\/+/, '');
+    return `${base}/${path}`;
+  } catch (error) {
+    console.error('Error processing image path:', error);
+    return '';
+  }
 };
 
 const ProductCard = ({ product }) => {

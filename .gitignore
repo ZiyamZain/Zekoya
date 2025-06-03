@@ -27,9 +27,7 @@ out
 .DS_Store
 Thumbs.db
 
-# Uploads
-server/uploads/
-uploads/
+
 
 # Logs
 logs
