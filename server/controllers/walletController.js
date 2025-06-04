@@ -1,7 +1,6 @@
 
 import Wallet from "../models/walletModel.js";
 import User from "../models/userModel.js";
-import { RiSafariFill } from "react-icons/ri";
 
 
 export const getWallet = async (req,res) =>{
