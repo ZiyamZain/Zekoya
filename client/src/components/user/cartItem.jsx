@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateCartItem, removeFromCart, resetCart } from "../../features/cart/cartSlice";
 import { FaTag } from "react-icons/fa";
 import axios from "axios";
-
+import { getImageUrl } from "../../utils/imageUtils";
 
 const CartItem = memo(({ item }) => {
   const dispatch = useDispatch();
@@ -234,7 +234,7 @@ const CartItem = memo(({ item }) => {
         <div className="w-24 h-24 flex-shrink-0 mr-4 overflow-hidden rounded-md">
           {product && product.images && product.images.length > 0 ? (
             <img
-              src={`http://localhost:5001${product.images[0]}`}
+              src={getImageUrl(product.images[0], '/default-cart-item.png')}
               alt={product?.name || 'Product'}
               className="w-full h-full object-cover"
             />

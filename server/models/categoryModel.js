@@ -9,7 +9,16 @@ const categorySchema = new mongoose.Schema(
       trim: true,
     },
     image: {
-      type: String,
+      type: {
+        url: {
+          type: String,
+          required: [true, "Category image URL is required"],
+        },
+        public_id: {
+          type: String,
+          required: [true, "Category image public ID is required"],
+        },
+      },
       required: [true, "Category image is required"],
     },
     description: {

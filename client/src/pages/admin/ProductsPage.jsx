@@ -220,7 +220,17 @@ const ProductsPage = () => {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <img
-                              src={product.images && product.images[0] ? (product.images[0].startsWith('/uploads') ? `${BACKEND_URL}${product.images[0]}` : product.images[0]) : "/default-product.png"}
+                              src={
+                                product.images && product.images.length > 0
+                                  ? typeof product.images[0] === 'object' && product.images[0] !== null && product.images[0].url
+                                    ? product.images[0].url // Cloudinary image object
+                                    : typeof product.images[0] === 'string'
+                                      ? product.images[0].startsWith('/uploads') // Legacy local path string
+                                        ? `${BACKEND_URL}${product.images[0]}`
+                                        : product.images[0] // Other string path (e.g., already absolute URL)
+                                      : "/default-product.png" // Fallback if images[0] is not object or string
+                                  : "/default-product.png" // Fallback if no images array or empty
+                              }
                               alt={product.name}
                               className="h-10 w-10 rounded object-cover border border-gray-200"
                             />

@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 const CategoryModal = ({ category, onClose }) => {
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState(category?.image ? `http://localhost:5001${category.image}` : null);
+  const [imagePreview, setImagePreview] = useState(category?.image?.url || null);
   
   const [formData, setFormData] = useState({
     name: category?.name || '',

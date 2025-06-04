@@ -33,7 +33,10 @@ const userSchema = new mongoose.Schema(
     isGoogle: { type: Boolean, default: false },
     googleId: { type: String ,unique:true ,sparse:true},
     isBlocked: { type: Boolean, default: false },
-    profileImage: { type: String, default: "" },
+    profileImage: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
     isVerified: { type: Boolean, default: false }, 
     otp: {
       code: String,

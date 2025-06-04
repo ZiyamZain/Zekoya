@@ -40,7 +40,7 @@ const editProduct = async (id, productData) => {
 
 const deleteProduct = async (id) => {
   // adminAxios will automatically add the auth header
-  const response = await adminAxios.delete(`/products/delete/${id}`);
+  const response = await adminAxios.delete(`/products/${id}`);
   return response.data;
 };
 

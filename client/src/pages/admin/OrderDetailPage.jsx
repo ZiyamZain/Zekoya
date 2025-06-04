@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { getOrderDetails, updateOrderStatus, processReturnRequest, generateInvoice, refreshOrders } from "../../features/adminOrder/adminOrderSlice";
 import { FaBox, FaShippingFast, FaCheckCircle, FaTimesCircle, FaArrowLeft, FaFileInvoice } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { getImageUrl } from "../../utils/imageUtils";
 
 // Confirmation Modal Component
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
@@ -522,17 +523,11 @@ This action will also add ${item.quantity} item(s) back to inventory.`
                         <td className="px-6 py-4">
                           <div className="flex items-start">
                             <div className="flex-shrink-0 h-16 w-16">
-                              {item.product && item.product.images && item.product.images.length > 0 ? (
-                                <img
-                                  src={`http://localhost:5001${item.product.images[0]}`}
-                                  alt={item.product.name}
-                                  className="h-16 w-16 object-cover rounded-md"
-                                />
-                              ) : (
-                                <div className="h-16 w-16 bg-gray-200 flex items-center justify-center rounded-md">
-                                  <span className="text-xs text-gray-500">No image</span>
-                                </div>
-                              )}
+                              <img
+                                src={getImageUrl(item.product?.images[0], '/default-admin-order-item.png')}
+                                alt={item.product?.name || 'Product Image'}
+                                className="h-16 w-16 object-cover rounded-md"
+                              />
                             </div>
                             <div className="ml-4 flex-1">
                               <div className="text-sm font-medium text-gray-900 break-words">{item.product?.name || 'Product name unavailable'}</div>

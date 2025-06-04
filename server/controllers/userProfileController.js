@@ -24,8 +24,8 @@ export const getUserProfile = async (req, res) => {
     }
     
     // Convert relative image paths to full URLs
-    if (user.profileImage && user.profileImage.startsWith('/uploads/')) {
-      user.profileImage = `http://localhost:5001${user.profileImage}`;
+    if (user.profileImage && user.profileImage.url && user.profileImage.url.startsWith('/uploads/')) {
+      user.profileImage.url = `http://localhost:5001${user.profileImage.url}`;
     }
     
     res.status(200).json(user);
@@ -54,16 +54,13 @@ export const updateUserProfile = async (req, res) => {
     }
     
     if (req.file) {
-      try {
-        const filename = req.file.filename;
-        
-        user.profileImage = `http://localhost:5001/uploads/${filename}`;
-      } catch (fileError) {
-        console.error('Error processing file:', fileError);
-
-      }
+      // TODO: Consider deleting the old image from Cloudinary if user.profileImage.public_id exists
+      user.profileImage = {
+        url: req.file.path, // URL from Cloudinary
+        public_id: req.file.filename // public_id from Cloudinary
+      };
     } else {
-      console.log('No file uploaded with this request');
+      console.log('No new file uploaded for profile image');
     }
     
     const updatedUser = await user.save();
@@ -74,10 +71,10 @@ export const updateUserProfile = async (req, res) => {
       name: updatedUser.name,
       email: updatedUser.email,
       phone: updatedUser.phone,
-      profileImage: updatedUser.profileImage,
+      profileImage: updatedUser.profileImage, // This will now be an object
       isVerified: updatedUser.isVerified,
       isGoogle: updatedUser.isGoogle,
-      token: generateToken(updatedUser._id),
+      token: generateAccessToken(updatedUser._id), // Corrected function name
     });
   } catch (error) {
     console.error('Error updating user profile:', error);

@@ -18,19 +18,27 @@ const Featured = () => {
       return '';
     }
     
+    // Handle Cloudinary image object structure
+    if (typeof imagePath === 'object' && imagePath !== null && imagePath.url) {
+      return imagePath.url;
+    }
   
-    if (imagePath.startsWith('http')) {
-      return imagePath;
+    // Existing logic for string paths (local or absolute URLs)
+    if (typeof imagePath === 'string') {
+      if (imagePath.startsWith('http')) {
+        return imagePath;
+      }
+      
+      if (imagePath.includes('/server/uploads/')) {
+        const filename = imagePath.split('/server/uploads/').pop();
+        return `http://localhost:5001/uploads/${filename}`;
+      }
+      
+      return `http://localhost:5001${imagePath}`;
     }
-    
 
-    if (imagePath.includes('/server/uploads/')) {
-      const filename = imagePath.split('/server/uploads/').pop();
-      return `http://localhost:5001/uploads/${filename}`;
-    }
-    
-
-    return `http://localhost:5001${imagePath}`;
+    // Fallback if imagePath is not a recognized object or string
+    return ''; // Or a placeholder like 'https://via.placeholder.com/400x500?text=Image+Invalid'
   };
 
   return (

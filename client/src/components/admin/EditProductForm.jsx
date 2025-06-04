@@ -7,18 +7,13 @@ import Cropper from "react-easy-crop";
 import getCroppedImg from "../../utils/cropImage";
 import { useNavigate } from "react-router-dom";
 
-const SERVER_URL = "http://localhost:5001/";
-
 const getPreviewUrl = (preview) => {
-  if (typeof preview === "string") {
-    if (preview.startsWith("http") || preview.startsWith("data:")) {
-      return preview;
-    } else if (preview.startsWith("/uploads") || preview.startsWith("uploads/")) {
-      return SERVER_URL + (preview.startsWith("/") ? preview.slice(1) : preview);
-    }
+  if (typeof preview === "string" && preview.startsWith("http")) {
     return preview;
   } else if (preview instanceof Blob) {
     return URL.createObjectURL(preview);
+  } else if (typeof preview === "object" && preview !== null && preview.url) {
+    return preview.url;
   }
   return "";
 };
@@ -40,10 +35,13 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
       { size: "XXL", stock: 0 },
       { size: "3XL", stock: 0 },
     ],
-    images: product.images || [], 
+    images: product.images ? product.images.map(img => ({ url: img.url, public_id: img.public_id })) : [],
   });
   const [loading, setLoading] = useState(false);
-  const [imagePreviews, setImagePreviews] = useState(product.images || []);
+  const [imagePreviews, setImagePreviews] = useState(
+    product.images ? product.images.map(img => img.url) : []
+  );
+  const [imagesToDelete, setImagesToDelete] = useState([]);
   const [imageSrc, setImageSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -74,11 +72,17 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
   };
 
   const handleRemoveImage = (index) => {
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    const imageToRemove = formData.images[index];
+    if (imageToRemove && imageToRemove.public_id) {
+      setImagesToDelete((prev) => [...prev, imageToRemove.public_id]);
+    }
+
     setFormData((prev) => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
     }));
+
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleImageSubmit = async () => {
@@ -87,15 +91,13 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
       return;
     }
     try {
-      const croppedDataUrl = await getCroppedImg(imageSrc, croppedAreaPixels);
-      const croppedBlob = croppedDataUrl;
-      setImagePreviews((prev) => [...prev, URL.createObjectURL(croppedBlob)]);
+      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
       setFormData((prev) => ({
         ...prev,
         images: [...prev.images, croppedBlob],
       }));
+      setImagePreviews((prev) => [...prev, URL.createObjectURL(croppedBlob)]);
       setImageSrc(null);
-      setCroppedImage(null);
       toast.success("Image submitted successfully. You can add more images.");
     } catch (error) {
       console.error("Error processing cropped image:", error);
@@ -130,8 +132,9 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.images.length < 3) {
-      toast.error("Please upload at least 3 images.");
+    const finalImageCount = formData.images.length;
+    if (finalImageCount < 1) {
+      toast.error("Please ensure the product has at least 1 image.");
       return;
     }
     setLoading(true);
@@ -143,32 +146,26 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
       formDataToSend.append("category", formData.category);
       formDataToSend.append("sizes", JSON.stringify(formData.sizes));
       
-      // Handle existing images (URLs) and new images (Blobs) differently
-      const existingImages = [];
-      
       formData.images.forEach((image) => {
-        if (typeof image === 'string') {
-          // For existing images (URLs), collect them to send as JSON
-          existingImages.push(image);
-        } else if (image instanceof Blob) {
-          // For new images (Blobs), append them to FormData
-          formDataToSend.append("newImages", image, image.name || "image.jpg");
+        if (image instanceof Blob) {
+          formDataToSend.append("newImages", image, image.name || `image-${Date.now()}.jpg`);
         }
       });
       
-      // Add existing images as a JSON string
-      formDataToSend.append("existingImages", JSON.stringify(existingImages));
+      if (imagesToDelete.length > 0) {
+        formDataToSend.append("imagesToDelete", JSON.stringify(imagesToDelete));
+      }
       
       await dispatch(editProduct({ id: product._id, productData: formDataToSend })).unwrap();
       toast.success("Product updated successfully");
-      onSuccess && onSuccess();
+      setImagesToDelete([]); 
+      if (onSuccess) onSuccess();
     } catch (error) {
       toast.error(error.message || "Failed to update product");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
@@ -243,7 +240,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
               </div>
             </div>
           </div>
-          {/* Image Upload with Cropper */}
           <div>
             <label className="block text-sm font-medium mb-2">Product Images</label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
@@ -295,23 +291,21 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="mt-2 text-sm text-gray-500">Click to upload images</span>
-                    <span className="mt-1 text-xs text-gray-400">(Minimum 3, Maximum 5)</span>
+                    <span className="mt-1 text-xs text-gray-400">(Minimum 1, Maximum 5)</span>
                   </label>
                 </div>
               )}
             </div>
-            {/* Image Previews */}
             <div className="mt-4 grid grid-cols-3 gap-4">
               {imagePreviews.map((preview, index) => {
-                const url = getPreviewUrl(preview);
                 return (
-                  <div key={index} className="relative">
-                    <img
-                      src={url}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-md border"
+                  <div key={index} className="relative w-24 h-24 border rounded overflow-hidden group">
+                    <img 
+                      src={preview} 
+                      alt={`Preview ${index + 1}`} 
+                      className="w-full h-full object-cover" 
                     />
-                    <button
+                    <button 
                       type="button"
                       onClick={() => handleRemoveImage(index)}
                       className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-700"
@@ -323,7 +317,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
               })}
             </div>
           </div>
-          {/* Submit Button */}
           <div className="flex justify-end gap-2 mt-6">
             <button
               type="button"

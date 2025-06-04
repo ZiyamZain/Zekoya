@@ -7,6 +7,7 @@ import { FaArrowLeft, FaMapMarkerAlt, FaPhone, FaTruck, FaFileInvoice, FaTimesCi
 import customToast from '../../utils/toast';
 import CancellationModal from '../../components/CancellationModal';
 import ReturnRequestForm from '../../components/ReturnRequestForm';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -584,7 +585,7 @@ const OrderDetails = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
-                          <img className="h-10 w-10 rounded-full" src={`http://localhost:5001${item.product?.images[0]}` || '/placeholder.png'} alt="product" />
+                          <img className="h-10 w-10 rounded-full" src={getImageUrl(item.product?.images[0], '/default-order-item.png')} alt={item.product?.name || 'Product'} />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{item.product?.name || 'Product'}</div>

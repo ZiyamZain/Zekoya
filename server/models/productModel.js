@@ -31,14 +31,25 @@ const productSchema = new mongoose.Schema(
       min: [0, "Price cannot be negative"],
     },
     images: {
-      type: [String],
+      type: [
+        {
+          url: {
+            type: String,
+            required: true,
+          },
+          public_id: {
+            type: String,
+            required: true,
+          },
+        },
+      ],
       required: [true, "At least 3 product images are required"],
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return v.length >= 3;
         },
-        message: "Product must have at least 3 images"
-      }
+        message: "Product must have at least 3 images",
+      },
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -49,15 +60,15 @@ const productSchema = new mongoose.Schema(
       type: [sizeSchema],
       required: [true, "At least one size must be specified"],
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return v.length > 0;
         },
-        message: "Product must have at least one size available"
-      }
+        message: "Product must have at least one size available",
+      },
     },
     totalStock: {
       type: Number,
-      default: 0
+      default: 0,
     },
     isListed: {
       type: Boolean,
@@ -67,11 +78,12 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    specifications: [{
-      key: String,
-      value: String
-    }],
- 
+    specifications: [
+      {
+        key: String,
+        value: String,
+      },
+    ],
   },
   {
     timestamps: true,

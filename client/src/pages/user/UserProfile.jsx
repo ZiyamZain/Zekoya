@@ -82,7 +82,7 @@ const UserProfile = () => {
                 <div className="relative group">
                   <div className="w-36 h-36 rounded-full overflow-hidden mb-6 border-4 border-white shadow-md">
                     <img
-                      src={user.profileImage || "/default-avatar.png"}
+                      src={user.profileImage?.url || "/default-avatar.png"}
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />

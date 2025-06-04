@@ -18,21 +18,6 @@ import ProductOffer from "../components/ProductOffer";
 import CategoryOffer from "../components/CategoryOffer";
 import DiscountedPrice from "../components/DiscountedPrice";
 
-const getImageUrl = (imagePath) => {
-  if (!imagePath) return "";
-  if (typeof imagePath !== 'string') return "";
-  if (imagePath.startsWith("http")) return imagePath;
-
-  try {
-    const base = import.meta.env.VITE_API_URL.replace(/\/$/, "");
-    const path = imagePath.replace(/^\/+/, "");
-    return `${base}/${path}`;
-  } catch (error) {
-    console.error('Error processing image path:', error);
-    return "";
-  }
-};
-
 const ProductDetail = () => {
   const { productId } = useParams();
   const dispatch = useDispatch();
@@ -211,6 +196,10 @@ const ProductDetail = () => {
     }
   };
 
+  const mainImageUrl = product.images && product.images.length > 0 && product.images[selectedImage] 
+    ? product.images[selectedImage].url 
+    : "/placeholder-image.jpg"; // Fallback image
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
@@ -232,7 +221,7 @@ const ProductDetail = () => {
                       onClick={() => setSelectedImage(index)}
                     >
                       <img
-                        src={getImageUrl(image)}
+                        src={image.url}
                         alt={`${product.name} - View ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
@@ -245,9 +234,7 @@ const ProductDetail = () => {
               <div className="flex-1 order-1 md:order-2">
                 <div className="product-image-container" style={{ border: '1px solid #f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
                   <ImageZoom 
-                    src={getImageUrl(
-                      product.images?.[selectedImage] || product.images?.[0] || ""
-                    )}
+                    src={mainImageUrl}
                     alt={product.name}
                     zoomScale={2.5}
                     height="400px"

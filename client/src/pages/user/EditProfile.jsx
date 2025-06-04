@@ -43,7 +43,7 @@ const EditProfile = () => {
         name: user.name || "",
         phone: user.phone || "",
       });
-      setPreviewUrl(user.profileImage || "");
+      setPreviewUrl(user.profileImage?.url || "");
     }
   }, [dispatch, navigate, userInfo, user]);
 

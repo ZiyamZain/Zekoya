@@ -104,8 +104,8 @@ const AddProductForm = ({ onCancel }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.images.length < 3) {
-      toast.error("Please upload at least 3 images.");
+    if (formData.images.length < 1) {
+      toast.error("Please upload at least 1 image.");
       return;
     }
 
@@ -303,11 +303,11 @@ const AddProductForm = ({ onCancel }) => {
                     htmlFor="product-images"
                     className="cursor-pointer flex flex-col items-center justify-center"
                   >
-                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="mt-2 text-sm text-gray-500">Click to upload images</span>
-                    <span className="mt-1 text-xs text-gray-400">(Minimum 3, Maximum 5)</span>
+                    <span className="mt-1 text-xs text-gray-400">(Minimum 1, Maximum 5)</span>
                   </label>
                 </div>
               )}

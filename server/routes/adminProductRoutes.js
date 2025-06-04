@@ -10,16 +10,21 @@ import {
   getFeaturedProducts,
 } from "../controllers/adminProductController.js";
 import adminProtect from "../middlewares/adminProtect.js";
-import upload, { handleUploadError } from "../middlewares/uploadMiddleware.js";
+import { createCloudinaryUploader, handleUploadError } from "../middlewares/cloudinaryUpload.js";
 
 const router = express.Router();
 
+// Create a specific uploader for product images
+const productUploader = createCloudinaryUploader({
+  folder: 'zekoya/products',
+  transformation: [
+    { width: 1000, height: 1000, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+  ]
+});
 
 router.get("/categories", adminProtect, getCategories);
 
-
 router.get("/featured", getFeaturedProducts);
-
 
 router.get("/", adminProtect, getProducts);
 
@@ -27,7 +32,7 @@ router.get("/", adminProtect, getProducts);
 router.post(
   "/add",
   adminProtect,
-  upload.array("images", 5),
+  productUploader.array("images", 5),
   handleUploadError,
   addProduct
 );
@@ -36,17 +41,14 @@ router.post(
 router.put(
   "/:id",
   adminProtect,
-  upload.array("newImages", 5),
+  productUploader.array("newImages", 5),
   handleUploadError,
   updateProduct
 );
 
-
-router.delete("/delete/:id", adminProtect, deleteProduct);
-
+router.delete("/:id", adminProtect, deleteProduct); // Corrected delete route path
 
 router.patch("/:id/toggle-listing", adminProtect, toggleProductListing);
-
 
 router.patch("/:id/toggle-featured", adminProtect, toggleProductFeatured);
 

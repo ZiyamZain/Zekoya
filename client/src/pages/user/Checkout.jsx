@@ -17,6 +17,7 @@ import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
 import { userAxios, paymentAxios } from "../../utils/userAxiosConfig";
 import axios from "axios";
+import { getImageUrl } from "../../utils/imageUtils";
 
 
 
@@ -532,7 +533,7 @@ const Checkout = () => {
                   >
                     <div className="w-16 h-16 flex-shrink-0 mr-4 overflow-hidden rounded-md">
                       <img
-                        src={`http://localhost:5001${item.product.images[0]}`}
+                        src={getImageUrl(item.product.images[0], '/default-checkout-item.png')}
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />

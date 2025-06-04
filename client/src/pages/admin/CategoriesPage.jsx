@@ -14,7 +14,6 @@ import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
 import { createSelector } from "@reduxjs/toolkit";
 
-
 const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
 
 const CategoriesPage = () => {
@@ -37,7 +36,6 @@ const CategoriesPage = () => {
       refreshTrigger: adminCategories.refreshTrigger,
     })
   );
-
 
   const {
     categories,
@@ -213,7 +211,15 @@ const CategoriesPage = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           <img
-                            src={category.image ? (category.image.startsWith('/uploads') ? `${BACKEND_URL}${category.image}` : category.image) : "/default-category.png"}
+                            src={
+                              (category.image && typeof category.image === 'object' && category.image.url)
+                                ? category.image.url // Handles new Cloudinary objects
+                                : (category.image && typeof category.image === 'string')
+                                  ? (category.image.startsWith('/uploads')
+                                    ? `${BACKEND_URL}${category.image}` // Handles old local paths
+                                    : category.image) // Handles old absolute URLs or direct string Cloudinary URLs
+                                  : "/default-category.png" // Default if no image or unrecognized format
+                            }
                             alt={category.name}
                             className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
                           />
