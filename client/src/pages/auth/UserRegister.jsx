@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   userRegister,
@@ -26,6 +26,14 @@ const UserRegister = () => {
 
   // State to store OTP if present in userId (for UI display)
   const [devOtp, setDevOtp] = useState("");
+
+  const handleGoogleSignIn = useCallback(async (response) => {
+    try {
+      dispatch(googleLogin({ token: response.credential }));
+    } catch (error) {
+      console.error("Error handling Google sign-in:", error);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const initializeGoogleSignIn = () => {
@@ -110,13 +118,7 @@ const UserRegister = () => {
     // If the backend returns OTP in another way, add logic here
   }, [userId]);
 
-  const handleGoogleSignIn = useCallback(async (response) => {
-    try {
-      dispatch(googleLogin({ token: response.credential }));
-    } catch (error) {
-      console.error("Error handling Google sign-in:", error);
-    }
-  }, [dispatch]);
+
 
   useEffect(() => {
     if (userInfo) {
