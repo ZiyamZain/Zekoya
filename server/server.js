@@ -34,7 +34,8 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
-  'https://zekoya.shop'    // Your production domain
+  'https://zekoya.shop',    // Your production domain
+  'https://www.zekoya.shop' // Your production domain with www
   // Add other origins if needed, e.g., staging environment
 ];
 
