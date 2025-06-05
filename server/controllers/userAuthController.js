@@ -361,7 +361,7 @@ export const googleLogin = async (req, res) => {
         name,
         email,
         isGoogle: true,
-        profileImage,
+        profileImage: { url: profileImage, public_id: '' },
         isVerified: true,
       });
     }
