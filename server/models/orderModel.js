@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
+    ref: 'Product',
     required: true,
   },
   size: {
@@ -29,39 +29,39 @@ const orderItemSchema = new mongoose.Schema({
     name: String,
     discountType: {
       type: String,
-      enum: ['percentage', 'fixed']
+      enum: ['percentage', 'fixed'],
     },
-    discountValue: Number
+    discountValue: Number,
   },
   status: {
     type: String,
     enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
-    default: 'Pending'
+    default: 'Pending',
   },
   cancelReason: {
-    type: String
+    type: String,
   },
   cancelledAt: {
-    type: Date
+    type: Date,
   },
   returnReason: {
-    type: String
+    type: String,
   },
   returnStatus: {
     type: String,
     enum: ['Requested', 'Accepted', 'Rejected', 'Completed', 'Not Applicable'],
-    default: 'Not Applicable'
+    default: 'Not Applicable',
   },
   returnRequestDate: {
-    type: Date
-  }
+    type: Date,
+  },
 });
 
 const orderSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     orderItems: [orderItemSchema],
@@ -72,12 +72,12 @@ const orderSchema = new mongoose.Schema(
       city: { type: String, required: true },
       state: { type: String, required: true },
       postalCode: { type: String, required: true },
-      country: { type: String, default: "India" },
+      country: { type: String, default: 'India' },
     },
     paymentMethod: {
       type: String,
       required: true,
-      default: "Cash on Delivery",
+      default: 'Cash on Delivery',
     },
     itemsPrice: {
       type: Number,
@@ -134,8 +134,8 @@ const orderSchema = new mongoose.Schema(
     orderStatus: {
       type: String,
       required: true,
-      default: "Pending",
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Returned"],
+      default: 'Pending',
+      enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
     },
     orderId: {
       type: String,
@@ -150,41 +150,39 @@ const orderSchema = new mongoose.Schema(
     },
     hasReturnRequest: {
       type: Boolean,
-      default: false
+      default: false,
     },
     invoice: {
-      type: String
+      type: String,
     },
     statusHistory: [{
       status: {
         type: String,
-        required: true
+        required: true,
       },
       date: {
         type: Date,
-        default: Date.now
+        default: Date.now,
       },
-      note: String
-    }]
+      note: String,
+    }],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-
-orderSchema.pre('save', function(next) {
-  
+orderSchema.pre('save', function (next) {
   if (this.isNew || this.isModified('orderStatus')) {
     this.statusHistory.push({
       status: this.orderStatus,
       date: new Date(),
-      note: this.isNew ? 'Order created' : 'Status updated'
+      note: this.isNew ? 'Order created' : 'Status updated',
     });
   }
   next();
 });
 
-const Order = mongoose.model("Order", orderSchema);
+const Order = mongoose.model('Order', orderSchema);
 
 export default Order;

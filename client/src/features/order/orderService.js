@@ -1,5 +1,6 @@
 import { orderAxios } from '../../utils/userAxiosConfig';
 
+
 // Base URL is already set in userAxios, so we just need the path
 // Create new order
 const createOrder = async (orderData) => {
@@ -65,7 +66,7 @@ const updateOrderToPaid = async (orderId) => {
 const generateInvoice = async (orderId) => {
   try {
     // Make API request with proper authentication using userAxios
-    const response = await userAxios.get(`/orders/${orderId}/invoice`, { 
+    const response = await orderAxios.get(`/${orderId}/invoice`, { 
       responseType: 'blob',
       headers: {
         'Accept': 'application/pdf'

@@ -129,7 +129,7 @@ const reportSlice = createSlice({
         url: null
       };
     },
-    reset: (state) => {
+    reset: () => {
       return { ...initialState };
     },
   },

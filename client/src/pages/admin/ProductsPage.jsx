@@ -42,16 +42,6 @@ const ProductsPage = () => {
     dispatch(getProducts({ page, search, limit }));
   }, [dispatch, page, search, limit, refreshTrigger]);
 
-  const handleDelete = async (id) => {
-    try {
-      await dispatch(deleteProduct(id)).unwrap();
-      toast.success("Product deleted successfully");
-      setConfirmDelete(null);
-    } catch (error) {
-      toast.error(error);
-    }
-  };
-
   const handleToggleListing = async (id) => {
     try {
       await dispatch(toggleProductListing(id)).unwrap();

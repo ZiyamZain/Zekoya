@@ -30,19 +30,17 @@ const AddProductForm = ({ onCancel }) => {
   });
 
   const [imagePreviews, setImagePreviews] = useState([]); 
-  const [isLoading, setIsLoading] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [croppedImage, setCroppedImage] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         await dispatch(getCategories({ page: 1, search: "" })).unwrap();
-      } catch (error) {
+      } catch {
         toast.error("Failed to load categories");
       }
     };
@@ -93,7 +91,6 @@ const AddProductForm = ({ onCancel }) => {
 
       // Reset cropper for next image
       setImageSrc(null);
-      setCroppedImage(null);
       toast.success("Image submitted successfully. You can add more images.");
     } catch (error) {
       console.error("Error processing cropped image:", error);
@@ -110,7 +107,6 @@ const AddProductForm = ({ onCancel }) => {
     }
 
     setIsSubmitting(true);
-    setIsLoading(true);
 
     try {
       const formDataToSend = new FormData();
@@ -140,7 +136,6 @@ const AddProductForm = ({ onCancel }) => {
       toast.error(error.message || "Failed to add product");
     } finally {
       setIsSubmitting(false);
-      setIsLoading(false);
     }
   };
 
@@ -240,14 +235,14 @@ const AddProductForm = ({ onCancel }) => {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Sizes & Stock</label>
               <div className="grid grid-cols-2 gap-2">
-                {formData.sizes.map((size, idx) => (
-                  <div key={size.size} className="flex items-center gap-2">
-                    <span className="w-8 inline-block font-semibold">{size.size}</span>
+                {formData.sizes.map((s) => (
+                  <div key={s.size} className="flex items-center gap-2">
+                    <span className="w-8 inline-block font-semibold">{s.size}</span>
                     <input
                       type="number"
                       min={0}
-                      value={size.stock}
-                      onChange={e => handleSizeChange(size.size, e.target.value)}
+                      value={s.stock}
+                      onChange={e => handleSizeChange(s.size, e.target.value)}
                       className="border rounded px-2 py-1 w-20"
                     />
                   </div>
@@ -282,7 +277,6 @@ const AddProductForm = ({ onCancel }) => {
                       type="button"
                       onClick={() => {
                         setImageSrc(null);
-                        setCroppedImage(null);
                       }}
                       className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                     >

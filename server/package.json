@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "seed": "node seed/seedDatabase.js"
+    "seed": "node seed/seedDatabase.js",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
@@ -40,6 +41,9 @@
     "sharp": "^0.34.1"
   },
   "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.31.0",
     "nodemon": "^3.1.9"
   }
 }

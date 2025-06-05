@@ -1,54 +1,46 @@
-import User from "../models/userModel.js";
-import bcrypt from "bcryptjs";
-import sendEmail from "../utils/sendEmail.js";
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/generateToken.js";
-
-import { OAuth2Client } from "google-auth-library";
-import mongoose from "mongoose";
+import bcrypt from 'bcryptjs';
+import { OAuth2Client } from 'google-auth-library';
+import mongoose from 'mongoose';
+import User from '../models/userModel.js';
+import sendEmail from '../utils/sendEmail.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/generateToken.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-
-
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-
-
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const { refreshToken: tokenFromRequest } = req.body;
 
-    if (!refreshToken) {
-      return res.status(400).json({ message: "Refresh token is required" });
+    if (!tokenFromRequest) {
+      return res.status(400).json({ message: 'Refresh token is required' });
     }
 
     // Verify the refresh token
-    const decoded = verifyRefreshToken(refreshToken);
+    const decoded = verifyRefreshToken(tokenFromRequest);
     if (!decoded) {
-      return res.status(401).json({ message: "Invalid or expired refresh token" });
+      return res.status(401).json({ message: 'Invalid or expired refresh token' });
     }
 
     // Find user by ID
     const user = await User.findById(decoded.userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Check token version
     if ((user.tokenVersion || 0) !== decoded.tokenVersion) {
-      return res.status(401).json({ message: "Token has been revoked, please login again" });
+      return res.status(401).json({ message: 'Token has been revoked, please login again' });
     }
 
     // Check if refresh token matches and is not expired
     if (
-      user.refreshToken !== refreshToken ||
-      !user.refreshTokenExpiry ||
-      new Date(user.refreshTokenExpiry) < new Date()
+      user.refreshToken !== tokenFromRequest
+      || !user.refreshTokenExpiry
+      || new Date(user.refreshTokenExpiry) < new Date()
     ) {
-      return res.status(401).json({ message: "Token has been revoked, please login again" });
+      return res.status(401).json({ message: 'Token has been revoked, please login again' });
     }
 
     // Generate new tokens (rotation)
@@ -66,70 +58,66 @@ export const refreshToken = async (req, res) => {
       refreshToken: newRefreshToken,
     });
   } catch (error) {
-    console.error("Refresh Token Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Refresh Token Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
-}
-
-
-
-
+};
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password , referralCode } = req.body;
+    const {
+      name, email, password, referralCode,
+    } = req.body;
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
-          "Password must be at least 6 characters and include uppercase, lowercase, and a number",
+          'Password must be at least 6 characters and include uppercase, lowercase, and a number',
       });
     }
 
-
     let user = await User.findOne({ email });
-    
-    //check referral code if provided
+
+    // check referral code if provided
     let referredBy = null;
-    if(referralCode){
-      const referrer = await User.findOne({referralCode});
-      if(!referrer){
-        return res.status(400).json({message:'Invalid referral code'});
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode });
+      if (!referrer) {
+        return res.status(400).json({ message: 'Invalid referral code' });
       }
       referredBy = referrer._id;
     }
     if (user) {
       if (user.isVerified) {
-        return res.status(400).json({ message: "User already exists" });
-      } else {
-
-        user.name = name;
-        user.password = password;
-        if(referredBy){
-          user.referredBy = referredBy;
-        }
-        user.otp = {
-          code: generateOTP(),
-          expiry: new Date(Date.now() + 5 * 60 * 1000),
-        };
-        console.log(`DEV OTP for ${email}:`, user.otp.code);
-        await user.save();
-        try {
-          await sendEmail(email, "Your OTP", `Your OTP is ${user.otp.code}`);
-        } catch (emailError) {
-          console.error("Email sending failed:", emailError.message);
-          return res.status(500).json({ message: "Failed to send OTP email" });
-        }
-        return res.status(201).json({
-          message: "OTP sent to email",
-          userId: user._id,
-          otpSent: true,
-        });
+        return res.status(400).json({ message: 'User already exists' });
       }
+
+      user.name = name;
+      user.password = password;
+      if (referredBy) {
+        user.referredBy = referredBy;
+      }
+      user.otp = {
+        code: generateOTP(),
+        expiry: new Date(Date.now() + 5 * 60 * 1000),
+      };
+      console.log(`DEV OTP for ${email}:`, user.otp.code);
+      await user.save();
+      try {
+        await sendEmail(email, 'Your OTP', `Your OTP is ${user.otp.code}`);
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError.message);
+        return res.status(500).json({ message: 'Failed to send OTP email' });
+      }
+      return res.status(201).json({
+        message: 'OTP sent to email',
+        userId: user._id,
+        otpSent: true,
+      });
     }
 
     // Create new user if not found
@@ -146,21 +134,21 @@ export const registerUser = async (req, res) => {
     });
 
     try {
-      await sendEmail(email, "Your OTP", `Your OTP is ${otp}`);
+      await sendEmail(email, 'Your OTP', `Your OTP is ${otp}`);
     } catch (emailError) {
-      console.error("Email sending failed:", emailError.message);
+      console.error('Email sending failed:', emailError.message);
       await User.deleteOne({ _id: user._id });
-      return res.status(500).json({ message: "Failed to send OTP email" });
+      return res.status(500).json({ message: 'Failed to send OTP email' });
     }
 
     res.status(201).json({
-      message: "OTP sent to email",
+      message: 'OTP sent to email',
       userId: user._id,
       otpSent: true,
     });
   } catch (error) {
-    console.error("Register Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Register Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -169,27 +157,27 @@ export const verifyOTP = async (req, res) => {
     const { userId, otp } = req.body;
 
     if (!userId || !otp) {
-      return res.status(400).json({ message: "User ID and OTP are required" });
+      return res.status(400).json({ message: 'User ID and OTP are required' });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     if (!user.otp?.code) {
-      return res.status(400).json({ message: "User already verified" });
+      return res.status(400).json({ message: 'User already verified' });
     }
 
     // Check OTP expiry
     if (new Date() > user.otp.expiry) {
-      return res.status(400).json({ message: "OTP expired" });
+      return res.status(400).json({ message: 'OTP expired' });
     }
 
     // Verify OTP
     const isOtpMatch = otp === user.otp.code;
     if (!isOtpMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
 
     // Update user
@@ -197,11 +185,11 @@ export const verifyOTP = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
-    //process referral if user was referred
+    // process referral if user was referred
     if (user.referredBy) {
       try {
-        //find the active referral offer
-        const ReferralOffer = mongoose.model("ReferralOffer");
+        // find the active referral offer
+        const ReferralOffer = mongoose.model('ReferralOffer');
         const activeOffer = await ReferralOffer.findOne({ isActive: true });
 
         // Get the referrer user
@@ -215,12 +203,11 @@ export const verifyOTP = async (req, res) => {
           const newUserReward = activeOffer?.newUserRewardValue || 50;
 
           // Add reward to referrer's wallet
-          referrer.walletBalance =
-            (referrer.walletBalance || 0) + referrerReward;
+          referrer.walletBalance = (referrer.walletBalance || 0) + referrerReward;
 
           // Add wallet history entry for referrer
           referrer.walletHistory.push({
-            type: "credit",
+            type: 'credit',
             amount: referrerReward,
             description: `Referral bonus for inviting ${user.name}`,
             date: new Date(),
@@ -233,26 +220,26 @@ export const verifyOTP = async (req, res) => {
 
           // Add wallet history entry for new user
           user.walletHistory.push({
-            type: "credit",
+            type: 'credit',
             amount: newUserReward,
-            description: "Welcome bonus for joining with a referral",
+            description: 'Welcome bonus for joining with a referral',
             date: new Date(),
           });
 
           await user.save();
         }
       } catch (error) {
-        console.error("Error processing referral : ", error);
+        console.error('Error processing referral : ', error);
       }
     }
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // Store refresh token in database
-    user.refreshToken = refreshToken;
+    user.refreshToken = newRefreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();
 
@@ -266,11 +253,11 @@ export const verifyOTP = async (req, res) => {
       walletBalance: user.walletBalance || 0,
       referralCode: user.referralCode,
       accessToken,
-      refreshToken
+      refreshToken: newRefreshToken,
     });
   } catch (error) {
-    console.error("Verify OTP Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Verify OTP Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -282,45 +269,45 @@ export const loginUser = async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Email and password are required" });
+        .json({ message: 'Email and password are required' });
     }
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     // Check verification status
     if (!user.isVerified && !user.isGoogle) {
       return res
         .status(401)
-        .json({ message: "Please verify your email first" });
+        .json({ message: 'Please verify your email first' });
     }
 
     // Check if Google account
     if (user.isGoogle) {
-      return res.status(400).json({ message: "Please sign in using Google" });
+      return res.status(400).json({ message: 'Please sign in using Google' });
     }
 
     // Check if blocked
     if (user.isBlocked) {
-      return res.status(403).json({ message: "Your account is blocked" });
+      return res.status(403).json({ message: 'Your account is blocked' });
     }
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // store refresh token in database
-    user.refreshToken = refreshToken;
+    user.refreshToken = newRefreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();
 
@@ -331,20 +318,19 @@ export const loginUser = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
-      token : accessToken, // thsi is the access token for backward compoatibility
-      refreshToken, // new refresh token
+      token: accessToken, // thsi is the access token for backward compoatibility
+      refreshToken: newRefreshToken, // new refresh token
     });
   } catch (error) {
-    console.error("Login Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Login Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
 
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token) return res.status(400).json({ message: "Token missing" });
+    if (!token) return res.status(400).json({ message: 'Token missing' });
 
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -352,7 +338,9 @@ export const googleLogin = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { name, email, sub: googleId, picture: profileImage } = payload;
+    const {
+      name, email, picture: profileImage,
+    } = payload;
 
     let user = await User.findOne({ email });
 
@@ -360,13 +348,13 @@ export const googleLogin = async (req, res) => {
       if (!user.isGoogle) {
         return res
           .status(400)
-          .json({ message: "Please login using email and password" });
+          .json({ message: 'Please login using email and password' });
       }
 
       if (user.isBlocked) {
         return res
           .status(403)
-          .json({ message: "Your account is blocked by admin" });
+          .json({ message: 'Your account is blocked by admin' });
       }
     } else {
       user = await User.create({
@@ -379,11 +367,11 @@ export const googleLogin = async (req, res) => {
     }
 
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // Store refresh token in database
-    user.refreshToken = refreshToken;
+    user.refreshToken = newRefreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();
 
@@ -395,16 +383,15 @@ export const googleLogin = async (req, res) => {
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
       token: accessToken,
-      refreshToken,
+      refreshToken: newRefreshToken,
     });
   } catch (error) {
-    console.error("Google login failed:", error);
+    console.error('Google login failed:', error);
     res
       .status(401)
-      .json({ message: "Invalid Google token", error: error.message }); // Log detailed error
+      .json({ message: 'Invalid Google token', error: error.message }); // Log detailed error
   }
 };
-
 
 export const sendForgotPasswordOtp = async (req, res) => {
   try {
@@ -412,13 +399,13 @@ export const sendForgotPasswordOtp = async (req, res) => {
 
     // Input validation
     if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+      return res.status(400).json({ message: 'Email is required' });
     }
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Generate OTP
@@ -429,12 +416,12 @@ export const sendForgotPasswordOtp = async (req, res) => {
     console.log(`DEV FORGOT PASSWORD OTP for ${email}:`, otp);
 
     // Send OTP email
-    await sendEmail(email, "Your Password Reset OTP", `Your OTP is ${otp}`);
+    await sendEmail(email, 'Your Password Reset OTP', `Your OTP is ${otp}`);
 
-    res.status(200).json({ message: "OTP sent to email", userId: user._id });
+    res.status(200).json({ message: 'OTP sent to email', userId: user._id });
   } catch (error) {
-    console.error("Forgot Password Send OTP Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Forgot Password Send OTP Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -444,39 +431,39 @@ export const verifyForgotPasswordOtp = async (req, res) => {
 
     // Input validation
     if (!userId || !otp) {
-      return res.status(400).json({ message: "User ID and OTP are required" });
+      return res.status(400).json({ message: 'User ID and OTP are required' });
     }
 
     // Find user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Check OTP existence
     if (!user.otp?.code) {
-      return res.status(400).json({ message: "No OTP requested" });
+      return res.status(400).json({ message: 'No OTP requested' });
     }
 
     // Check OTP expiry
     if (new Date() > user.otp.expiry) {
-      return res.status(400).json({ message: "OTP expired" });
+      return res.status(400).json({ message: 'OTP expired' });
     }
 
     // Verify OTP
     const isOtpMatch = otp === user.otp.code;
     if (!isOtpMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
 
     // Clear OTP
     user.otp = undefined;
     await user.save();
 
-    res.status(200).json({ message: "OTP verified" });
+    res.status(200).json({ message: 'OTP verified' });
   } catch (error) {
-    console.error("Forgot Password Verify OTP Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Forgot Password Verify OTP Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -488,36 +475,36 @@ export const changePassword = async (req, res) => {
     if (!userId || !password) {
       return res
         .status(400)
-        .json({ message: "User ID and password are required" });
+        .json({ message: 'User ID and password are required' });
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
-          "Password must be at least 6 characters and include uppercase, lowercase, and a number",
+          'Password must be at least 6 characters and include uppercase, lowercase, and a number',
       });
     }
 
     // Find user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Check if OTP verification is pending
     if (user.otp && user.otp.code) {
-      return res.status(400).json({ message: "OTP verification required" });
+      return res.status(400).json({ message: 'OTP verification required' });
     }
 
     // Update password
     user.password = password;
     await user.save();
 
-    res.status(200).json({ message: "Password changed successfully" });
+    res.status(200).json({ message: 'Password changed successfully' });
   } catch (error) {
-    console.error("Forgot Password Change Password Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Forgot Password Change Password Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -525,16 +512,16 @@ export const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+      return res.status(400).json({ message: 'Email is required' });
     }
 
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
     if (user.isVerified) {
-      return res.status(400).json({ message: "User already verified" });
+      return res.status(400).json({ message: 'User already verified' });
     }
 
     // Generate new OTP
@@ -545,56 +532,53 @@ export const resendOTP = async (req, res) => {
     await user.save();
 
     // Send OTP email
-    await sendEmail(email, "Your OTP", `Your OTP is ${otp}`);
+    await sendEmail(email, 'Your OTP', `Your OTP is ${otp}`);
 
     res.status(200).json({
-      message: "OTP resent to email",
+      message: 'OTP resent to email',
       userId: user._id,
       otpSent: true,
     });
   } catch (error) {
-    console.error("Resend OTP Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Resend OTP Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-export const logoutUser = async (req,res) =>{
-  try{
-    const {refreshToken} = req.body;
+export const logoutUser = async (req, res) => {
+  try {
+    const { refreshToken: tokenFromRequest } = req.body;
 
-    if(!refreshToken){
-      return res.status(400).json({message:"Refresh token is required"})
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
     }
 
-    //verify the refresh token
+    // verify the refresh token
     const decoded = verifyRefreshToken(refreshToken);
-    if(!decoded) {
-      return res.status(200).json({message:"Logged out successfully"});
-
+    if (!decoded) {
+      return res.status(200).json({ message: 'Logged out successfully' });
     }
 
-    //Find user by ID
+    // Find user by ID
     const user = await User.findById(decoded.userId);
-    if(!user) {
-      return res.status(200).json({message: "Logged out successfully"});
-
+    if (!user) {
+      return res.status(200).json({ message: 'Logged out successfully' });
     }
-     // Increment token version to invalidate all existing tokens
+    // Increment token version to invalidate all existing tokens
     user.tokenVersion = (user.tokenVersion || 0) + 1;
-    
+
     // Clear refresh token
     user.refreshToken = null;
     user.refreshTokenExpiry = null;
-    
+
     await user.save();
 
-    res.status(200).json({ message: "Logged out successfully" });
-
-  }catch(error){
-    console.error("Logout Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
-}
+};
 
 export const checkAuthStatus = async (req, res) => {
   try {
@@ -614,7 +598,7 @@ export const checkAuthStatus = async (req, res) => {
       isAuthenticated: true,
     });
   } catch (error) {
-    console.error("Auth Status Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Auth Status Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

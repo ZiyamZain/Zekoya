@@ -10,7 +10,7 @@ const RazorpayPayment = ({ orderData, orderId }) => {
   const navigate = useNavigate();
   
   const { userInfo } = useSelector((state) => state.userAuth);
-  const { razorpayKey, razorpayOrder, isLoading, isSuccess, isError, message } = useSelector(
+  const { razorpayKey, razorpayOrder, isLoading, isError, message } = useSelector(
     (state) => state.payment
   );
 
@@ -68,7 +68,7 @@ const RazorpayPayment = ({ orderData, orderId }) => {
       console.error('Error initializing payment:', error);
       toast.error('Failed to initialize payment. Please try again.');
     }
-  }, [dispatch, orderData, orderId, userInfo]);
+  }, [dispatch, orderData, orderId, userInfo, handlePayment]);
 
 
   const handlePayment = useCallback(async (key, order) => {

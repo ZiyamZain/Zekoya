@@ -1,70 +1,64 @@
-import User from "../models/userModel.js";
-import bcrypt from "bcryptjs";
-import sendEmail from "../utils/sendEmail.js";
-import { generateAccessToken } from "../utils/generateToken.js";
-import axios from "axios";
+import bcrypt from 'bcryptjs';
 
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+import User from '../models/userModel.js';
+import sendEmail from '../utils/sendEmail.js';
+import { generateAccessToken } from '../utils/generateToken.js';
 
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const getUserProfile = async (req, res) => {
   try {
     if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "User not authenticated" });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
-    
+
     const user = await User.findById(req.user._id)
       .select('name email phone profileImage isVerified isGoogle addresses createdAt walletBalance walletHistory referralCode referralCount')
-      .lean(); 
-    
+      .lean();
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     // Convert relative image paths to full URLs
     if (user.profileImage && user.profileImage.url && user.profileImage.url.startsWith('/uploads/')) {
       user.profileImage.url = `http://localhost:5001${user.profileImage.url}`;
     }
-    
+
     res.status(200).json(user);
   } catch (error) {
     console.error('Error in getUserProfile:', error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-
-
 export const updateUserProfile = async (req, res) => {
   try {
-
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     if (req.body.name) {
       user.name = req.body.name;
     }
-    
+
     if (req.body.phone) {
       user.phone = req.body.phone;
     }
-    
+
     if (req.file) {
       // TODO: Consider deleting the old image from Cloudinary if user.profileImage.public_id exists
       user.profileImage = {
         url: req.file.path, // URL from Cloudinary
-        public_id: req.file.filename // public_id from Cloudinary
+        public_id: req.file.filename, // public_id from Cloudinary
       };
     } else {
       console.log('No new file uploaded for profile image');
     }
-    
+
     const updatedUser = await user.save();
-    
+
     // Return the updated user data
     res.status(200).json({
       _id: updatedUser._id,
@@ -78,27 +72,26 @@ export const updateUserProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating user profile:', error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
 
 export const changeEmail = async (req, res) => {
   try {
     const { newEmail } = req.body;
 
     if (!newEmail) {
-      return res.status(400).json({ message: "New email is required" });
+      return res.status(400).json({ message: 'New email is required' });
     }
 
     const existingUser = await User.findOne({ email: newEmail });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already in use" });
+      return res.status(400).json({ message: 'Email already in use' });
     }
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const otp = generateOTP();
@@ -111,52 +104,52 @@ export const changeEmail = async (req, res) => {
 
     await sendEmail(
       newEmail,
-      "Email Change Verification",
-      `Your OTP is ${otp}`
+      'Email Change Verification',
+      `Your OTP is ${otp}`,
     );
 
-    res.status(200).json({ message: "OTP sent to new email" });
+    res.status(200).json({ message: 'OTP sent to new email' });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const verifyEmailChange = async (req, res) => {
   try {
     const { otp } = req.body;
-    
+
     if (!otp) {
-      return res.status(400).json({ message: "OTP is required" });
+      return res.status(400).json({ message: 'OTP is required' });
     }
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     if (!user.otp || !user.otp.code) {
-      return res.status(400).json({ message: "No OTP request found" });
+      return res.status(400).json({ message: 'No OTP request found' });
     }
-    
+
     if (new Date() > user.otp.expiry) {
-      return res.status(400).json({ message: "OTP expired" });
+      return res.status(400).json({ message: 'OTP expired' });
     }
 
     if (otp !== user.otp.code) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
-    
+
     user.email = user.tempEmail;
     user.tempEmail = undefined;
     user.otp = undefined;
     await user.save();
-    
+
     res.status(200).json({
-      message: "Email updated successfully",
-      email: user.email
+      message: 'Email updated successfully',
+      email: user.email,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -165,23 +158,23 @@ export const requestPasswordChangeOtp = async (req, res) => {
     const { currentPassword } = req.body;
 
     if (!currentPassword) {
-      return res.status(400).json({ message: "Current password is required" });
+      return res.status(400).json({ message: 'Current password is required' });
     }
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     if (user.isGoogle) {
       return res
         .status(400)
-        .json({ message: "Google users cannot change password" });
+        .json({ message: 'Google users cannot change password' });
     }
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Current password is incorrect" });
+      return res.status(400).json({ message: 'Current password is incorrect' });
     }
 
     const otp = generateOTP();
@@ -195,111 +188,108 @@ export const requestPasswordChangeOtp = async (req, res) => {
     try {
       await sendEmail(
         user.email,
-        "Password Change Verification",
-        `Your OTP for password change is ${otp}`
+        'Password Change Verification',
+        `Your OTP for password change is ${otp}`,
       );
     } catch (emailError) {
-      console.error("Failed to send OTP email:", emailError);
+      console.error('Failed to send OTP email:', emailError);
     }
 
-    res.status(200).json({ message: "OTP sent to your email", otpSent: true });
+    res.status(200).json({ message: 'OTP sent to your email', otpSent: true });
   } catch (error) {
-    console.error("Password Change OTP Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Password Change OTP Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const verifyPasswordChangeOtp = async (req, res) => {
   try {
     const { otp } = req.body;
-    
+
     if (!otp) {
-      return res.status(400).json({ message: "OTP is required" });
+      return res.status(400).json({ message: 'OTP is required' });
     }
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     if (!user.passwordChangeOtp || !user.passwordChangeOtp.code) {
-      return res.status(400).json({ message: "No OTP request found" });
+      return res.status(400).json({ message: 'No OTP request found' });
     }
-    
 
     if (new Date() > user.passwordChangeOtp.expiry) {
-      return res.status(400).json({ message: "OTP expired" });
+      return res.status(400).json({ message: 'OTP expired' });
     }
-    
+
     if (otp !== user.passwordChangeOtp.code) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: 'Invalid OTP' });
     }
-    
-    res.status(200).json({ message: "OTP verified successfully", otpVerified: true });
+
+    res.status(200).json({ message: 'OTP verified successfully', otpVerified: true });
   } catch (error) {
-    console.error("Password Change OTP Verification Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Password Change OTP Verification Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
 
 export const changePassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
-    
+
     if (!newPassword) {
-      return res.status(400).json({ message: "New password is required" });
+      return res.status(400).json({ message: 'New password is required' });
     }
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     // Check if Google user
     if (user.isGoogle) {
-      return res.status(400).json({ message: "Google users cannot change password" });
+      return res.status(400).json({ message: 'Google users cannot change password' });
     }
-    
+
     if (!user.passwordChangeOtp || !user.passwordChangeOtp.code) {
-      return res.status(400).json({ message: "OTP verification required" });
+      return res.status(400).json({ message: 'OTP verification required' });
     }
-    
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&#_.]{6,}$/;
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
-        message: "Password must be at least 6 characters and include uppercase, lowercase, and a number"
+        message: 'Password must be at least 6 characters and include uppercase, lowercase, and a number',
       });
     }
-    
+
     user.password = newPassword;
     user.passwordChangeOtp = undefined;
     await user.save();
-    
-    res.status(200).json({ message: "Password updated successfully" });
+
+    res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error("Password Change Error:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Password Change Error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const getAddresses = async (req, res) => {
-  
   try {
     if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "User not authenticated" });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
-    
-    const user = await User.findById(req.user._id).select("addresses").lean();
-    
+
+    const user = await User.findById(req.user._id).select('addresses').lean();
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     res.status(200).json(user.addresses || []);
   } catch (error) {
     console.error('Error in getAddresses:', error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -318,14 +308,14 @@ export const addAddress = async (req, res) => {
     } = req.body;
 
     if (!name || !phone || !addressLine1 || !city || !state || !postalCode) {
-      return res.status(400).json({ message: "Required fields missing" });
+      return res.status(400).json({ message: 'Required fields missing' });
     }
     // Validate phone number (India: 10 digits)
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone)) {
       return res
         .status(400)
-        .json({ message: "Invalid phone number. Must be 10 digits." });
+        .json({ message: 'Invalid phone number. Must be 10 digits.' });
     }
 
     // Validate postal code (India: 6 digits)
@@ -333,32 +323,31 @@ export const addAddress = async (req, res) => {
     if (!postalCodeRegex.test(postalCode)) {
       return res
         .status(400)
-        .json({ message: "Invalid postal code. Must be 6 digits." });
+        .json({ message: 'Invalid postal code. Must be 6 digits.' });
     }
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const newAddress = {
       name,
       phone,
       addressLine1,
-      addressLine2: addressLine2 || "",
+      addressLine2: addressLine2 || '',
       city,
       state,
       postalCode,
-      country: country || "India",
+      country: country || 'India',
       isDefault: isDefault || false,
     };
 
-
-
     if (isDefault || user.addresses.length === 0) {
-      user.addresses.forEach((addr) => {
-        addr.isDefault = false;
-      });
+      user.addresses = user.addresses.map((addr) => ({
+        ...addr,
+        isDefault: false,
+      }));
       newAddress.isDefault = true;
     }
 
@@ -366,11 +355,11 @@ export const addAddress = async (req, res) => {
     await user.save();
 
     res.status(201).json({
-      message: "Address added successfully",
+      message: 'Address added successfully',
       address: user.addresses[user.addresses.length - 1],
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -386,22 +375,22 @@ export const updateAddress = async (req, res) => {
       state,
       postalCode,
       country,
-      isDefault
+      isDefault,
     } = req.body;
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const addressIndex = user.addresses.findIndex(
-      addr => addr._id.toString() === addressId
+      (addr) => addr._id.toString() === addressId,
     );
-    
+
     if (addressIndex === -1) {
-      return res.status(404).json({ message: "Address not found" });
+      return res.status(404).json({ message: 'Address not found' });
     }
-    
+
     const updatedAddress = {
       name: name || user.addresses[addressIndex].name,
       phone: phone || user.addresses[addressIndex].phone,
@@ -422,85 +411,86 @@ export const updateAddress = async (req, res) => {
     };
 
     if (isDefault) {
-      user.addresses.forEach((addr, index) => {
-        addr.isDefault = index === addressIndex;
-      });
+      user.addresses = user.addresses.map((addr, index) => ({
+        ...addr,
+        isDefault: index === addressIndex,
+      }));
     }
-    
+
     await user.save();
-    
+
     res.status(200).json({
-      message: "Address updated successfully",
-      address: user.addresses[addressIndex]
+      message: 'Address updated successfully',
+      address: user.addresses[addressIndex],
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const deleteAddress = async (req, res) => {
   try {
     const addressId = req.params.id;
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
-    const addressIndex = user.addresses.findIndex(
-      addr => addr._id.toString() === addressId
-    );
-    
-    if (addressIndex === -1) {
-      return res.status(404).json({ message: "Address not found" });
-    }
-    
 
-    const isDefault = user.addresses[addressIndex].isDefault;
-    
+    const addressIndex = user.addresses.findIndex(
+      (addr) => addr._id.toString() === addressId,
+    );
+
+    if (addressIndex === -1) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+
+    const { isDefault } = user.addresses[addressIndex];
+
     user.addresses.splice(addressIndex, 1);
-  
+
     if (isDefault && user.addresses.length > 0) {
       user.addresses[0].isDefault = true;
     }
-    
+
     await user.save();
-    
-    res.status(200).json({ message: "Address deleted successfully" });
+
+    res.status(200).json({ message: 'Address deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 export const setDefaultAddress = async (req, res) => {
   try {
     const addressId = req.params.id;
-    
+
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const addressIndex = user.addresses.findIndex(
-      addr => addr._id.toString() === addressId
+      (addr) => addr._id.toString() === addressId,
     );
-    
+
     if (addressIndex === -1) {
-      return res.status(404).json({ message: "Address not found" });
+      return res.status(404).json({ message: 'Address not found' });
     }
-    
-    user.addresses.forEach((addr, index) => {
-      addr.isDefault = index === addressIndex;
-    });
-    
+
+    user.addresses = user.addresses.map((addr, index) => ({
+      ...addr,
+      isDefault: index === addressIndex,
+    }));
+
     await user.save();
-    
+
     res.status(200).json({
-      message: "Default address updated",
-      address: user.addresses[addressIndex]
+      message: 'Default address updated',
+      address: user.addresses[addressIndex],
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -508,17 +498,17 @@ export const setDefaultAddress = async (req, res) => {
 export const getWalletBalance = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
+
     res.status(200).json({
       walletBalance: user.walletBalance || 0,
-      walletHistory: user.walletHistory || []
+      walletHistory: user.walletHistory || [],
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -526,20 +516,20 @@ export const getWalletBalance = async (req, res) => {
 export const checkUserStatus = async (req, res) => {
   try {
     if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "User not authenticated" });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
-    
+
     const user = await User.findById(req.user._id).select('isBlocked').lean();
-    
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
-    
-    res.status(200).json({ 
-      isBlocked: user.isBlocked || false
+
+    res.status(200).json({
+      isBlocked: user.isBlocked || false,
     });
   } catch (error) {
     console.error('Error in checkUserStatus:', error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

@@ -1,14 +1,15 @@
-import express from "express";
-const router = express.Router();
+import express from 'express';
 import {
-    createCoupon,
-    getAllCoupons,
-    getCouponById,
-    updateCoupon,
-    deleteCoupon
+  createCoupon,
+  getAllCoupons,
+  getCouponById,
+  updateCoupon,
+  deleteCoupon,
 } from '../controllers/couponController.js';
 
 import adminProtect from '../middlewares/adminProtect.js';
+
+const router = express.Router();
 
 // Admin coupon routes with multiple paths to support both old and new frontend calls
 router.post('/', adminProtect, createCoupon);

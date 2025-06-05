@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getSalesReport, downloadReport } from '../../features/report/reportSlice';
 import { format } from 'date-fns';
@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 const SalesReportPage = () => {
   const dispatch = useDispatch();
   const salesReport = useSelector((state) => state.report.salesReport);
-  const data = salesReport?.data || { orders: [], pagination: { total: 0, totalPages: 1 } };
+  const data = useMemo(() => salesReport?.data || { orders: [], pagination: { total: 0, totalPages: 1 } }, [salesReport]);
   const isLoading = salesReport?.isLoading || false;
   const downloadStatus = useSelector((state) => state.report.downloadStatus);
   const isDownloading = downloadStatus?.isLoading || false;
@@ -45,10 +45,7 @@ const SalesReportPage = () => {
       .then(response => {
      
         if (response.data && response.data.orders) {
-        
-          if (response.data.orders.length > 0) {
-         
-          }
+          // Orders data exists, no specific action needed here based on length alone for now
         } else {
           console.error('No orders data found in response');
         }
@@ -70,7 +67,7 @@ const SalesReportPage = () => {
   }, [data, currentPage]);
 
   // Summary states
-  const [summary, setSummary] = useState({
+  const [, setSummary] = useState({
     totalOrders: 0,
     totalRevenue: 0,
     totalDiscount: 0,
@@ -149,7 +146,7 @@ const SalesReportPage = () => {
       .then((response) => {
 
         if (response.data && response.data.orders) {
-    
+          // Orders data exists, no specific action needed here for now
         } else {
           console.warn('No orders data in response:', response);
         }
@@ -178,7 +175,7 @@ const SalesReportPage = () => {
       };
       await dispatch(downloadReport({ filters, format })).unwrap();
       toast.success(`Report downloaded successfully in ${format.toUpperCase()} format`);
-    } catch (error) {
+    } catch { // _error removed as it's not used
       toast.error('Failed to download report');
     }
   };

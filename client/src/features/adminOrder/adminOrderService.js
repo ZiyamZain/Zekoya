@@ -4,24 +4,16 @@ import adminAxios from '../../utils/adminAxiosConfig';
 
 
 const getAllOrders = async (params = {}) => {
-  try {
-    // adminAxios will automatically add auth header
-    const response = await adminAxios.get('/orders', { params });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.get('/orders', { params });
+  return response.data;
 };
 
 
 const getOrderDetails = async (id) => {
-  try {
-    // adminAxios will automatically add auth header
-    const response = await adminAxios.get(`/orders/${id}`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  // adminAxios will automatically add auth header
+  const response = await adminAxios.get(`/orders/${id}`);
+  return response.data;
 };
 
 const updateOrderStatus = async (data) => {

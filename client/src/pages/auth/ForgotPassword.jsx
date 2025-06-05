@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { sendForgotPasswordOtp, verifyForgotPasswordOtp, resetForgotPasswordOtp, changePassword } from '../../features/userAuth/userAuthSlice';
+import { sendForgotPasswordOtp, verifyForgotPasswordOtp, changePassword } from '../../features/userAuth/userAuthSlice';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,6 @@ const ForgotPassword = () => {
   const { forgotOtpSent, forgotUserId, loading, error } = useSelector(state => state.userAuth);
   const [step, setStep] = useState('request'); // 'request', 'verify', 'reset'
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [canResend, setCanResend] = useState(false);
   const [otpTimer, setOtpTimer] = useState(60);
 
@@ -45,16 +44,15 @@ const ForgotPassword = () => {
   const handleRequestOtp = (values) => {
     setEmail(values.email);
     dispatch(sendForgotPasswordOtp({ email: values.email }))
-      .then(res => {
+      .then(() => {
         setStep('verify');
       });
   };
 
   // Verify OTP
   const handleVerifyOtp = (values) => {
-    setOtp(values.otp);
     dispatch(verifyForgotPasswordOtp({ userId: forgotUserId, otp: values.otp }))
-      .then(res => {
+      .then(() => {
         setStep('reset');
       });
   };
@@ -70,7 +68,7 @@ const ForgotPassword = () => {
   // Change Password
   const handleChangePassword = (values) => {
     dispatch(changePassword({ userId: forgotUserId, password: values.password }))
-      .then(res => {
+      .then(() => {
         navigate('/login');
       });
   };

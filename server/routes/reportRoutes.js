@@ -1,10 +1,10 @@
 import express from 'express';
 import adminProtect from '../middlewares/adminProtect.js';
-import { 
+import {
   getSalesReport,
   getDashboardStats,
   getBestSellers,
-  getPaymentStats
+  getPaymentStats,
 } from '../controllers/reportController.js';
 
 const router = express.Router();

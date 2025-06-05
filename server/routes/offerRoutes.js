@@ -3,7 +3,7 @@ import { getActiveOfferForProduct } from '../controllers/productOfferController.
 import { getActiveOfferForCategory } from '../controllers/categoryOfferController.js';
 import { getActiveReferralOffer, processReferral } from '../controllers/referralOfferController.js';
 import { getAllActiveOffers } from '../controllers/userOfferController.js';
-import  protect  from '../middlewares/userProtect.js';
+import protect from '../middlewares/userProtect.js';
 
 const router = express.Router();
 

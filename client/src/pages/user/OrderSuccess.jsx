@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+ 
 import { getOrderDetails, clearOrder } from "../../features/order/orderSlice";
 import { FaCheckCircle, FaShoppingBag, FaFileAlt } from "react-icons/fa";
 
@@ -20,25 +21,20 @@ const OrderSuccess = () => {
   }, [dispatch, id]);
 
   useEffect(() => {
-    if (order && !isLoading && !paymentChecked && retryCount < 3) {
+    if (order && !isLoading && !paymentChecked) { // Removed retryCount < 3 from here
       setPaymentChecked(true);
-      const pendingPaymentId = localStorage.getItem("razorpay_payment_pending");
       const isNewOrder = new Date() - new Date(order.createdAt) < 10000;
 
       if (!isNewOrder && order.paymentMethod === "Razorpay" && !order.isPaid) {
-        // Retry fetching the order after a delay
-        setTimeout(() => {
-          dispatch(getOrderDetails(id));
-          setRetryCount((prev) => prev + 1);
-        }, 2000);
-      } else if (
-        !isNewOrder &&
-        order.paymentMethod === "Razorpay" &&
-        !order.isPaid &&
-        retryCount >= 3
-      ) {
-        
-        navigate(`/payment-failed/${id}`);
+        if (retryCount < 3) { // Check retryCount here
+          // Retry fetching the order after a delay
+          setTimeout(() => {
+            dispatch(getOrderDetails(id));
+            setRetryCount((prev) => prev + 1);
+          }, 2000);
+        } else { // retryCount >= 3
+          navigate(`/payment-failed/${id}`);
+        }
       }
     }
   }, [order, isLoading, id, navigate, paymentChecked, retryCount, dispatch]);

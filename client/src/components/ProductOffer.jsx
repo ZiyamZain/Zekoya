@@ -5,15 +5,6 @@ import { format } from 'date-fns';
 const ProductOffer = ({ offer }) => {
   if (!offer) return null;
 
-  // Calculate discounted price
-  const calculateDiscount = (price) => {
-    if (offer.discountType === 'percentage') {
-      return (price * offer.discountValue / 100).toFixed(2);
-    } else {
-      return offer.discountValue.toFixed(2);
-    }
-  };
-
   // Format the discount text
   const formatDiscountText = () => {
     if (offer.discountType === 'percentage') {
@@ -27,7 +18,9 @@ const ProductOffer = ({ offer }) => {
   const formatDate = (dateString) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy');
-    } catch (error) {
+    } catch {
+      // If formatting fails, return the original string
+      // console.warn(`Could not format date: ${dateString}`); // Optional: for debugging
       return dateString;
     }
   };

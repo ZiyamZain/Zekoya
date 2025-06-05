@@ -278,7 +278,7 @@ const userAuthSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(verifyForgotPasswordOtp.fulfilled, (state, action) => {
+      .addCase(verifyForgotPasswordOtp.fulfilled, (state) => {
         state.loading = false;
         state.forgotOtpSent = false;
       })

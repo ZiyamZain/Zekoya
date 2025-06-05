@@ -11,10 +11,7 @@ const Cart = () => {
   const { userInfo } = useSelector((state) => state.userAuth);
   const { cart, hasUnavailableItems, isLoading, isError, message } = useSelector((state) => state.cart);
   
-  const [productOffers, setProductOffers] = useState({});
-  const [categoryOffers, setCategoryOffers] = useState({});
   const [offerDiscountAmount, setOfferDiscountAmount] = useState(0);
-  const [isLoadingOffers, setIsLoadingOffers] = useState(false);
 
   const navigate = useNavigate();
 
@@ -23,7 +20,7 @@ const Cart = () => {
     if (!cartItems || cartItems.length === 0) return;
     
     try {
-      setIsLoadingOffers(true);
+
       const productOffers = {};
       const categoryOffers = {};
       let totalOfferDiscount = 0;
@@ -52,7 +49,7 @@ const Cart = () => {
             
             bestDiscountForProduct = productDiscountValue;
           }
-        } catch (error) {
+        } catch (error) { // eslint-disable-line no-unused-vars
           // No product offer available
         }
         
@@ -76,7 +73,7 @@ const Cart = () => {
               // Use the best discount (either product or category)
               bestDiscountForProduct = Math.max(bestDiscountForProduct, categoryDiscountValue);
             }
-          } catch (error) {
+          } catch (error) { // eslint-disable-line no-unused-vars
             // No category offer available
           }
         }
@@ -85,13 +82,9 @@ const Cart = () => {
         totalOfferDiscount += bestDiscountForProduct;
       }
       
-      setProductOffers(productOffers);
-      setCategoryOffers(categoryOffers);
       setOfferDiscountAmount(totalOfferDiscount);
     } catch (error) {
       console.error('Error fetching offers:', error);
-    } finally {
-      setIsLoadingOffers(false);
     }
   };
 

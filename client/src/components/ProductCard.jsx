@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FaHeart, FaShoppingCart } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import {useDispatch , useSelector} from "react-redux";
-import {addToCart} from "../features/cart/cartSlice";
 import { addToWishlist,removeFromWishlist} from "../features/wishlist/wishlistSlice";
 import ProductCardOffer from './ProductCardOffer';
 import axios from 'axios';
@@ -17,30 +16,25 @@ const ProductCard = ({ product }) => {
     images,
     brand,
     category,
-    sizes,
-    totalStock,
-    isFeatured,
   } = product;
   
   const [activeOffer, setActiveOffer] = useState(null);
-  const [isLoadingOffer, setIsLoadingOffer] = useState(false);
   
   // Fetch active offer for this product
   useEffect(() => {
     const fetchOffer = async () => {
       if (!_id) return;
       
-      setIsLoadingOffer(true);
       try {
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/offers/product/active/${_id}`);
         if (response.data) {
           setActiveOffer(response.data);
         }
-      } catch (error) {
+      } catch {
         // Silently fail - no offer available is a normal state
         // Don't log errors for 404s as they're expected when no offer exists
       } finally {
-        setIsLoadingOffer(false);
+        // No longer setting isLoadingOffer
       }
     };
     
@@ -84,63 +78,30 @@ const ProductCard = ({ product }) => {
     displayCategory = displayCategory.name || JSON.stringify(displayCategory);
   }
 
- 
-
-  const handleAddToFavorite = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toast.info("Added to favorites!");
-  };
-
-
   const dispatch = useDispatch();
   const {userInfo} = useSelector((state) =>state.userAuth);
   const {wishlist} = useSelector((state)=>state.wishlist);
 
-  const firstAvailableSize = Array.isArray(sizes) ? sizes.find((size)=>size.stock > 0):null;
-
-  const isOutOfStock = totalStock <=0 || !firstAvailableSize;
 
   const isInWishlist =  wishlist && wishlist.products && wishlist.products.some((item) => item._id ===_id);
 
 
-  const handleAddToCart = (e) =>{
+  const handleWishlistToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if(!userInfo){
-      toast.error("Please login to add to cart");
+    if (!userInfo) {
+      toast.error("Please login to use wishlist!");
       window.location.href = "/login";
       return;
     }
-    if(!firstAvailableSize ){
-      toast.error("Product is out of stock!");
-      return;
+    if (isInWishlist) {
+      dispatch(removeFromWishlist(_id));
+      toast.info("Removed from wishlist!");
+    } else {
+      dispatch(addToWishlist(_id));
+      toast.success("Added to wishlist!");
     }
-    dispatch(addToCart({
-      productId:_id,
-      size:firstAvailableSize.size,
-      quantity:1,
-    }))
-    toast.success(`${name} added to cart!`)
-
-    };
-
-    const handleWishlistToggle = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!userInfo) {
-        toast.error("Please login to use wishlist!");
-        window.location.href = "/login";
-        return;
-      }
-      if (isInWishlist) {
-        dispatch(removeFromWishlist(_id));
-        toast.info("Removed from wishlist!");
-      } else {
-        dispatch(addToWishlist(_id));
-        toast.success("Added to wishlist!");
-      }
-    };
+  };
 
   return (
     <Link to={`/products/${_id}`} className="flex flex-col h-full group">

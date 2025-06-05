@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { clearCart } from "../../features/cart/cartSlice";
 import {
   createOrder,
-  clearOrder,
   getOrderDetails,
 
 } from "../../features/order/orderSlice";
@@ -15,7 +14,7 @@ import { clearActiveCoupon } from "../../features/coupons/couponSlice";
 import { getAddresses, getUserProfile } from "../../features/userProfile/userProfileSlice";
 import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
-import { userAxios, paymentAxios } from "../../utils/userAxiosConfig";
+import { paymentAxios } from "../../utils/userAxiosConfig";
 import axios from "axios";
 import { getImageUrl } from "../../utils/imageUtils";
 
@@ -45,7 +44,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [createdOrderId, setCreatedOrderId] = useState(null);
+  const [_createdOrderId, setCreatedOrderId] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [insufficientWalletFunds, setInsufficientWalletFunds] = useState(false);
 
@@ -89,8 +88,8 @@ const Checkout = () => {
             
             bestDiscountForProduct = productDiscountValue;
           }
-        } catch (error) {
-       
+        } catch (error) { // eslint-disable-line no-unused-vars
+          // No product offer available
         }
         
         if (item.product.category) {
@@ -109,8 +108,8 @@ const Checkout = () => {
               }
               bestDiscountForProduct = Math.max(bestDiscountForProduct, categoryDiscountValue);
             }
-          } catch (error) {
-    
+          } catch (error) { // eslint-disable-line no-unused-vars
+            // No category offer available
           }
         }
         
@@ -128,8 +127,6 @@ const Checkout = () => {
     }
   };
 
-  
-  const coupons = useSelector((state) => state.coupons);
 
   
   useEffect(() => {

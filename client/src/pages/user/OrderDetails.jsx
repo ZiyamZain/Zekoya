@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getOrderDetails, resetOrder, cancelOrder, cancelOrderItem, requestReturnItem, generateInvoice, updateOrderToPaid } from '../../features/order/orderSlice';
+import { getOrderDetails, resetOrder, cancelOrder, cancelOrderItem, requestReturnItem, generateInvoice } from '../../features/order/orderSlice';
 import { createPaymentOrder, verifyPayment, getRazorpayKey } from '../../features/payment/paymentSlice';
 import { FaArrowLeft, FaMapMarkerAlt, FaPhone, FaTruck, FaFileInvoice, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import customToast from '../../utils/toast';
@@ -273,7 +273,7 @@ const OrderDetails = () => {
             
             
             // 4. Verify the payment
-            const verifyResult = await dispatch(verifyPayment({
+            await dispatch(verifyPayment({
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,

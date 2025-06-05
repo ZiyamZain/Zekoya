@@ -43,7 +43,7 @@ adminAxios.interceptors.response.use(
           originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
           return adminAxios(originalRequest);
         }
-      } catch (refreshError) {
+      } catch { // refreshError removed as it was unused
         // Refresh failed, force logout
         store.dispatch(adminLogout());
       }

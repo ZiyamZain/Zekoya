@@ -95,7 +95,7 @@ export const adminCouponSlice = createSlice({
         clearCoupon: (state) => {
             state.coupon = null;
         },
-        resetAll: (state) => {
+        resetAll: () => {
             return initialState;
         }
     },

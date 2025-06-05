@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
 import { getProducts, getProductsByCategory } from '../features/products/productSlice';
@@ -16,7 +16,7 @@ const Products = () => {
   const { activeCategoryOffer } = useSelector((state) => state.offer);
   
   const products = productsState?.products || [];
-  const categories = Array.isArray(categoriesState?.categories) ? categoriesState.categories : [];
+  const categories = useMemo(() => Array.isArray(categoriesState?.categories) ? categoriesState.categories : [], [categoriesState?.categories]);
   const isProductsLoading = productsState?.isLoading || false;
   const isCategoriesLoading = categoriesState?.isLoading || false;
   
@@ -95,12 +95,6 @@ const Products = () => {
 
   const toggleFilter = (filterName) => {
     setExpandedFilter(expandedFilter === filterName ? null : filterName);
-  };
-
-  const handleCategoryChange = (event) => {
-    const selectedCategory = event.target.value;
-    setPage(1); // Reset to first page when changing categories
-    setFilters((prev) => ({ ...prev, selectedCategory }));
   };
 
   const handlePriceRangeChange = (event, index) => {

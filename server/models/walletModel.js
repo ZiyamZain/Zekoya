@@ -1,27 +1,27 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const walletTransactionSchema = new mongoose.Schema({
   amount: {
     type: Number,
-    required: true
+    required: true,
   },
   type: {
     type: String,
     enum: ['credit', 'debit'],
-    required: true
+    required: true,
   },
   description: {
     type: String,
-    required: true
+    required: true,
   },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order'
+    ref: 'Order',
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 const walletSchema = new mongoose.Schema({
@@ -29,16 +29,16 @@ const walletSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true
+    unique: true,
   },
   balance: {
     type: Number,
     default: 0,
-    min: 0
+    min: 0,
   },
-  transactions: [walletTransactionSchema]
+  transactions: [walletTransactionSchema],
 }, { timestamps: true });
 
-const Wallet = mongoose.model("Wallet", walletSchema);
+const Wallet = mongoose.model('Wallet', walletSchema);
 
 export default Wallet;

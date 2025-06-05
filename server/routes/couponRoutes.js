@@ -1,30 +1,29 @@
-import express from "express";
-const router = express.Router();
+import express from 'express';
 import {
-    createCoupon,
-    getAllCoupons,
-    getCouponById,
-    updateCoupon,
-    deleteCoupon,
-    validateCoupon,
-    getAvailableCoupons
+  createCoupon,
+  getAllCoupons,
+  getCouponById,
+  updateCoupon,
+  deleteCoupon,
+  validateCoupon,
+  getAvailableCoupons,
 } from '../controllers/couponController.js';
 
 import adminProtect from '../middlewares/adminProtect.js';
-import protect from '../middlewares/userProtect.js'
+import protect from '../middlewares/userProtect.js';
 
+const router = express.Router();
 
-//admin routes
+// admin routes
 
-router.post('/',adminProtect , createCoupon);
-router.get('/admin',adminProtect,getAllCoupons);
+router.post('/', adminProtect, createCoupon);
+router.get('/admin', adminProtect, getAllCoupons);
 router.route('/:id')
-    .get(adminProtect,getCouponById)
-    .put(adminProtect,updateCoupon)
-    .delete(adminProtect , deleteCoupon)
+  .get(adminProtect, getCouponById)
+  .put(adminProtect, updateCoupon)
+  .delete(adminProtect, deleteCoupon);
 
-
-//user routes 
+// user routes
 router.post('/validate', protect, validateCoupon);
 router.get('/available', protect, getAvailableCoupons);
 

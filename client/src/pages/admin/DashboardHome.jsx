@@ -17,13 +17,10 @@ import {
 import { 
   FaSpinner, 
   FaShoppingBag, 
-  FaBox, 
   FaTags, 
-  FaMoneyBillWave, 
   FaChartPie, 
   FaFileAlt
 } from 'react-icons/fa';
-import { toast } from 'react-toastify';
 
 // Register ChartJS components
 ChartJS.register(
@@ -49,7 +46,7 @@ const DashboardHome = () => {
   const { adminInfo } = useSelector((state) => state.adminAuth);
   
   // Extract data from the Redux state
-  const dashboardData = dashboardStats?.data || {};
+  const dashboardData = useMemo(() => dashboardStats?.data || {}, [dashboardStats]);
   const isLoading = dashboardStats?.loading || false;
   const error = dashboardStats?.error || null;
   
@@ -73,12 +70,6 @@ const DashboardHome = () => {
     navigate('/admin/sales-report');
   };
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.debug('Dashboard data loaded:', { dashboardData, bestSellers, paymentStatsState });
-    }
-  }, [dashboardData, bestSellers, paymentStatsState]);
 
   useEffect(() => {
     // Only fetch data if admin is logged in
@@ -177,34 +168,7 @@ const DashboardHome = () => {
     }
   }, [paymentStatsState]);
 
-  // Process best sellers to ensure consistent data structure
-  const processBestSellers = useMemo(() => {
-    if (!bestSellers?.data) return { products: [], categories: [] };
-    
-    try {
-      const result = { products: [], categories: [] };
-      const data = bestSellers.data;
-      
-      // Handle products
-      if (data.products || data.products === 0) {
-        result.products = Array.isArray(data.products) 
-          ? data.products 
-          : [data.products];
-      }
-      
-      // Handle categories
-      if (data.categories || data.categories === 0) {
-        result.categories = Array.isArray(data.categories)
-          ? data.categories
-          : [data.categories];
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Error processing best sellers:', error);
-      return { products: [], categories: [] };
-    }
-  }, [bestSellers]);
+
 
   // Payment chart data
   const paymentChartData = useMemo(() => {
@@ -245,46 +209,6 @@ const DashboardHome = () => {
       ],
     };
   }, [processPaymentStats]);
-
-  const chartOptions = {
-    responsive: true,
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Sales Overview',
-      },
-    },
-    scales: {
-      y: {
-        type: 'linear',
-        display: true,
-        position: 'left',
-        title: {
-          display: true,
-          text: 'Sales Amount (₹)',
-        },
-      },
-      y1: {
-        type: 'linear',
-        display: true,
-        position: 'right',
-        title: {
-          display: true,
-          text: 'Number of Orders',
-        },
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-    },
-  };
 
   const paymentChartOptions = {
     responsive: true,

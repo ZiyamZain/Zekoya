@@ -80,12 +80,13 @@ const EditAddress = () => {
     }
   }, [success, dispatch, navigate, returnUrl]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchSuggestions = useCallback(
     debounce(async (query) => {
       try {
         const data = await fetchAddressSuggestions(query);
         setSuggestions(data);
-      } catch (error) {
+      } catch (_error) { // eslint-disable-line no-unused-vars
         toast.error("Error fetching address suggestions");
         setSuggestions([]);
       }
@@ -128,7 +129,7 @@ const EditAddress = () => {
     }
     if (name === "postalCode") {
       const postalCodeRegex = /^[0-9]{0,6}$/;
-      if (!phoneRegex.test(value)) return;
+      if (!postalCodeRegex.test(value)) return;
     }
     const newValue = e.target.type === "checkbox" ? e.target.checked : value;
     setFormData({
@@ -170,13 +171,13 @@ const EditAddress = () => {
           } else {
             toast.error("Unable to retrieve address from location");
           }
-        } catch (error) {
+        } catch (_error) { // eslint-disable-line no-unused-vars
           toast.error("Error fetching location data");
         } finally {
           setIsFetchingLocation(false);
         }
       },
-      (error) => {
+      (_error) => { // eslint-disable-line no-unused-vars
         toast.error(
           "Unable to retrieve your location. Please allow location access."
         );

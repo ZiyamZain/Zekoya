@@ -18,7 +18,9 @@ const CategoryOffer = ({ offer }) => {
   const formatDate = (dateString) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy');
-    } catch (error) {
+    } catch {
+      // If formatting fails, return the original string
+      // console.warn(`Could not format date: ${dateString}`); // Optional: for debugging
       return dateString;
     }
   };

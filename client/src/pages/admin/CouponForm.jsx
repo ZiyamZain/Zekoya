@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createCoupon, updateCoupon, getCouponById, reset, resetAll } from '../../features/adminSide/coupons/adminCouponSlice';
+import { createCoupon, updateCoupon, getCouponById, resetAll } from '../../features/adminSide/coupons/adminCouponSlice';
 import { toast } from 'react-toastify';
 
 const CouponForm = () => {

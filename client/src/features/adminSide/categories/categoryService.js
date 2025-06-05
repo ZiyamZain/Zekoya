@@ -7,11 +7,11 @@ const getCategories = async (params = {}) => {
   const queryParams = { 
     limit: params.limit || 5, 
     page: params.page || 1,
-    search: params.search || '',
-    admin: true 
+    search: params.search || ''
+    // admin: true // No longer needed, route is admin-specific
   };
   // adminAxios will automatically add the auth header
-  const response = await adminAxios.get('/categories', { params: queryParams });
+  const response = await adminAxios.get('/categories/all-admin', { params: queryParams });
   return response.data;
 };
 

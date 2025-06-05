@@ -27,7 +27,7 @@ const WishlistItemNew = ({ product }) => {
       toast.success("Added to cart successfully")
       dispatch(removeFromWishlist(product._id));
     })
-    .catch((error) => {
+    .catch(() => {
       toast.error("Failed to add to cart")
     })
 

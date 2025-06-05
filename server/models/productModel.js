@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const sizeSchema = new mongoose.Schema({
   size: {
@@ -9,26 +9,26 @@ const sizeSchema = new mongoose.Schema({
   stock: {
     type: Number,
     required: true,
-    min: [0, "Stock cannot be negative"],
-  }
-}, { _id: false }); 
+    min: [0, 'Stock cannot be negative'],
+  },
+}, { _id: false });
 
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Product name is required"],
+      required: [true, 'Product name is required'],
       trim: true,
     },
     description: {
       type: String,
-      required: [true, "Product description is required"],
+      required: [true, 'Product description is required'],
       trim: true,
     },
     price: {
       type: Number,
-      required: [true, "Product price is required"],
-      min: [0, "Price cannot be negative"],
+      required: [true, 'Product price is required'],
+      min: [0, 'Price cannot be negative'],
     },
     images: {
       type: [
@@ -43,27 +43,27 @@ const productSchema = new mongoose.Schema(
           },
         },
       ],
-      required: [true, "At least 3 product images are required"],
+      required: [true, 'At least 3 product images are required'],
       validate: {
-        validator: function (v) {
+        validator(v) {
           return v.length >= 3;
         },
-        message: "Product must have at least 3 images",
+        message: 'Product must have at least 3 images',
       },
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: [true, "Product category is required"],
+      ref: 'Category',
+      required: [true, 'Product category is required'],
     },
     sizes: {
       type: [sizeSchema],
-      required: [true, "At least one size must be specified"],
+      required: [true, 'At least one size must be specified'],
       validate: {
-        validator: function (v) {
+        validator(v) {
           return v.length > 0;
         },
-        message: "Product must have at least one size available",
+        message: 'Product must have at least one size available',
       },
     },
     totalStock: {
@@ -87,11 +87,11 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Middleware to calculate totalStock before saving
-productSchema.pre('save', function(next) {
+productSchema.pre('save', function (next) {
   this.totalStock = this.sizes.reduce((total, size) => total + size.stock, 0);
   next();
 });
@@ -101,7 +101,6 @@ productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1, brand: 1 });
 productSchema.index({ isListed: 1 });
 
-
-const Product = mongoose.model("Product", productSchema);
+const Product = mongoose.model('Product', productSchema);
 
 export default Product;

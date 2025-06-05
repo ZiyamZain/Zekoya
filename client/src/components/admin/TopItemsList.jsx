@@ -26,7 +26,7 @@ const TopItemsList = ({ title, items = [], type }) => {
       <div className="p-4">
         {items?.length > 0 ? (
           <div className="space-y-4">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <div
                 key={item._id}
                 className="flex items-center justify-between py-2 border-b last:border-0"

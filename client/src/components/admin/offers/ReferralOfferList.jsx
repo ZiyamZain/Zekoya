@@ -24,7 +24,6 @@ const ReferralOfferList = () => {
     referralOffers, 
     isLoading, 
     isError, 
-    isSuccess, 
     message,
     totalPages 
   } = useSelector(state => state.referralOffer);

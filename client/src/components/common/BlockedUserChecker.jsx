@@ -55,7 +55,7 @@ const BlockedUserChecker = () => {
         intervalRef.current = null;
       }
     };
-  }, [dispatch, userInfo]);
+  }, [dispatch, userInfo, CHECK_INTERVAL]);
   
   // This component doesn't render anything
   return null;

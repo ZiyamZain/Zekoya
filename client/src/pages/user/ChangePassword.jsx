@@ -120,7 +120,6 @@ const ChangePassword = () => {
 
   const handleResendOtp = () => {
     if (!canResend) return;
-    const currentPassword = localStorage.getItem('tempCurrentPassword') || '';
     setOtpTimer(60);
     setCanResend(false);
   };

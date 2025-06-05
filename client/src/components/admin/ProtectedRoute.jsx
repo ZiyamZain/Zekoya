@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children }) => {
 
       try {
         // Check authentication status using the check-auth endpoint
-        const response = await adminAxios.get("/check-auth");
+        await adminAxios.get("/check-auth");
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Admin authentication verification failed:", error);

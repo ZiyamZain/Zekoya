@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCategories } from '../../features/categories/categorySlice';
 import { FiArrowRight, FiTag } from 'react-icons/fi';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { FaRunning, FaBasketballBall, FaFootballBall, FaVolleyballBall } from 'react-icons/fa';
 
@@ -18,11 +19,13 @@ const Categories = () => {
   }, [dispatch]);
 
   // Ensure categories is always an array
-  const safeCategories = Array.isArray(categories)
-    ? categories
-    : (categories && Array.isArray(categories.categories))
-      ? categories.categories
-      : [];
+  const safeCategories = useMemo(() => {
+    return Array.isArray(categories)
+      ? categories
+      : (categories && Array.isArray(categories.categories))
+        ? categories.categories
+        : [];
+  }, [categories]);
       
   // Set first category as active when categories load
   useEffect(() => {

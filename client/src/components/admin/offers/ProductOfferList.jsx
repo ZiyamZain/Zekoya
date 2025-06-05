@@ -25,10 +25,13 @@ const ProductOfferList = () => {
     productOffers, 
     isLoading, 
     isError, 
-    isSuccess, 
     message,
     totalPages 
   } = useSelector(state => state.productOffer);
+
+  useEffect(() => {
+    setPage(1); // Reset to page 1 when search term changes
+  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(getAllProductOffers({ page, search: searchTerm }));
@@ -36,7 +39,7 @@ const ProductOfferList = () => {
     return () => {
       dispatch(reset());
     };
-  }, [dispatch, page]);
+  }, [dispatch, page, searchTerm]);
 
   useEffect(() => {
     if (isError) {

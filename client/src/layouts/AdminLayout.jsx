@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Sidebar from "../components/admin/Sidebar";
 import { Outlet } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 
 const AdminLayout = () => {
+  useEffect(() => {
+    document.title = 'Zekoya Admin Panel';
+
+    // Optional: Reset to default title when the component unmounts
+    return () => {
+      document.title = 'Zekoya'; // Your default title from index.html
+    };
+  }, []); // Empty dependency array means this effect runs once when the component mounts
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Fixed Sidebar */}

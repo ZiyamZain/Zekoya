@@ -1,40 +1,40 @@
-import Order from "../models/orderModel.js";
-import Product from "../models/productModel.js";
-import User from "../models/userModel.js";
 import fs from 'fs';
-import {generateOrderInvoice} from '../utils/pdfGenerator.js';
+import Order from '../models/orderModel.js';
+import Product from '../models/productModel.js';
+import User from '../models/userModel.js';
+import Wallet from '../models/walletModel.js';
+import { generateOrderInvoice } from '../utils/pdfGenerator.js';
 
 export const getAllOrders = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const sortBy = req.query.sortBy || "createdAt";
-    const sortOrder = req.query.sortOrder || "desc";
-    const search = req.query.search || "";
-    const status = req.query.status || "";
-    const dateFilter = req.query.dateFilter || "";
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder || 'desc';
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+    const dateFilter = req.query.dateFilter || '';
     const priceMin = req.query.priceMin ? parseFloat(req.query.priceMin) : null;
     const priceMax = req.query.priceMax ? parseFloat(req.query.priceMax) : null;
 
     const query = {};
-    
 
     if (search) {
       query.$or = [
-        { orderId: { $regex: search, $options: "i" } },
-        { "user.name": { $regex: search, $options: "i" } },
+        { orderId: { $regex: search, $options: 'i' } },
+        { 'user.name': { $regex: search, $options: 'i' } },
       ];
     }
 
     if (status) {
       query.orderStatus = status;
     }
-    
+
     if (dateFilter) {
       const now = new Date();
       let startDate;
-      
-      switch(dateFilter) {
+
+      switch (dateFilter) {
         case 'today':
           startDate = new Date(now.setHours(0, 0, 0, 0));
           query.createdAt = { $gte: startDate };
@@ -60,7 +60,6 @@ export const getAllOrders = async (req, res) => {
           break;
       }
     }
-    
 
     if (priceMin !== null || priceMax !== null) {
       query.totalPrice = {};
@@ -69,7 +68,7 @@ export const getAllOrders = async (req, res) => {
     }
 
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
     const skip = (page - 1) * limit;
 
@@ -77,13 +76,13 @@ export const getAllOrders = async (req, res) => {
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
-      .populate("user", "name email");
+      .populate('user', 'name email');
 
-    const processedOrders = orders.map(order => {
+    const processedOrders = orders.map((order) => {
       const orderObj = order.toObject();
       // Check if any items have return requests
-      const hasReturnRequests = orderObj.orderItems && 
-        orderObj.orderItems.some(item => item.returnRequested);
+      const hasReturnRequests = orderObj.orderItems
+        && orderObj.orderItems.some((item) => item.returnRequested);
       return { ...orderObj, hasReturnRequests };
     });
 
@@ -97,8 +96,8 @@ export const getAllOrders = async (req, res) => {
       total,
     });
   } catch (error) {
-    console.error("Error in getAllOrders:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in getAllOrders:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -109,17 +108,17 @@ export const getOrderById = async (req, res) => {
       .populate('user', 'name email')
       .populate({
         path: 'orderItems.product',
-        select: 'name images price countInStock'
+        select: 'name images price countInStock',
       });
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
     res.json(order);
   } catch (error) {
-    console.error("Error in getOrderById:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in getOrderById:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -131,15 +130,15 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (status === "Cancelled" && order.orderStatus !== "Cancelled") {
+    if (status === 'Cancelled' && order.orderStatus !== 'Cancelled') {
       for (const item of order.orderItems) {
         const product = await Product.findById(item.product);
         if (product) {
           // Find the size and update stock
-          const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
+          const sizeIndex = product.sizes.findIndex((s) => s.size === item.size);
           if (sizeIndex !== -1) {
             product.sizes[sizeIndex].stock += item.quantity;
             product.totalStock = product.sizes.reduce((total, size) => total + size.stock, 0);
@@ -149,12 +148,12 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
-    if (order.orderStatus === "Cancelled" && status !== "Cancelled") {
+    if (order.orderStatus === 'Cancelled' && status !== 'Cancelled') {
       for (const item of order.orderItems) {
         const product = await Product.findById(item.product);
         if (product) {
           // Find the size and update stock
-          const sizeIndex = product.sizes.findIndex(s => s.size === item.size);
+          const sizeIndex = product.sizes.findIndex((s) => s.size === item.size);
           if (sizeIndex !== -1) {
             product.sizes[sizeIndex].stock -= item.quantity;
             product.totalStock = product.sizes.reduce((total, size) => total + size.stock, 0);
@@ -167,73 +166,69 @@ export const updateOrderStatus = async (req, res) => {
     // Update order status
     order.orderStatus = status;
 
-    if(order.paymentMethod=== "Cash on Delivery" && status === "Delivered"){
+    if (order.paymentMethod === 'Cash on Delivery' && status === 'Delivered') {
       order.isPaid = true;
       order.paidAt = new Date();
     }
-    
+
     // Add a note to the status history if provided
     if (note) {
       order.statusHistory.push({
         status,
         date: new Date(),
-        note
+        note,
       });
     }
-    
+
     await order.save();
 
     res.json(order);
   } catch (error) {
-    console.error("Error in updateOrderStatus:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in updateOrderStatus:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
 // Process return request (admin)
 export const processReturnRequest = async (req, res) => {
   try {
-    
     const { orderId, itemId } = req.params;
     const { action } = req.body;
 
     if (!action) {
       console.error('No action provided in request body');
-      return res.status(400).json({ message: "Action is required (accept or reject)" });
+      return res.status(400).json({ message: 'Action is required (accept or reject)' });
     }
 
     const order = await Order.findById(orderId);
 
     if (!order) {
       console.error(`Order not found with ID: ${orderId}`);
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
     const orderItem = order.orderItems.find(
-      (item) => item._id.toString() === itemId
+      (item) => item._id.toString() === itemId,
     );
 
     if (!orderItem) {
       console.error(`Order item not found with ID: ${itemId}`);
-      return res.status(404).json({ message: "Order item not found" });
+      return res.status(404).json({ message: 'Order item not found' });
     }
-
 
     if (orderItem.returnStatus !== 'Requested') {
       console.error(`No return request for this item. Current status: ${orderItem.returnStatus}`);
       return res
         .status(400)
-        .json({ message: "No return request for this item" });
+        .json({ message: 'No return request for this item' });
     }
 
-    if (action === "accept") {
+    if (action === 'accept') {
       try {
         const product = await Product.findById(orderItem.product);
-        
+
         if (product) {
+          const sizeIndex = product.sizes.findIndex((s) => s.size === orderItem.size);
 
-
-          const sizeIndex = product.sizes.findIndex(s => s.size === orderItem.size);
-          
           if (sizeIndex !== -1) {
             product.sizes[sizeIndex].stock += orderItem.quantity;
             product.totalStock = product.sizes.reduce((total, size) => total + size.stock, 0);
@@ -245,18 +240,15 @@ export const processReturnRequest = async (req, res) => {
           console.error('Product not found with ID:', orderItem.product);
         }
 
+        orderItem.returnStatus = 'Accepted';
 
-        orderItem.returnStatus = "Accepted";
-        
-        orderItem.status = "Returned";
-        
+        orderItem.status = 'Returned';
 
         const refundAmount = orderItem.price * orderItem.quantity;
-        
-        try {
 
+        try {
           const user = await User.findById(order.user);
-          
+
           if (!user) {
             throw new Error(`User not found for refund: ${order.user}`);
           }
@@ -270,30 +262,27 @@ export const processReturnRequest = async (req, res) => {
 
           // Check if this refund has already been processed
           const refundAlreadyProcessed = user.walletHistory.some(
-            transaction => 
-              transaction.type === 'credit' && 
-              transaction.orderId && 
-              transaction.orderId.toString() === order._id.toString() && 
-              transaction.description.includes(orderItem._id.toString())
+            (transaction) => transaction.type === 'credit'
+              && transaction.orderId
+              && transaction.orderId.toString() === order._id.toString()
+              && transaction.description.includes(orderItem._id.toString()),
           );
 
           if (refundAlreadyProcessed) {
-
             order.walletUpdateSuccess = true;
             order.walletUpdateNote = 'Refund already processed for this item';
           } else {
             user.walletBalance += refundAmount;
 
-            
             const transaction = {
-              type: "credit",
+              type: 'credit',
               amount: refundAmount,
               description: `Refund for order ${order.orderId} - ${orderItem.name || 'Item'} (Return) - Item ID: ${orderItem._id}`,
               date: new Date(),
-              orderId: order._id
+              orderId: order._id,
             };
             user.walletHistory.push(transaction);
-            
+
             await user.save();
 
             order.walletUpdateSuccess = true;
@@ -302,7 +291,6 @@ export const processReturnRequest = async (req, res) => {
 
           order.walletUpdateSuccess = true;
           order.walletUpdateError = null;
-
         } catch (error) {
           console.error('Error processing return request:', error);
           if (error.message.includes('wallet')) {
@@ -313,31 +301,30 @@ export const processReturnRequest = async (req, res) => {
         }
       } catch (acceptError) {
         console.error('Error accepting return request:', acceptError);
-        return res.status(500).json({ message: "Error accepting return request", error: acceptError.message });
+        return res.status(500).json({ message: 'Error accepting return request', error: acceptError.message });
       }
-    } else if (action === "reject") {
+    } else if (action === 'reject') {
       try {
-        orderItem.returnStatus = "Rejected";
+        orderItem.returnStatus = 'Rejected';
       } catch (rejectError) {
         console.error('Error rejecting return request:', rejectError);
-        return res.status(500).json({ message: "Error rejecting return request", error: rejectError.message });
+        return res.status(500).json({ message: 'Error rejecting return request', error: rejectError.message });
       }
     } else {
       console.error('Invalid action provided:', action);
-      return res.status(400).json({ message: "Invalid action" });
+      return res.status(400).json({ message: 'Invalid action' });
     }
 
     try {
-
-      const pendingReturns = order.orderItems.some(item => item.returnStatus === 'Requested');
+      const pendingReturns = order.orderItems.some((item) => item.returnStatus === 'Requested');
       if (!pendingReturns) {
         order.hasReturnRequest = false;
       }
       await order.save();
 
-      let responseData = {
+      const responseData = {
         message: `Return request ${action === 'accept' ? 'accepted' : 'rejected'} successfully`,
-        order
+        order,
       };
 
       if (action === 'accept') {
@@ -350,78 +337,75 @@ export const processReturnRequest = async (req, res) => {
       res.json(responseData);
     } catch (saveError) {
       console.error('Error saving order:', saveError);
-      return res.status(500).json({ message: "Error saving order", error: saveError.message });
+      return res.status(500).json({ message: 'Error saving order', error: saveError.message });
     }
   } catch (error) {
-    console.error("Error in processReturnRequest:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in processReturnRequest:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 export const generateInvoice = async (req, res) => {
   // Flag to track if response has been sent
   let responseSent = false;
-  
+
   try {
     const { orderId } = req.params;
-    
+
     const order = await Order.findById(orderId)
       .populate('user', 'name email')
       .populate({
         path: 'orderItems.product',
-        select: 'name images'
+        select: 'name images',
       });
-    
 
     if (!order) {
       responseSent = true;
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
-    
+
     let result;
     try {
       result = await generateOrderInvoice(order);
     } catch (pdfError) {
-      console.error("PDF Generation Error:", pdfError);
+      console.error('PDF Generation Error:', pdfError);
       responseSent = true;
-      return res.status(500).json({ 
-        message: "Failed to generate invoice", 
-        error: pdfError.message 
+      return res.status(500).json({
+        message: 'Failed to generate invoice',
+        error: pdfError.message,
       });
     }
-    
+
     if (!result || !result.path) {
       console.error('Invalid PDF generation result:', result);
       responseSent = true;
-      return res.status(500).json({ message: "Failed to generate invoice: Invalid result" });
+      return res.status(500).json({ message: 'Failed to generate invoice: Invalid result' });
     }
-    
+
     if (!fs.existsSync(result.path)) {
       console.error(`PDF file does not exist at path: ${result.path}`);
       responseSent = true;
-      return res.status(500).json({ message: "Failed to generate invoice: File not found" });
+      return res.status(500).json({ message: 'Failed to generate invoice: File not found' });
     }
-    
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.orderId}.pdf"`);
-    
+
     const fileStream = fs.createReadStream(result.path);
-    
+
     fileStream.on('error', (err) => {
       console.error(`Error reading invoice file: ${err.message}`);
       if (!responseSent) {
         responseSent = true;
-        res.status(500).json({ message: "Error reading invoice file" });
+        res.status(500).json({ message: 'Error reading invoice file' });
       }
     });
-    
+
     fileStream.pipe(res);
-    
   } catch (error) {
-    console.error("Error in invoice generation process:", error);
+    console.error('Error in invoice generation process:', error);
     if (!responseSent) {
-      res.status(500).json({ message: "Failed to generate invoice" });
+      res.status(500).json({ message: 'Failed to generate invoice' });
     }
   }
 };

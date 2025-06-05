@@ -52,7 +52,7 @@ const ProductDetail = () => {
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, _setQuantity] = useState(1);
   const [sizeError, setSizeError] = useState(false);
 
   useEffect(() => {
@@ -105,12 +105,6 @@ const ProductDetail = () => {
       </div>
     );
   }
-
-  const formattedPrice = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(product.price);
 
   const isOutOfStock = product.totalStock <= 0;
 

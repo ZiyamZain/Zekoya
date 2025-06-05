@@ -51,12 +51,13 @@ const AddAddress = () => {
     }
   }, [success, dispatch, navigate, returnUrl]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchSuggestions = useCallback(
     debounce(async (query) => {
       try {
         const data = await fetchAddressSuggestions(query);
         setSuggestions(data);
-      } catch (error) {
+      } catch {
         toast.error("Error fetching address suggestions");
         setSuggestions([]);
       }
@@ -141,13 +142,13 @@ const AddAddress = () => {
           } else {
             toast.error("Unable to retrieve address from location");
           }
-        } catch (error) {
+        } catch { // error removed as it's not used
           toast.error("Error fetching location data");
         } finally {
           setIsFetchingLocation(false);
         }
       },
-      (error) => {
+      () => { // error removed as it's not used
         toast.error(
           "Unable to retrieve your location. Please allow location access."
         );

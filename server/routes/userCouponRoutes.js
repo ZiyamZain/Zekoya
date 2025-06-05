@@ -1,11 +1,12 @@
-import express from "express";
-const router = express.Router();
+import express from 'express';
 import {
-    validateCoupon,
-    getAvailableCoupons
+  validateCoupon,
+  getAvailableCoupons,
 } from '../controllers/couponController.js';
 
 import protect from '../middlewares/userProtect.js';
+
+const router = express.Router();
 
 router.post('/validate', protect, validateCoupon);
 router.get('/available', protect, getAvailableCoupons);

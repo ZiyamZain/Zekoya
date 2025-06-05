@@ -102,7 +102,7 @@ const getBestSellers = async (params) => {
 
     
     if (response.data && response.data.success && Array.isArray(response.data.data)) {
-    
+      // Data structure is as expected, proceed to return
     } else {
       console.warn(`Unexpected response structure for ${category}:`, response.data);
     }

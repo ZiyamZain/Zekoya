@@ -1,4 +1,4 @@
-import { createImage, getRadianAngle } from './imageUtils';
+import { createImage } from './imageUtils';
 
 /**
  * Returns the cropped image as a Blob or Data URL.

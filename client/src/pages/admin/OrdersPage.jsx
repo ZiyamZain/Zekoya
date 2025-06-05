@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 const OrdersPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { orders, isLoading, totalOrders, totalPages, currentPage: currentPageFromState, refreshTrigger } = useSelector((state) => state.adminOrder);
+  const { orders, isLoading, totalOrders, totalPages, refreshTrigger } = useSelector((state) => state.adminOrder);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");

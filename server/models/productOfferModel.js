@@ -5,53 +5,53 @@ const productOfferSchema = mongoose.Schema(
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
-      required: [true, 'Product is required']
+      required: [true, 'Product is required'],
     },
     name: {
       type: String,
       required: [true, 'Offer name is required'],
-      trim: true
+      trim: true,
     },
     description: {
       type: String,
       required: [true, 'Offer description is required'],
-      trim: true
+      trim: true,
     },
     discountType: {
       type: String,
       enum: ['percentage', 'fixed'],
-      required: [true, 'Discount type is required']
+      required: [true, 'Discount type is required'],
     },
     discountValue: {
       type: Number,
       required: [true, 'Discount value is required'],
-      min: [0, 'Discount value cannot be negative']
+      min: [0, 'Discount value cannot be negative'],
     },
     startDate: {
       type: Date,
-      required: [true, 'Start date is required']
+      required: [true, 'Start date is required'],
     },
     endDate: {
       type: Date,
-      required: [true, 'End date is required']
+      required: [true, 'End date is required'],
     },
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',
-      required: false // Changed from true to false to make it optional
-    }
+      required: false, // Changed from true to false to make it optional
+    },
   },
   {
-    timestamps: true
-  }
+    timestamps: true,
+  },
 );
 
 // Validate that end date is after start date
-productOfferSchema.pre('validate', function(next) {
+productOfferSchema.pre('validate', function (next) {
   if (this.startDate && this.endDate && this.startDate >= this.endDate) {
     this.invalidate('endDate', 'End date must be after start date');
   }
@@ -59,7 +59,7 @@ productOfferSchema.pre('validate', function(next) {
 });
 
 // Method to check if offer is currently active
-productOfferSchema.methods.isCurrentlyActive = function() {
+productOfferSchema.methods.isCurrentlyActive = function () {
   const now = new Date();
   return this.isActive && this.startDate <= now && this.endDate >= now;
 };

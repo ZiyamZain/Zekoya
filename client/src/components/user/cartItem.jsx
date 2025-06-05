@@ -7,13 +7,12 @@ import { getImageUrl } from "../../utils/imageUtils";
 
 const CartItem = memo(({ item }) => {
   const dispatch = useDispatch();
-  const { isError, message, isLoading } = useSelector((state) => state.cart);
+  const { isLoading, isError } = useSelector((state) => state.cart);
   
   const [quantityError, setQuantityError] = useState(null);
   const [localQuantity, setLocalQuantity] = useState(item.quantity);
   const [activeOffer, setActiveOffer] = useState(null);
   const [activeCategoryOffer, setActiveCategoryOffer] = useState(null);
-  const [isLoadingOffer, setIsLoadingOffer] = useState(false);
   
   const product = item.product;
   const size = item.size;
@@ -29,11 +28,9 @@ const CartItem = memo(({ item }) => {
       if (!product) {
         setActiveOffer(null);
         setActiveCategoryOffer(null);
-        setIsLoadingOffer(false);
         return;
       }
 
-      setIsLoadingOffer(true);
       try {
         try {
           const productOfferResponse = await axios.get(
@@ -76,7 +73,7 @@ const CartItem = memo(({ item }) => {
       } catch (error) {
         console.error("Error in fetchOffers:", error);
       } finally {
-        setIsLoadingOffer(false);
+        // isLoadingOffer state was removed
       }
     };
     

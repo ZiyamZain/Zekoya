@@ -5,22 +5,10 @@ import { getCategories } from "../../features/adminSide/categories/categorySlice
 import { toast } from "react-toastify";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../../utils/cropImage";
-import { useNavigate } from "react-router-dom";
-
-const getPreviewUrl = (preview) => {
-  if (typeof preview === "string" && preview.startsWith("http")) {
-    return preview;
-  } else if (preview instanceof Blob) {
-    return URL.createObjectURL(preview);
-  } else if (typeof preview === "object" && preview !== null && preview.url) {
-    return preview.url;
-  }
-  return "";
-};
+// import { useNavigate } from "react-router-dom"; // Removed as navigate is unused
 
 const EditProductForm = ({ product, onCancel, onSuccess }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { categories } = useSelector((state) => state.adminCategories);
   const [formData, setFormData] = useState({
     name: product.name || "",
@@ -46,7 +34,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [croppedImage, setCroppedImage] = useState(null);
 
   useEffect(() => {
     if (!categories || categories.length === 0) {
@@ -225,14 +212,14 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Sizes & Stock</label>
               <div className="grid grid-cols-2 gap-2">
-                {formData.sizes.map((size, idx) => (
-                  <div key={size.size} className="flex items-center gap-2">
-                    <span className="w-8 inline-block font-semibold">{size.size}</span>
+                {formData.sizes.map((s) => (
+                  <div key={s.size} className="flex items-center gap-2">
+                    <span className="w-8 inline-block font-semibold">{s.size}</span>
                     <input
                       type="number"
                       min={0}
-                      value={size.stock}
-                      onChange={e => handleSizeChange(size.size, e.target.value)}
+                      value={s.stock}
+                      onChange={e => handleSizeChange(s.size, e.target.value)}
                       className="border rounded px-2 py-1 w-20"
                     />
                   </div>
@@ -266,7 +253,6 @@ const EditProductForm = ({ product, onCancel, onSuccess }) => {
                       type="button"
                       onClick={() => {
                         setImageSrc(null);
-                        setCroppedImage(null);
                       }}
                       className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                     >

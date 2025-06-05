@@ -5,46 +5,46 @@ const referralSchema = new mongoose.Schema(
     referrer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
     },
     referred: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
     },
     referralCode: {
       type: String,
-      required: true
+      required: true,
     },
     status: {
       type: String,
       enum: ['pending', 'completed', 'rewarded'],
-      default: 'pending'
+      default: 'pending',
     },
     completedAt: {
-      type: Date
+      type: Date,
     },
     rewardedAt: {
-      type: Date
+      type: Date,
     },
     rewardType: {
       type: String,
-      enum: ['coupon', 'wallet_credit']
+      enum: ['coupon', 'wallet_credit'],
     },
     rewardValue: {
-      type: Number
+      type: Number,
     },
     couponCode: {
-      type: String
+      type: String,
     },
     referralOffer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'ReferralOffer'
-    }
+      ref: 'ReferralOffer',
+    },
   },
   {
-    timestamps: true
-  }
+    timestamps: true,
+  },
 );
 
 // Ensure uniqueness of referrer-referred pair

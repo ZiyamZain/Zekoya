@@ -24,6 +24,7 @@ const wishlistAxios = createUserAxiosInstance('/api/wishlist');
 const orderAxios = createUserAxiosInstance('/api/orders');
 const couponAxios = createUserAxiosInstance('/api/coupons');
 const paymentAxios = createUserAxiosInstance('/api/payments');
+const offerAxios = createUserAxiosInstance('/api/offers');
 
 
 // Configure request interceptor for all instances
@@ -71,7 +72,7 @@ function configureResponseInterceptor(instance) {
             // Use the same instance that made the original request
             return axios(originalRequest);
           }
-        } catch (refreshError) {
+        } catch { // refreshError removed as it was unused
           // Refresh failed, force logout
           store.dispatch(userLogout());
         }
@@ -82,4 +83,4 @@ function configureResponseInterceptor(instance) {
 }
 
 // Export all instances
-export { userAxios, productAxios, cartAxios, wishlistAxios, orderAxios, couponAxios, paymentAxios };
+export { userAxios, productAxios, cartAxios, wishlistAxios, orderAxios, couponAxios, paymentAxios, offerAxios };

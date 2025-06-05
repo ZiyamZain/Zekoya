@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 
 import { useSelector, useDispatch } from "react-redux";
-import { getUserProfile, getAddresses, setDefaultAddress, deleteAddress, resetUserProfile } from "../../features/userProfile/userProfileSlice";
+import { getUserProfile, setDefaultAddress, deleteAddress, resetUserProfile } from "../../features/userProfile/userProfileSlice";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaWhatsapp, FaTwitter, FaCopy, FaClipboard, FaPlus } from "react-icons/fa";

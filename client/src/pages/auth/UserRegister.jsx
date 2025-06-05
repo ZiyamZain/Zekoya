@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   userRegister,
   verifyOTP,
-  resetOTP,
   resendOTP,
   googleLogin,
 } from "../../features/userAuth/userAuthSlice.js";
@@ -82,7 +81,7 @@ const UserRegister = () => {
         script.remove();
       }
     };
-  }, []);
+  }, [handleGoogleSignIn]);
 
   useEffect(() => {
     if (otpSent) {
@@ -111,13 +110,13 @@ const UserRegister = () => {
     // If the backend returns OTP in another way, add logic here
   }, [userId]);
 
-  const handleGoogleSignIn = async (response) => {
+  const handleGoogleSignIn = useCallback(async (response) => {
     try {
       dispatch(googleLogin({ token: response.credential }));
     } catch (error) {
       console.error("Error handling Google sign-in:", error);
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     if (userInfo) {
@@ -202,104 +201,117 @@ const UserRegister = () => {
           )}
           {!otpSent ? (
             <Formik
-              initialValues={{ name: "", email: "", password: "", confirmPassword: "", referralCode: "", otp: "" }}
+              initialValues={{
+                name: "",
+                email: "",
+                password: "",
+                confirmPassword: "",
+                referralCode: "",
+              }}
               validationSchema={registerSchema}
-              onSubmit={(values) => {
-                setLastRegisterValues(values); // for resend
-                dispatch(
-                  userRegister({
-                    name: values.name,
-                    email: values.email,
-                    password: values.password,
-                    referralCode: values.referralCode
-                  })
-                );
+              onSubmit={async (values, { setFieldError }) => {
+                setLastRegisterValues(values); // Store for potential resend
+                setResendSuccess("");
+                try {
+                  await dispatch(userRegister(values)).unwrap();
+                  // OTP sent, UI will switch, no need to setSubmitting(false) here
+                } catch (err) {
+                  if (err && err.message) {
+                    setFieldError("email", err.message);
+                  } else {
+                    setFieldError(
+                      "email",
+                      "Registration failed. Please try again."
+                    );
+                  }
+                  // No need to setSubmitting(false) here as Formik handles it on error
+                }
               }}
             >
-              {({ isSubmitting }) => (
+              {() => (
                 <Form className="space-y-6">
-                  <div className="space-y-4">
+                  <div>
                     <Field
                       type="text"
                       name="name"
-                      placeholder="USERNAME"
+                      placeholder="FULL NAME"
                       className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
                     <ErrorMessage
                       name="name"
                       component="div"
-                      className="text-red-600 text-sm"
+                      className="text-red-600 text-sm mt-1"
                     />
+                  </div>
+                  <div>
                     <Field
                       type="email"
                       name="email"
-                      placeholder="EMAIL"
+                      placeholder="EMAIL ADDRESS"
                       className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
                     <ErrorMessage
                       name="email"
                       component="div"
-                      className="text-red-600 text-sm"
+                      className="text-red-600 text-sm mt-1"
                     />
-                    <div className="relative">
-                      <Field
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        placeholder="PASSWORD"
-                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    <ErrorMessage
+                  </div>
+                  <div className="relative">
+                    <Field
+                      type={showPassword ? "text" : "password"}
                       name="password"
-                      component="div"
-                      className="text-red-600 text-sm"
+                      placeholder="PASSWORD"
+                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
-                    <div className="relative">
-                      <Field
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        placeholder="CONFIRM PASSWORD"
-                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    <ErrorMessage
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-black"
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                  <ErrorMessage
+                    name="password"
+                    component="div"
+                    className="text-red-600 text-sm -mt-3"
+                  />
+                  <div className="relative">
+                    <Field
+                      type={showConfirmPassword ? "text" : "password"}
                       name="confirmPassword"
-                      component="div"
-                      className="text-red-600 text-sm"
+                      placeholder="CONFIRM PASSWORD"
+                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
                     />
-
-                    {/* Referral Code Field */}
-                    <div className="relative">
-                      <Field
-                        type="text"
-                        name="referralCode"
-                        placeholder="REFERRAL CODE (OPTIONAL)"
-                        className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
-                      />
-                      <ErrorMessage
-                        name="referralCode"
-                        component="div"
-                        className="text-red-600 text-sm"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-black"
+                    >
+                      {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                  <ErrorMessage
+                    name="confirmPassword"
+                    component="div"
+                    className="text-red-600 text-sm -mt-3"
+                  />
+                  <div>
+                    <Field
+                      type="text"
+                      name="referralCode"
+                      placeholder="REFERRAL CODE (OPTIONAL)"
+                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide"
+                    />
+                    <ErrorMessage
+                      name="referralCode"
+                      component="div"
+                      className="text-red-600 text-sm mt-1"
+                    />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300 disabled:bg-gray-400"
+                    className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300"
                     disabled={loading}
                   >
                     {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
@@ -313,110 +325,75 @@ const UserRegister = () => {
               validationSchema={otpSchema}
               onSubmit={async (values, { setSubmitting }) => {
                 try {
-
                   await dispatch(verifyOTP({ userId, otp: values.otp }));
                 } catch (err) {
                   console.error("OTP Form Submit Error:", err);
                 } finally {
                   setSubmitting(false);
-              
                 }
               }}
             >
-              {({ isSubmitting }) => (
+              {() => (
                 <Form className="space-y-6">
-                  <div className="flex flex-col items-center mb-2">
-                    <span className="text-xs text-gray-700 font-semibold">
-                      OTP expires in: {Math.floor(otpTimer / 60)}:
-                      {otpTimer % 60 < 10
-                        ? "0" + (otpTimer % 60)
-                        : otpTimer % 60}
-                      s
-                    </span>
-                    {otpTimer === 0 && (
-                      <span className="text-xs text-red-600 font-semibold mt-1">
-                        OTP expired. Please resend OTP.
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-4">
+                  <div>
                     <Field
                       type="text"
                       name="otp"
                       placeholder="ENTER 6-DIGIT OTP"
-                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide text-center letter-spacing-wide"
                       maxLength="6"
-                      disabled={otpTimer === 0}
+                      className="w-full px-4 py-4 bg-gray-100 border-2 border-transparent rounded-none text-black placeholder-gray-500 focus:border-black focus:bg-white transition-all duration-300 font-medium tracking-wide text-center"
                     />
                     <ErrorMessage
                       name="otp"
                       component="div"
-                      className="text-red-600 text-sm"
+                      className="text-red-600 text-sm mt-1"
                     />
                   </div>
-                  <div className="flex flex-col gap-2 items-center">
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={!canResend || loading}
-                      className={`w-full py-2 px-4 border-2 border-black font-bold tracking-wider rounded transition-colors duration-300 ${
-                        canResend
-                          ? "bg-black text-white hover:bg-white hover:text-black"
-                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
-                    >
-                      {canResend ? "Resend OTP" : `Resend OTP in ${otpTimer}s`}
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-
-                    <button
-                      type="submit"
-                      className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300"
-                      disabled={false} // TEMP: always enabled for debugging
-                    >
-                      {loading ? "VERIFYING..." : "VERIFY OTP"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        dispatch(resetOTP());
-                        setDevOtp("");
-                      }}
-                      className="w-full bg-white text-black py-4 font-bold tracking-wider border-2 border-black hover:bg-black hover:text-white transition-colors duration-300"
-                      disabled={loading}
-                    >
-                      GO BACK
-                    </button>
-                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-black text-white py-4 font-bold tracking-wider hover:bg-gray-900 transition-colors duration-300"
+                    disabled={loading}
+                  >
+                    {loading ? "VERIFYING..." : "VERIFY & REGISTER"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={!canResend || loading}
+                    className={`w-full py-2 px-4 border-2 border-black font-bold tracking-wider rounded transition-colors duration-300 ${
+                      canResend
+                        ? "bg-black text-white hover:bg-white hover:text-black"
+                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    {canResend ? "Resend OTP" : `Resend OTP in ${otpTimer}s`}
+                  </button>
                 </Form>
               )}
             </Formik>
           )}
-          {!otpSent && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500 uppercase tracking-wide text-sm font-medium">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-              <div
-                id="googleSignInButton"
-                className="flex justify-center"
-              ></div>
-              <p className="text-center text-black">
-                Already have an account?{" "}
-                <a href="/login" className="font-bold hover:underline">
-                  Sign in now
-                </a>
-              </p>
-            </>
-          )}
+          {/* End of conditional rendering for forms */}
+
+          <div className="relative flex items-center justify-center my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative px-3 bg-white text-sm text-gray-500">
+              OR
+            </div>
+          </div>
+
+          <div id="googleSignInButton" className="flex justify-center"></div>
+
+          <p className="text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-black hover:underline"
+            >
+              Log in
+            </Link>
+          </p>
         </div>
       </div>
     </div>

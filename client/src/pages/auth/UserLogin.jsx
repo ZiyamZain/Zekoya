@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { userLogin, googleLogin } from "../../features/userAuth/userAuthSlice";
-import { jwtDecode } from "jwt-decode";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const UserLogin = () => {
@@ -31,7 +30,7 @@ const UserLogin = () => {
     }
   };
 
-  const handleGoogleLogin = (response) => {
+  const handleGoogleLogin = useCallback((response) => {
     dispatch(googleLogin({ token: response.credential }))
       .then((data) => {
         // Store the JWT token in localStorage after successful login
@@ -41,23 +40,9 @@ const UserLogin = () => {
       .catch((error) => {
         console.error("Google login failed:", error);
       });
-  };
+  }, [dispatch, navigate]);
 
-  const handleLogin = async () => {
-    try {
-      // Validate token before decoding
-      if (response.data.token && typeof response.data.token === "string") {
-        const decodedToken = jwtDecode(response.data.token);
-        // ...existing code using decodedToken...
-      } else {
-        console.error("Invalid token received:", response.data.token);
-        throw new Error("Invalid token format");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      // Handle error gracefully
-    }
-  };
+
 
   useEffect(() => {
     /* global google */
@@ -75,12 +60,11 @@ const UserLogin = () => {
         }
       );
     }
-  }, []);
+  }, [handleGoogleLogin]);
 
   useEffect(() => {
     if (userInfo && userInfo.token) {
       try {
-        const decodedToken = jwtDecode(userInfo.token);
         localStorage.setItem("userInfo", JSON.stringify(userInfo));
         navigate("/home");
       } catch (error) {

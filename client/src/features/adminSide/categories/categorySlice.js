@@ -139,7 +139,7 @@ const categorySlice = createSlice({
       // Reset to page 1 after adding a new category
       state.currentPage = 1;
     },
-    refreshCategories: (state, action) => {
+    refreshCategories: (state) => {
       // This action will be dispatched after adding a category
       // The actual refresh will happen via the useEffect in the component
       state.refreshTrigger = Date.now();

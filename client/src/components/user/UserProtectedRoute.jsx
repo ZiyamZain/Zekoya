@@ -22,7 +22,7 @@ const UserProtectedRoute = ({ children }) => {
       try {
         // Check authentication status using the token
         // The userAxios instance will handle token refresh automatically if needed
-        const response = await userAxios.get("/check-auth");
+        await userAxios.get("/check-auth");
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Authentication verification failed:", error);

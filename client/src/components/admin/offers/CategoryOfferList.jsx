@@ -25,10 +25,13 @@ const CategoryOfferList = () => {
     categoryOffers, 
     isLoading, 
     isError, 
-    isSuccess, 
     message,
     totalPages 
   } = useSelector(state => state.categoryOffer);
+
+  useEffect(() => {
+    setPage(1); // Reset to page 1 when search term changes
+  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(getAllCategoryOffers({ page, search: searchTerm }));
@@ -36,7 +39,7 @@ const CategoryOfferList = () => {
     return () => {
       dispatch(reset());
     };
-  }, [dispatch, page]);
+  }, [dispatch, page, searchTerm]);
 
   useEffect(() => {
     if (isError) {

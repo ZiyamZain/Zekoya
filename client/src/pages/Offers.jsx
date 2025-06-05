@@ -37,7 +37,7 @@ const Offers = () => {
   const formatDate = (dateString) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy');
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
       return dateString;
     }
   };
