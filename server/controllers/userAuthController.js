@@ -309,6 +309,15 @@ export const loginUser = async (req, res) => {
     // store refresh token in database
     user.refreshToken = newRefreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
+
+    // Ensure profileImage is an object before saving, correcting malformed string data
+    if (user.profileImage && typeof user.profileImage === 'string') {
+      user.profileImage = { url: user.profileImage, public_id: '' };
+    } else if (!user.profileImage || typeof user.profileImage.url === 'undefined' || typeof user.profileImage.public_id === 'undefined') {
+      // If profileImage is null, undefined, or not the expected object structure (e.g. just {url: 'blah'}), ensure it adheres to schema default
+      user.profileImage = { url: user.profileImage && typeof user.profileImage.url !== 'undefined' ? user.profileImage.url : '', public_id: '' };
+    }
+
     await user.save();
 
     res.status(200).json({
@@ -369,6 +378,25 @@ export const googleLogin = async (req, res) => {
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
     const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Ensure profileImage is an object before saving, correcting malformed string data
+    // and updating with the latest picture from Google for existing users.
+    // 'profileImage' variable here comes from: const { name, email, picture: profileImage } = payload;
+
+    if (user.profileImage && typeof user.profileImage === 'string') {
+      // Case 1: profileImage was a string (old bad data from a previous Google login or manual entry)
+      user.profileImage = { url: profileImage || user.profileImage, public_id: '' };
+    } else if (user.profileImage && typeof user.profileImage === 'object' && typeof user.profileImage.url !== 'undefined') {
+      // Case 2: profileImage is already an object, update URL from Google, preserve existing public_id
+      user.profileImage.url = profileImage || user.profileImage.url; 
+      // Ensure public_id exists, even if empty, to conform to schema
+      if (typeof user.profileImage.public_id === 'undefined') {
+        user.profileImage.public_id = '';
+      }
+    } else {
+      // Case 3: profileImage was null, undefined, or not a usable object. Create/reset it using Google's picture.
+      user.profileImage = { url: profileImage || '', public_id: '' };
+    }
 
     // Store refresh token in database
     user.refreshToken = newRefreshToken;
