@@ -25,6 +25,7 @@ const orderAxios = createUserAxiosInstance('/api/orders');
 const couponAxios = createUserAxiosInstance('/api/coupons');
 const paymentAxios = createUserAxiosInstance('/api/payments');
 const offerAxios = createUserAxiosInstance('/api/offers');
+const categoryAxios = createUserAxiosInstance('/api/categories');
 
 
 // Configure request interceptor for all instances
@@ -83,4 +84,4 @@ function configureResponseInterceptor(instance) {
 }
 
 // Export all instances
-export { userAxios, productAxios, cartAxios, wishlistAxios, orderAxios, couponAxios, paymentAxios, offerAxios };
+export { userAxios, productAxios, cartAxios, wishlistAxios, orderAxios, couponAxios, paymentAxios, offerAxios, categoryAxios };

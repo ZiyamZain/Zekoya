@@ -6,10 +6,10 @@ import { FiArrowRight, FiTag } from 'react-icons/fi';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { FaRunning, FaBasketballBall, FaFootballBall, FaVolleyballBall } from 'react-icons/fa';
-
-const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
+import { getBaseImageUrl } from "../../utils/urlUtils"; // Adjust path as needed
 
 const Categories = () => {
+  const baseImageUrl = getBaseImageUrl();
   const dispatch = useDispatch();
   const { categories, isLoading, isError, message } = useSelector((state) => state.categories);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -182,11 +182,11 @@ const Categories = () => {
                         <img
                           src={
                             (category.image && typeof category.image === 'object' && category.image.url)
-                              ? category.image.url // Handles new Cloudinary objects
+                              ? category.image.url // Cloudinary object with direct URL
                               : (category.image && typeof category.image === 'string')
-                                ? (category.image.startsWith('/uploads')
-                                  ? `${BACKEND_URL}${category.image}` // Handles old local paths
-                                  : category.image) // Handles old absolute URLs or direct string Cloudinary URLs
+                                ? (category.image.startsWith('http') // Already an absolute URL (e.g., direct Cloudinary string URL)
+                                  ? category.image
+                                  : `${baseImageUrl}${category.image.startsWith('/') ? '' : '/'}${category.image}`) // Relative path, prepend base
                                 : 'https://via.placeholder.com/1200x800?text=Sport+Category' // Default placeholder
                           }
                           alt={category.name}

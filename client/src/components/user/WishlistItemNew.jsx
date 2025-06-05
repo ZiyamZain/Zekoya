@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { removeFromWishlist } from "../../features/wishlist/wishlistSlice";
 import { addToCart } from "../../features/cart/cartSlice";
 import { toast } from "react-toastify";
+import { getImageUrl } from "../../utils/imageUtils"; // Use consistent image URL utility
 const WishlistItemNew = ({ product }) => {
   const dispatch = useDispatch();
 
@@ -43,16 +44,16 @@ const WishlistItemNew = ({ product }) => {
     <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4">
       <div className="flex flex-col md:flex-row">
         {/* Product Image */}
-        <div className="md:w-1/3 p-4">
+        <div className="md:w-2/5 p-4">
           <img
-            src={`http://localhost:5001${product.images[0]}`}
+            src={getImageUrl(product.images[0])}
             alt={product.name}
-            className="w-full h-48 object-cover rounded-md"
+            className="w-full h-40 object-contain rounded-md"
           />
         </div>
 
         {/* Product Details */}
-        <div className="md:w-2/3 p-4 flex flex-col justify-between">
+        <div className="md:w-3/5 p-4 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
               {product.name}

@@ -5,8 +5,8 @@ import { toast } from 'react-toastify';
 import {useDispatch , useSelector} from "react-redux";
 import { addToWishlist,removeFromWishlist} from "../features/wishlist/wishlistSlice";
 import ProductCardOffer from './ProductCardOffer';
-import axios from 'axios';
 import { getImageUrl } from '../utils/imageUtils';
+import { offerAxios } from '../utils/userAxiosConfig'; // Adjusted path assuming utils is one level up from components
 
 const ProductCard = ({ product }) => {
   const {
@@ -26,7 +26,7 @@ const ProductCard = ({ product }) => {
       if (!_id) return;
       
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/offers/product/active/${_id}`);
+        const response = await offerAxios.get(`/product/active/${_id}`);
         if (response.data) {
           setActiveOffer(response.data);
         }

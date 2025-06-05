@@ -1,4 +1,5 @@
 import asyncHandler from 'express-async-handler';
+import mongoose from 'mongoose'; // Added for ObjectId validation
 import Product from '../models/productModel.js';
 import Category from '../models/categoryModel.js';
 
@@ -56,6 +57,11 @@ export const getProductsByCategory = asyncHandler(async (req, res) => {
 
 export const getProductById = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid product ID format' });
+  }
 
   try {
     const product = await Product.findById(id)

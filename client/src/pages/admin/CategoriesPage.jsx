@@ -13,10 +13,10 @@ import CategoryModal from "../../components/admin/CategoryModal";
 import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
 import { createSelector } from "@reduxjs/toolkit";
-
-const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
+import { getBaseImageUrl } from "../../utils/urlUtils"; // Adjust path as needed
 
 const CategoriesPage = () => {
+  const baseImageUrl = getBaseImageUrl();
   const dispatch = useDispatch();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -213,11 +213,11 @@ const CategoriesPage = () => {
                           <img
                             src={
                               (category.image && typeof category.image === 'object' && category.image.url)
-                                ? category.image.url // Handles new Cloudinary objects
+                                ? category.image.url // Cloudinary object with direct URL
                                 : (category.image && typeof category.image === 'string')
-                                  ? (category.image.startsWith('/uploads')
-                                    ? `${BACKEND_URL}${category.image}` // Handles old local paths
-                                    : category.image) // Handles old absolute URLs or direct string Cloudinary URLs
+                                  ? (category.image.startsWith('http') // Already an absolute URL
+                                    ? category.image
+                                    : `${baseImageUrl}${category.image.startsWith('/') ? '' : '/'}${category.image}`) // Relative path, prepend base
                                   : "/default-category.png" // Default if no image or unrecognized format
                             }
                             alt={category.name}

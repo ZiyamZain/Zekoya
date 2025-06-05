@@ -1,19 +1,17 @@
-import axios from "axios";
-import { userAxios } from '../../utils/userAxiosConfig';
-
-const API_URL = "http://localhost:5001/api/users";
+import { userAxios } from '../../utils/userAxiosConfig'; // Ensure userAxios is imported
 
 const register = async (userData) => {
-  const response = await axios.post(`${API_URL}/register`, userData);
+  // Use relative path; userAxios prepends '/api/users'
+  const response = await userAxios.post("/register", userData);
 
   if (response.data && response.data.otp) {
-    console.log("DEV OTP:", response.data.otp);
+    console.log("DEV OTP:", response.data.otp); // Keep for development if needed
   }
   return response.data;
 };
 
 const verifyOTP = async (otpData) => {
-  const response = await axios.post(`${API_URL}/verify-otp`, otpData);
+  const response = await userAxios.post("/verify-otp", otpData);
   if (response.data) {
     localStorage.setItem("userInfo", JSON.stringify(response.data));
   }
@@ -21,7 +19,7 @@ const verifyOTP = async (otpData) => {
 };
 
 const login = async (userData) => {
-  const response = await axios.post(`${API_URL}/login`, userData);
+  const response = await userAxios.post("/login", userData);
   if (response.data) {
     localStorage.setItem("userInfo", JSON.stringify(response.data));
   }
@@ -30,7 +28,7 @@ const login = async (userData) => {
 
 // Google Login
 const googleLogin = async (userData) => {
-  const response = await axios.post(`${API_URL}/google-login`, userData);
+  const response = await userAxios.post("/google-login", userData);
   if (response.data) {
     localStorage.setItem("userInfo", JSON.stringify(response.data));
   }
@@ -55,22 +53,23 @@ const logout = async () => {
 
 // Refresh token function
 const refreshToken = async (refreshToken) => {
-  const response = await axios.post(`${API_URL}/refresh-token`, { refreshToken });
+  // This function is usually called by the interceptor, but if called directly, it should use userAxios
+  const response = await userAxios.post("/refresh-token", { refreshToken });
   return response.data;
 };
 
 const sendForgotPasswordOtp = async ({ email }) => {
-  const response = await axios.post(`${API_URL}/forgot-password/send-otp`, {
+  const response = await userAxios.post("/forgot-password/send-otp", {
     email,
   });
   if (response.data && response.data.otp) {
-    console.log("DEV FORGOT PASSWORD OTP:", response.data.otp);
+    console.log("DEV FORGOT PASSWORD OTP:", response.data.otp); // Keep for dev if needed
   }
   return response.data;
 };
 
 const verifyForgotPasswordOtp = async ({ userId, otp }) => {
-  const response = await axios.post(`${API_URL}/forgot-password/verify-otp`, {
+  const response = await userAxios.post("/forgot-password/verify-otp", {
     userId,
     otp,
   });
@@ -78,8 +77,8 @@ const verifyForgotPasswordOtp = async ({ userId, otp }) => {
 };
 
 const changePassword = async ({ userId, password }) => {
-  const response = await axios.post(
-    `${API_URL}/forgot-password/change-password`,
+  const response = await userAxios.post(
+    "/forgot-password/change-password",
     { userId, password }
   );
   return response.data;
@@ -87,7 +86,7 @@ const changePassword = async ({ userId, password }) => {
 
 // Resend OTP
 const resendOTP = async (email) => {
-  const response = await axios.post(`${API_URL}/resend-otp`, { email });
+  const response = await userAxios.post("/resend-otp", { email });
   return response.data;
 };
 

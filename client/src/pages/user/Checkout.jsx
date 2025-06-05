@@ -14,8 +14,7 @@ import { clearActiveCoupon } from "../../features/coupons/couponSlice";
 import { getAddresses, getUserProfile } from "../../features/userProfile/userProfileSlice";
 import { FaMapMarkerAlt, FaCheck, FaTag, FaWallet } from "react-icons/fa";
 import CouponApply from "../../components/user/CouponApply";
-import { paymentAxios } from "../../utils/userAxiosConfig";
-import axios from "axios";
+import { paymentAxios, offerAxios } from "../../utils/userAxiosConfig"; // Added offerAxios
 import { getImageUrl } from "../../utils/imageUtils";
 
 
@@ -75,7 +74,7 @@ const Checkout = () => {
         
 
         try {
-          const productOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/product/active/${productId}`);
+          const productOfferResponse = await offerAxios.get(`/product/active/${productId}`);
           if (productOfferResponse.data) {
             productOffers[productId] = productOfferResponse.data;
             
@@ -95,7 +94,7 @@ const Checkout = () => {
         if (item.product.category) {
           try {
             const categoryId = typeof item.product.category === 'object' ? item.product.category._id : item.product.category;
-            const categoryOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/category/active/${categoryId}`);
+            const categoryOfferResponse = await offerAxios.get(`/category/active/${categoryId}`);
             
             if (categoryOfferResponse.data) {
               categoryOffers[categoryId] = categoryOfferResponse.data;

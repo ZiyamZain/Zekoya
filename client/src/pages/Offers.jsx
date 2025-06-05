@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaTag, FaPercent, FaGift, FaArrowRight } from 'react-icons/fa';
-import axios from 'axios';
 import { format } from 'date-fns';
+import { offerAxios } from "../utils/userAxiosConfig"; // Adjust path as needed
+import { getImageUrl } from "../utils/imageUtils"; // Adjust path as needed
 import ProductOffer from '../components/ProductOffer';
 import CategoryOffer from '../components/CategoryOffer';
 
@@ -19,7 +20,7 @@ const Offers = () => {
     const fetchOffers = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/offers/active`);
+        const response = await offerAxios.get('/active');
         setOffers(response.data);
         setError(null);
       } catch (err) {
@@ -105,7 +106,7 @@ const Offers = () => {
                     {offer.product && offer.product.images && offer.product.images[0] && (
                       <div className="h-48 overflow-hidden relative">
                         <img 
-                          src={`${import.meta.env.VITE_API_URL}/${offer.product.images[0]}`} 
+                          src={getImageUrl(offer.product.images[0])} 
                           alt={offer.product.name} 
                           className="w-full h-full object-cover"
                         />

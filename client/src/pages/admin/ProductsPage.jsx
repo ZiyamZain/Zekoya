@@ -21,10 +21,10 @@ import {
 import { toast } from "react-toastify";
 import AddProductForm from "../../components/admin/AddProductForm";
 import EditProductForm from "../../components/admin/EditProductForm"; // Import EditProductForm
-
-const BACKEND_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5001';
+import { getBaseImageUrl } from "../../utils/urlUtils"; // Adjust path as needed
 
 const ProductsPage = () => {
+  const baseImageUrl = getBaseImageUrl();
   const dispatch = useDispatch();
   const { products, total, isLoading, refreshTrigger } = useSelector(
     (state) => state.adminProducts
@@ -213,11 +213,11 @@ const ProductsPage = () => {
                               src={
                                 product.images && product.images.length > 0
                                   ? typeof product.images[0] === 'object' && product.images[0] !== null && product.images[0].url
-                                    ? product.images[0].url // Cloudinary image object
+                                    ? product.images[0].url // Cloudinary image object with direct URL
                                     : typeof product.images[0] === 'string'
-                                      ? product.images[0].startsWith('/uploads') // Legacy local path string
-                                        ? `${BACKEND_URL}${product.images[0]}`
-                                        : product.images[0] // Other string path (e.g., already absolute URL)
+                                      ? product.images[0].startsWith('http') // Already an absolute URL
+                                        ? product.images[0]
+                                        : `${baseImageUrl}${product.images[0].startsWith('/') ? '' : '/'}${product.images[0]}` // Relative path, prepend base
                                       : "/default-product.png" // Fallback if images[0] is not object or string
                                   : "/default-product.png" // Fallback if no images array or empty
                               }

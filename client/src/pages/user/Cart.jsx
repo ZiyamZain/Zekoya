@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { getCart, resetCart } from "../../features/cart/cartSlice";
 import CartItem from "../../components/user/cartItem";
-import axios from "axios";
+import { offerAxios } from "../../utils/userAxiosConfig"; // Added offerAxios
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -35,7 +35,7 @@ const Cart = () => {
         
         // Fetch product offer
         try {
-          const productOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/product/active/${productId}`);
+          const productOfferResponse = await offerAxios.get(`/product/active/${productId}`);
           if (productOfferResponse.data) {
             productOffers[productId] = productOfferResponse.data;
             
@@ -57,7 +57,7 @@ const Cart = () => {
         if (item.product.category) {
           try {
             const categoryId = typeof item.product.category === 'object' ? item.product.category._id : item.product.category;
-            const categoryOfferResponse = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/offers/category/active/${categoryId}`);
+            const categoryOfferResponse = await offerAxios.get(`/category/active/${categoryId}`);
             
             if (categoryOfferResponse.data) {
               categoryOffers[categoryId] = categoryOfferResponse.data;

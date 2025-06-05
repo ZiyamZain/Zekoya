@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateCartItem, removeFromCart, resetCart } from "../../features/cart/cartSlice";
 import { FaTag } from "react-icons/fa";
-import axios from "axios";
+import { offerAxios } from "../../utils/userAxiosConfig";
 import { getImageUrl } from "../../utils/imageUtils";
 
 const CartItem = memo(({ item }) => {
@@ -33,18 +33,16 @@ const CartItem = memo(({ item }) => {
 
       try {
         try {
-          const productOfferResponse = await axios.get(
-            `${
-              import.meta.env.VITE_API_URL || "http://localhost:5001"
-            }/api/offers/product/active/${product._id}`
+          const productOfferResponse = await offerAxios.get(
+            `/product/active/${product._id}`
           );
           setActiveOffer(productOfferResponse.data);
         } catch (error) {
-          // If it's a 404, just means no offers available
           if (error.response && error.response.status === 404) {
             setActiveOffer(null);
           } else {
             console.error("Error fetching product offer:", error);
+            setActiveOffer(null); 
           }
         }
 
@@ -55,18 +53,16 @@ const CartItem = memo(({ item }) => {
               ? product.category._id
               : product.category;
           try {
-            const categoryOfferResponse = await axios.get(
-              `${
-                import.meta.env.VITE_API_URL || "http://localhost:5001"
-              }/api/offers/category/active/${categoryId}`
+            const categoryOfferResponse = await offerAxios.get(
+              `/category/active/${categoryId}`
             );
             setActiveCategoryOffer(categoryOfferResponse.data);
           } catch (error) {
-            // If it's a 404, just means no category offers available
             if (error.response && error.response.status === 404) {
               setActiveCategoryOffer(null);
             } else {
               console.error("Error fetching category offer:", error);
+              setActiveCategoryOffer(null);
             }
           }
         }
