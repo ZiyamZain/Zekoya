@@ -22,6 +22,7 @@ import productRoutes from './routes/productRoutes.js';
 import adminOfferRoutes from './routes/adminOfferRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import helmet from 'helmet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
 
 const uploadsPath = path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsPath));
@@ -87,13 +89,23 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/admin/reports', reportRoutes);
 
 app.use((err, req, res, _next) => {
-  console.error('Server Error:', err);
-  console.error('Error Stack:', err.stack);
-  console.error('Request URL:', req.originalUrl);
-  console.error('Request Method:', req.method);
-  console.error('Request Body:', req.body);
-  console.error('Request Files:', req.files);
-  console.error('Request Headers:', req.headers);
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  console.error('Server Error:', err.message);
+  if (isDevelopment) {
+    console.error('Error Stack:', err.stack);
+    console.error('Request URL:', req.originalUrl);
+    console.error('Request Method:', req.method);
+    console.error('Request Body:', req.body);
+    console.error('Request Files:', req.files);
+    console.error('Request Headers:', req.headers);
+  } else {
+    // In production, log less sensitive info but enough to trace
+    console.error('Request URL:', req.originalUrl);
+    console.error('Request Method:', req.method);
+    if (req.user) { // If you have user info on req, log user ID for traceability
+      console.error('User ID:', req.user._id || req.user.id);
+    }
+  }
 
   if (err.name === 'CastError') {
     return res.status(400).json({
@@ -112,13 +124,13 @@ app.use((err, req, res, _next) => {
   if (err.statusCode) {
     return res.status(err.statusCode).json({
       message: err.message,
-      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      error: isDevelopment ? err.stack : undefined,
     });
   }
 
   res.status(500).json({
     message: err.message || 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    error: isDevelopment ? err.stack : undefined,
   });
 });
 
