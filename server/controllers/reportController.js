@@ -489,348 +489,221 @@ export const getSalesReport = asyncHandler(async (req, res) => {
         const doc = new PDFDocument({
           margin: 40,
           size: 'A4',
-          layout: 'portrait',
-          bufferPages: true,
+          layout: 'landscape', // Consider landscape if there are many columns
         });
 
         // Set response headers for PDF download
+        const filename = `sales-report_${req.query.startDate || req.query.period || 'all'}_to_${req.query.endDate || 'all'}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader(
           'Content-Disposition',
-          `attachment; filename=sales-report-${Date.now()}.pdf`,
+          `attachment; filename="${filename}"`,
         );
-
-        // Create a buffer to collect the PDF data
-        const chunks = [];
-        doc.on('data', (chunk) => chunks.push(chunk));
-        doc.on('end', () => {
-          const result = Buffer.concat(chunks);
-
-          res.end(result);
-        });
-
-        // Pipe the PDF to the response
         doc.pipe(res);
 
-        // Add logo and header
+        // --- Report Header ---
         doc
-          .fontSize(24)
+          .fontSize(18)
           .font('Helvetica-Bold')
-          .fillColor('#2c3e50')
-          .text('SALES REPORT', { align: 'center' });
+          .text('Sales Report', { align: 'center' });
+        doc.moveDown();
+        const reportDateRange = period
+          ? `Period: ${period}`
+          : `From: ${formatDate(
+            new Date(dateFilter.createdAt.$gte),
+            'yyyy-MM-dd',
+          )} To: ${formatDate(
+            new Date(dateFilter.createdAt.$lte),
+            'yyyy-MM-dd',
+          )}`;
+        doc.fontSize(10).font('Helvetica').text(reportDateRange, { align: 'center' });
+        doc.moveDown(2);
 
-        // Add date range
-        doc
-          .fontSize(10)
-          .fillColor('#7f8c8d')
-          .text(
-            `Date Range: ${formatDate(
-              new Date(startDate),
-              'dd MMM yyyy',
-            )} - ${formatDate(new Date(endDate), 'dd MMM yyyy')}`,
-            { align: 'center', lineGap: 20 },
-          );
 
-        // Add summary section with better styling
-        doc
-          .fontSize(14)
-          .fillColor('#2c3e50')
-          .text('SUMMARY', { underline: true });
+        // --- Summary Section (Using periodSummary) ---
+        doc.fontSize(12).font('Helvetica-Bold').text('Report Summary:', { underline: true });
+        doc.moveDown(0.5);
+        
+        let currentY = doc.y; // Y position for current row
+        const summaryLabelX = doc.x; // Starts at left margin
+        const summaryValueX = summaryLabelX + 200; // X position for the start of value text
+        const summaryValueWidth = 100; // Width for the value text block, allows for right alignment
+        const summaryLineHeight = doc.currentLineHeight() + 3;
 
-        // Summary box
-        const summaryY = doc.y + 10;
-        doc.roundedRect(40, summaryY, doc.page.width - 80, 80, 5).fill('#f8f9fa');
-
-        // Summary content
-        const summaryItems = [
-          { label: 'Total Orders', value: responseData.summary.totalOrders },
-          {
-            label: 'Total Revenue',
-            value: `₹${responseData.summary.totalRevenue.toFixed(2)}`,
-          },
-          {
-            label: 'Total Discount',
-            value: `₹${responseData.summary.totalDiscount.toFixed(2)}`,
-          },
-          {
-            label: 'Avg. Order Value',
-            value: `₹${responseData.summary.averageOrderValue.toFixed(2)}`,
-          },
-        ];
-
-        const summaryCol1X = 60;
-        const summaryCol2X = 250;
-        let currentY = summaryY + 20;
-
-        summaryItems.forEach((item, index) => {
-          const x = index % 2 === 0 ? summaryCol1X : summaryCol2X;
-          if (index % 2 === 0 && index > 0) currentY += 25;
-
-          doc
-            .fontSize(10)
-            .fillColor('#7f8c8d')
-            .text(`${item.label}:`, x, currentY);
-
-          doc
-            .fontSize(12)
-            .fillColor('#2c3e50')
-            .text(item.value, x + 100, currentY);
-        });
-
-        // Orders section
-        const ordersY = currentY + 30;
-        doc
-          .fontSize(14)
-          .font('Helvetica-Bold')
-          .fillColor('#2c3e50')
-          .text('ORDER DETAILS', 40, ordersY, {
-            underline: false,
-            align: 'left',
-            lineGap: 10,
+        const printSummaryRow = (label, value) => {
+          doc.font('Helvetica-Bold').fontSize(9).text(label, summaryLabelX, currentY);
+          doc.font('Helvetica').fontSize(9).text(value, summaryValueX, currentY, {
+            width: summaryValueWidth,
+            align: 'right'
           });
+          currentY += summaryLineHeight;
+        };
 
-        // Table headers and layout
-        const leftMargin = 40;
-        const rowHeight = 20;
-        const colWidths = [90, 70, 150, 80, 80];
+        printSummaryRow('Total Orders:', totalOrders.toString());
+        printSummaryRow('Total Items Sold:', periodSummary.totalItemsAgg.toFixed(0));
+        printSummaryRow('Subtotal (Items Price):', `₹${periodSummary.subtotalAmountAgg.toFixed(2)}`);
+        printSummaryRow('Total Product/Offer Discounts:', `₹${periodSummary.totalProductOfferDiscountAgg.toFixed(2)}`);
+        printSummaryRow('Total Coupon Discounts:', `₹${periodSummary.totalCouponDiscountAgg.toFixed(2)}`);
+        // Tax is removed as per request
+        // printSummaryRow('Total Tax:', `₹${periodSummary.totalTaxAgg.toFixed(2)}`); 
+        printSummaryRow('Total Shipping:', `₹${periodSummary.totalShippingAgg.toFixed(2)}`);
+        printSummaryRow('Total Revenue:', `₹${periodSummary.totalRevenueAgg.toFixed(2)}`);
+        
+        doc.y = currentY; // Update doc.y to position after last summary item
+        doc.moveDown(2);
 
-        // Calculate available rows per page
-        const rowsPerPage = 7; // Match the limit for consistency
 
-        // Split orders into chunks that fit on each page
-        const allOrders = responseData.orders;
-        const orderChunks = [];
-        for (let i = 0; i < allOrders.length; i += rowsPerPage) {
-          orderChunks.push(allOrders.slice(i, i + rowsPerPage));
-        }
+        // --- Table Headers ---
+        const tableTop = doc.y; // Y position for the table headers
+        const headers = [
+          'Order ID', // Left
+          'Date',     // Left
+          'Customer', // Left
+          'Items Price',// Right
+          'Offer Disc.',// Right
+          'Coupon',     // Center
+          'Coupon Disc.',// Right
+          // Tax column removed
+          'Shipping',   // Right
+          'Total',      // Right
+          'Status',     // Center
+        ];
+        // Adjusted column widths for 10 columns to fit A4 landscape (~761 points available)
+        const columnWidths = [75, 60, 110, 75, 70, 70, 75, 65, 80, 50]; // Sum: 730
+        let currentX = doc.page.margins.left; // Explicitly start at left page margin
 
-        // If no orders, add an empty chunk to show the table header
-        if (orderChunks.length === 0) {
-          orderChunks.push([]);
-        }
+        doc.font('Helvetica-Bold').fontSize(8);
+        headers.forEach((header, i) => {
+          let align = 'left';
+          if (['Items Price', 'Offer Disc.', 'Coupon Disc.', 'Shipping', 'Total'].includes(header)) {
+            align = 'right';
+          } else if (['Coupon', 'Status'].includes(header)) {
+            align = 'center';
+          }
+          // Use currentX directly as the starting X for the cell, and full columnWidths[i]
+          doc.text(header, currentX, tableTop, {
+            width: columnWidths[i],
+            align: align,
+          });
+          currentX += columnWidths[i];
+        });
+        doc.moveDown(0.5); // Space after headers
+        const headerBottomY = doc.y;
+        doc
+          .moveTo(doc.x, headerBottomY)
+          .lineTo(doc.x + columnWidths.reduce((a, b) => a + b, 0) - doc.page.margins.left , headerBottomY) // Adjust line width
+          .stroke();
+        doc.moveDown();
 
-        // Process each page of orders
-        orderChunks.forEach((tableRows, pageIndex) => {
-        // Add new page for all chunks after the first one
-          if (pageIndex > 0) {
-            doc.addPage();
-            // Reset Y position for the new page
-            currentY = 50;
 
-            // Add header for subsequent pages
-            doc
-              .fontSize(24)
-              .font('Helvetica-Bold')
-              .fillColor('#2c3e50')
-              .text('SALES REPORT (CONTINUED)', { align: 'center' });
+        // --- Table Rows ---
+        currentY = doc.y;
+        doc.font('Helvetica').fontSize(7); // Smaller font for table data
 
-            // Add date range for subsequent pages
-            doc
-              .fontSize(10)
-              .fillColor('#7f8c8d')
-              .text(
-                `Date Range: ${formatDate(new Date(startDate), 'dd MMM yyyy')} - ${formatDate(new Date(endDate), 'dd MMM yyyy')}`,
-                { align: 'center', lineGap: 20 },
-              );
+        const ordersToProcess = format === 'pdf' ? await Order.find(dateFilter) // Fetch all for PDF
+          .sort({ createdAt: -1 })
+          .populate('user', 'name email')
+          .lean() : processedOrders;
+
+
+        // Chunk orders for pagination within PDF (if needed, but for now, let's try to fit all)
+        // For simplicity, this example will try to render all orders.
+        // Proper pagination within PDF would require more complex logic for page breaks.
+
+        ordersToProcess.forEach((order) => {
+          // Check if new page is needed
+          if (currentY + 30 > doc.page.height - doc.page.margins.bottom) { // 30 is an estimated row height
+            doc.addPage({ layout: 'landscape', margin: 40 });
+            currentY = doc.page.margins.top;
+            // Redraw headers on new page
+            let tempX = doc.page.margins.left;
+            doc.font('Helvetica-Bold').fontSize(8);
+            headers.forEach((header, i) => {
+              let align = 'left';
+              if (['Items Price', 'Offer Disc.', 'Coupon Disc.', 'Shipping', 'Total'].includes(header)) {
+                align = 'right';
+              } else if (['Coupon', 'Status'].includes(header)) {
+                align = 'center';
+              }
+              // Use tempX directly as the starting X for the cell, and full columnWidths[i]
+              doc.text(header, tempX, currentY, {
+                width: columnWidths[i],
+                align: align,
+              });
+              tempX += columnWidths[i];
+            });
+            doc.moveDown(0.5);
+            const newHeaderBottomY = doc.y;
+             doc
+              .moveTo(doc.page.margins.left, newHeaderBottomY)
+              .lineTo(doc.page.margins.left + columnWidths.reduce((a, b) => a + b, 0), newHeaderBottomY)
+              .stroke();
+            doc.moveDown();
+            currentY = doc.y;
+            doc.font('Helvetica').fontSize(7);
           }
 
-          // Draw table header
-          doc
-            .roundedRect(leftMargin, currentY, doc.page.width - 80, rowHeight, 3)
-            .fill('#2c3e50');
+          let cellX = doc.page.margins.left;
+          const rowData = [
+            order.orderId || order._id.toString().substring(0, 8),
+            formatDate(new Date(order.createdAt), 'dd-MM-yy'),
+            order.user ? order.user.name : 'N/A',
+            `₹${(order.itemsPrice || 0).toFixed(2)}`,
+            `₹${(order.discountPrice || 0).toFixed(2)}`, // Product/Category Offer Discount
+            order.couponCode || '-',
+            `₹${(order.couponDiscount || 0).toFixed(2)}`,
+            // taxPrice removed
+            `₹${(order.shippingPrice || 0).toFixed(2)}`,
+            `₹${((order.itemsPrice || 0) - (order.discountPrice || 0) - (order.couponDiscount || 0) + (order.shippingPrice || 0) + (order.taxPrice || 0)).toFixed(2)}`,
+            order.orderStatus || 'N/A',
+          ];
 
-          let currentX = leftMargin + 5;
-          const headers = ['Order ID', 'Date', 'Customer', 'Amount', 'Status'];
-          headers.forEach((header, i) => {
-            doc
-              .fontSize(10)
-              .fillColor('#ffffff')
-              .text(header, currentX, currentY + 5, { width: colWidths[i] - 10 });
-            currentX += colWidths[i];
-          });
-
-          // Draw table rows for current page
-          const currentTableY = currentY + rowHeight;
-          tableRows.forEach((order, index) => {
-            const rowY = currentTableY + index * rowHeight;
-
-            // Alternate row colors
-            if (index % 2 === 0) {
-              doc
-                .fillColor('#f8f9fa')
-                .rect(leftMargin, rowY, doc.page.width - 80, rowHeight)
-                .fill();
+          rowData.forEach((cell, i) => {
+            let align = 'left';
+            // Determine alignment based on header (matches header logic)
+            const headerText = headers[i];
+             if (['Items Price', 'Offer Disc.', 'Coupon Disc.', 'Shipping', 'Total'].includes(headerText)) {
+              align = 'right';
+            } else if (['Coupon', 'Status'].includes(headerText)) {
+              align = 'center';
             }
-
-            // Draw cell borders
-            doc
-              .strokeColor('#e0e0e0')
-              .lineWidth(0.5)
-              .moveTo(leftMargin, rowY + rowHeight)
-              .lineTo(leftMargin + doc.page.width - 80, rowY + rowHeight)
-              .stroke();
-
-            // Order ID
-            doc
-              .fontSize(8)
-              .fillColor('#2c3e50')
-              .text(
-                `${(order.orderId || order._id).toString().substring(0, 8)}...`,
-                leftMargin + 5,
-                rowY + 5,
-                { width: colWidths[0] - 10, lineGap: 2 },
-              );
-
-            // Date
-            doc
-              .fontSize(8)
-              .fillColor('#2c3e50')
-              .text(
-                formatDate(new Date(order.createdAt), 'dd MMM yy'),
-                leftMargin + colWidths[0] + 5,
-                rowY + 5,
-                { width: colWidths[1] - 10 },
-              );
-
-            // Customer
-            doc
-              .fontSize(8)
-              .fillColor('#2c3e50')
-              .text(
-                order.user?.name || 'Guest',
-                leftMargin + colWidths[0] + colWidths[3] + 10,
-                rowY + 10,
-                { width: colWidths[3] - 10, ellipsis: true },
-              );
-
-            // Amount - Show final amount after all discounts
-            const finalAmount = (order.totalPrice || 0) - (order.discountPrice || 0);
-            doc
-              .fontSize(8)
-              .fillColor('#2c3e50')
-              .text(
-                `₹${finalAmount.toFixed(2)}`,
-                leftMargin + colWidths[0] + colWidths[1] + colWidths[2] - 5,
-                rowY + 5,
-                { width: colWidths[3] + 10, align: 'left' },
-              );
-
-            // Status with colored pill - Adjust positioning
-            const status = order.orderStatus.toLowerCase();
-            const statusColors = {
-              completed: '#2ecc71',
-              processing: '#3498db',
-              shipped: '#9b59b6',
-              delivered: '#27ae60',
-              cancelled: '#e74c3c',
-              pending: '#f39c12',
-            };
-
-            const statusBg = statusColors[status] || '#95a5a6';
-            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-
-            doc
-              .roundedRect(
-                leftMargin
-                + colWidths[0]
-                + colWidths[1]
-                + colWidths[2]
-                + colWidths[3]
-                + 10,
-                rowY + 2,
-                colWidths[4] - 20,
-                15,
-                7.5,
-              )
-              .fill(statusBg);
-
-            doc
-              .fontSize(7)
-              .fillColor('#ffffff')
-              .text(
-                statusText,
-                leftMargin
-                + colWidths[0]
-                + colWidths[1]
-                + colWidths[2]
-                + colWidths[3]
-                + 10,
-                rowY + 5.5,
-                { width: colWidths[4] - 20, align: 'center' },
-              );
+            // Use cellX directly as the starting X for the cell, and full columnWidths[i]
+            doc.text(cell.toString(), cellX, currentY, {
+              width: columnWidths[i],
+              align: align, 
+            });
+            cellX += columnWidths[i];
           });
+          currentY = doc.y + 5; // Move Y for next row, add some padding
+          
+          // Draw horizontal line after each row
+          doc.moveTo(doc.page.margins.left, currentY + 2)
+             .lineTo(doc.page.width - doc.page.margins.right, currentY + 2)
+             .strokeColor('#CCCCCC') // Light gray color for row lines
+             .stroke();
+          doc.strokeColor('black'); // Reset stroke color
+          currentY += 5; // Move to next line for data
         });
 
-        // Add page numbers to all pages
-        const pageCount = orderChunks.length;
-        for (let i = 0; i < pageCount; i += 1) {
+        // --- Footer with Page Numbers ---
+        const range = doc.bufferedPageRange();
+        for (
+          let i = range.start;
+          i < range.start + range.count;
+          i += 1
+        ) {
           doc.switchToPage(i);
           doc
             .fontSize(8)
-            .fillColor('#95a5a6')
+            .font('Helvetica')
             .text(
-              `Page ${i + 1} of ${pageCount}`,
-              doc.page.width - 50,
-              doc.page.height - 20,
-            );
-        }
-
-        // Add pagination footer to PDF
-        const pdfTotalOrders = responseData.pagination.total;
-        const { totalPages: pdfTotalPages } = responseData.pagination;
-        const { currentPage } = responseData.pagination;
-
-        for (let i = 0; i < pageCount; i += 1) {
-          doc.switchToPage(i);
-
-          // Current page indicator
-          doc
-            .fontSize(10)
-            .fillColor('#666')
-            .text(
-              `Page ${currentPage} of ${pdfTotalPages}`,
-              doc.page.width / 2 - 30,
-              doc.page.height - 20,
+              `Page ${i + 1} of ${range.count}`,
+              doc.page.margins.left,
+              doc.page.height - doc.page.margins.bottom + 10,
               { align: 'center' },
             );
-
-          // Pagination info
-          const startItem = (currentPage - 1) * rowsPerPage + 1;
-          const endItem = Math.min(currentPage * rowsPerPage, totalOrders);
-
-          doc
-            .fontSize(10)
-            .fillColor('#666')
-            .text(
-              `Showing ${startItem}-${endItem} of ${totalOrders} orders`,
-              doc.page.width - 50,
-              doc.page.height - 20,
-              { align: 'right' },
-            );
-
-          // Add navigation text if there are more pages
-          if (currentPage < totalPages) {
-            doc
-              .fontSize(10)
-              .fillColor('#3498db')
-              .text('Next Page', doc.page.width - 50, doc.page.height - 40, {
-                align: 'right',
-                link: `?page=${parseInt(currentPage, 10) + 1}`,
-              });
-          }
-
-          if (currentPage > 1) {
-            doc
-              .fontSize(10)
-              .fillColor('#3498db')
-              .text('Previous Page', 50, doc.page.height - 40, {
-                align: 'left',
-                link: `?page=${parseInt(currentPage, 10) - 1}`,
-              });
-          }
         }
 
-        // Finalize the PDF and end the stream
         doc.end();
       } catch (error) {
         console.error('Error generating PDF:', error);
