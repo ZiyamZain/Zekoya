@@ -1,5 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import mongoose from 'mongoose'; // Added for ObjectId validation
+import mongoose from 'mongoose'; 
 import Product from '../models/productModel.js';
 import Category from '../models/categoryModel.js';
 

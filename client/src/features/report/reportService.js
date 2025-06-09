@@ -121,7 +121,6 @@ const getPaymentStats = async () => {
     const response = await adminAxios.get(
       `/reports/payment-stats`
     );
-    console.log('Payment stats response:', response.data);
     return response.data;
   } catch (error) {
     return handleApiError(error, 'getPaymentStats');

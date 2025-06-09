@@ -12,6 +12,7 @@ export default async function getCroppedImg(imageSrc, pixelCrop) {
     const isGoogleImage = imageSrc.includes('googleusercontent.com');
     const isExternalUrl = imageSrc.startsWith('http') && !imageSrc.includes('localhost');
     
+  
     if (isGoogleImage || isExternalUrl) {
       console.warn('External image detected, CORS issues may occur:', imageSrc);
     }
@@ -19,6 +20,7 @@ export default async function getCroppedImg(imageSrc, pixelCrop) {
     const image = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+
 
     canvas.width = pixelCrop.width;
     canvas.height = pixelCrop.height;
