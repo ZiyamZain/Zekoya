@@ -1,5 +1,4 @@
 import asyncHandler from 'express-async-handler';
-import path from 'path';
 import Product from '../models/productModel.js';
 import Category from '../models/categoryModel.js';
 import cloudinary from '../config/cloudinary.js';
@@ -18,10 +17,7 @@ export const addProduct = asyncHandler(async (req, res) => {
   let uploadedImagesData = [];
 
   try {
-    // Basic validation
     if (!name || !description || !price || !category || !sizes) {
-      // If validation fails before files are processed by multer-storage-cloudinary, req.files might not exist yet.
-      // If files were uploaded, they need to be cleaned up.
       if (req.files && req.files.length > 0) {
         uploadedImagesData = req.files.map((f) => ({ public_id: f.filename }));
         await deleteImagesFromCloudinary(uploadedImagesData);
@@ -41,9 +37,7 @@ export const addProduct = asyncHandler(async (req, res) => {
       return res.status(400).json({ success: false, message: 'Category not found' });
     }
 
-    // Process images from Cloudinary (multer-storage-cloudinary puts path and filename)
     if (!req.files || req.files.length < 3) {
-      // If files were uploaded but not enough, clean them up.
       if (req.files && req.files.length > 0) {
         uploadedImagesData = req.files.map((f) => ({ public_id: f.filename }));
         await deleteImagesFromCloudinary(uploadedImagesData);
@@ -64,7 +58,6 @@ export const addProduct = asyncHandler(async (req, res) => {
       if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
         throw new Error('Sizes must be a non-empty array.');
       }
-      // Further validation for size objects can be added here if needed
     } catch (error) {
       await deleteImagesFromCloudinary(uploadedImagesData);
       return res.status(400).json({ success: false, message: `Invalid sizes format: ${error.message}` });
@@ -93,11 +86,8 @@ export const addProduct = asyncHandler(async (req, res) => {
     res.status(201).json({ success: true, product });
   } catch (error) {
     console.error('Error in addProduct:', error);
-    // Ensure cleanup if an error occurs after images are uploaded but before product is created
+
     if (uploadedImagesData.length > 0) {
-      // Check if product was created to avoid deleting images of a successfully created product
-      // This check might be tricky depending on where the error occurred.
-      // A more robust way is to check if product._id exists.
       const productExists = await Product.findOne({ 'images.public_id': { $in: uploadedImagesData.map((img) => img.public_id) } });
       if (!productExists) {
         await deleteImagesFromCloudinary(uploadedImagesData);
@@ -233,8 +223,6 @@ export const updateProduct = asyncHandler(async (req, res) => {
       }
     }
 
-    // 2. Add new images (if any)
-    // `req.files` would be from a field like `newImages`
     if (req.files && req.files.length > 0) {
       newUploadedImagesData = req.files.map((file) => ({
         url: file.path,

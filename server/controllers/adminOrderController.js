@@ -171,7 +171,7 @@ export const updateOrderStatus = async (req, res) => {
       order.paidAt = new Date();
     }
 
-    // Add a note to the status history if provided
+
     if (note) {
       order.statusHistory.push({
         status,
@@ -189,7 +189,6 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-// Process return request (admin)
 export const processReturnRequest = async (req, res) => {
   try {
     const { orderId, itemId } = req.params;

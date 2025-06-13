@@ -51,10 +51,41 @@ const productOfferSchema = mongoose.Schema(
 );
 
 // Validate that end date is after start date
-productOfferSchema.pre('validate', function (next) {
+productOfferSchema.pre('validate', async function (next) {
   if (this.startDate && this.endDate && this.startDate >= this.endDate) {
     this.invalidate('endDate', 'End date must be after start date');
   }
+
+  // Validate discount value based on type and product price
+  if (this.product) {
+    try {
+      const product = await mongoose.model('Product').findById(this.product);
+      if (!product) {
+        this.invalidate('product', 'Product not found');
+        return next();
+      }
+
+      if (this.discountType === 'fixed') {
+        if (this.discountValue > product.price) {
+          this.invalidate(
+            'discountValue',
+            `Fixed discount cannot be greater than product price (${product.price})`
+          );
+        }
+      } else if (this.discountType === 'percentage') {
+        if (this.discountValue > 100) {
+          this.invalidate(
+            'discountValue',
+            'Percentage discount cannot be greater than 100%'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error validating product price:', error);
+      this.invalidate('product', 'Error validating product price');
+    }
+  }
+
   next();
 });
 

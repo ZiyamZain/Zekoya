@@ -2,9 +2,6 @@ import asyncHandler from 'express-async-handler';
 import Category from '../models/categoryModel.js';
 import cloudinary from '../config/cloudinary.js';
 
-// @desc    Get all categories for admin (includes unlisted)
-// @route   GET /api/admin/categories
-// @access  Private/Admin
 export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
   const { search = '', page = 1, limit = 10 } = req.query;
   const pageNum = parseInt(page, 10) || 1;
@@ -24,9 +21,6 @@ export const getAllCategoriesAdmin = asyncHandler(async (req, res) => {
   res.json({ categories, total, page: pageNum, pages: Math.ceil(total / limitNum) });
 });
 
-// @desc    Add a new category
-// @route   POST /api/admin/categories
-// @access  Private/Admin
 export const addCategory = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
@@ -77,9 +71,6 @@ export const addCategory = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Update a category
-// @route   PUT /api/admin/categories/:id
-// @access  Private/Admin
 export const updateCategory = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id);
 
@@ -155,9 +146,6 @@ export const updateCategory = asyncHandler(async (req, res) => {
   res.json(updatedCategory);
 });
 
-// @desc    Delete a category
-// @route   DELETE /api/admin/categories/:id
-// @access  Private/Admin
 export const deleteCategory = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id);
 
@@ -189,9 +177,7 @@ export const deleteCategory = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Toggle category listing status
-// @route   PATCH /api/admin/categories/:id/toggle
-// @access  Private/Admin
+
 export const toggleCategoryListing = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const category = await Category.findById(id);

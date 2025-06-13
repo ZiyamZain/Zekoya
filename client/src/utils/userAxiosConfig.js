@@ -1,22 +1,17 @@
 import axios from 'axios';
-import { refreshUserToken, userLogout } from '../features/userAuth/userAuthSlice';
 
-// Create a factory function to generate axios instances with different base URLs
+ 
 const createUserAxiosInstance = (baseURL) => {
   const instance = axios.create({
     baseURL,
   });
 
-  // Add request interceptor
-  configureRequestInterceptor(instance);
-  
-  // Add response interceptor
-  configureResponseInterceptor(instance);
+  configureRequestInterceptor(instance);//req
+  configureResponseInterceptor(instance);//res
   
   return instance;
 };
 
-// Main user-related axios instances
 const userAxios = createUserAxiosInstance('/api/users');
 const productAxios = createUserAxiosInstance('/api/products');
 const cartAxios = createUserAxiosInstance('/api/cart');
@@ -28,15 +23,15 @@ const offerAxios = createUserAxiosInstance('/api/offers');
 const categoryAxios = createUserAxiosInstance('/api/categories');
 
 
-// Configure request interceptor for all instances
+// req config
 function configureRequestInterceptor(instance) {
   instance.interceptors.request.use(
     async (config) => {
-      // Lazy import store to avoid circular dependency using ES6 dynamic import
-      const storeModule = await import('../app/store');
-      const store = storeModule.default;
-      const userInfo = store.getState().userAuth.userInfo;
-      // Check for token in either accessToken or token field
+      if (config._skipAuth) {
+        delete config._skipAuth;
+        return config;
+      }
+      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
       const token = userInfo?.accessToken || userInfo?.token;
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;
@@ -47,41 +42,70 @@ function configureRequestInterceptor(instance) {
   );
 }
 
-// Configure response interceptor for all instances
 function configureResponseInterceptor(instance) {
+  
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      // Lazy import store to avoid circular dependency using ES6 dynamic import
-      const storeModule = await import('../app/store');
-      const store = storeModule.default;
-      if (
-        error.response &&
-        error.response.status === 401 &&
-        !originalRequest._retry &&
-        (store.getState().userAuth.userInfo?.refreshToken)
-      ) {
-        originalRequest._retry = true;
-        try {
-          // Attempt to refresh token
-          const result = await store.dispatch(refreshUserToken());
-          // Check for token in either accessToken or token field
-          const newAccessToken = result.payload?.accessToken || result.payload?.token;
-          if (newAccessToken) {
-            originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-            // Use the same instance that made the original request
-            return axios(originalRequest);
-          }
-        } catch { // refreshError removed as it was unused
-          // Refresh failed, force logout
-          store.dispatch(userLogout());
-        }
+
+      // Skip if no config or already retried
+      if (!originalRequest || originalRequest._retry) {
+        return Promise.reject(error);
       }
-      return Promise.reject(error);
+      //if (401=unauthorized) occurs
+      if (error.response?.status !== 401) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true; // flag for avoiding infinite loops
+
+      try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        if (!userInfo) {
+          console.log("No user info found, redirecting to login");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+
+        const refreshToken = userInfo.refreshToken || userInfo.refresh_token;
+        if (!refreshToken) {
+          console.log("No refresh token found, logging out");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+
+        // Call refresh token endpoint
+        const response = await axios({
+          method: "post",
+          url: "/api/users/refresh-token",
+          data: { refreshToken },
+          _skipAuth: true,
+        });
+
+        if (response.data.accessToken) {
+          const updatedUserInfo = {
+            ...userInfo,
+            accessToken: response.data.accessToken,
+            refreshToken: response.data.refreshToken || refreshToken,
+          };
+
+          localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
+          originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+          return axios(originalRequest);//now retry the request
+        }
+
+        throw new Error("No access token in response");
+        
+      }catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        localStorage.removeItem("userInfo");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshError);
+      }
     }
   );
 }
-
-// Export all instances
 export { userAxios, productAxios, cartAxios, wishlistAxios, orderAxios, couponAxios, paymentAxios, offerAxios, categoryAxios };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import Pagination from "../../components/common/Pagination";
 import {
   FaSearch,
   FaTimesCircle,
@@ -20,6 +21,9 @@ const OrdersPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { orders, isLoading, totalOrders, totalPages, refreshTrigger } = useSelector((state) => state.adminOrder);
+
+  // Fallback: derive totalPages if backend does not supply it
+  const derivedTotalPages = totalPages || Math.max(1, Math.ceil((totalOrders || orders?.length || 0) / 10));
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -145,56 +149,6 @@ const OrdersPage = () => {
     ) : (
       <FaSortDown className="inline" />
     );
-  };
-
-  // Generate an array of page numbers for pagination
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
-    
-    if (totalPages <= maxPagesToShow) {
-      // If total pages is less than max pages to show, display all pages
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      // Always show first page
-      pageNumbers.push(1);
-      
-      // Calculate start and end page numbers
-      let startPage = Math.max(2, currentPage - 1);
-      let endPage = Math.min(totalPages - 1, currentPage + 1);
-      
-      // Adjust if we're at the beginning
-      if (currentPage <= 2) {
-        endPage = 4;
-      }
-      
-      // Adjust if we're at the end
-      if (currentPage >= totalPages - 2) {
-        startPage = totalPages - 3;
-      }
-      
-      // Add ellipsis after first page if needed
-      if (startPage > 2) {
-        pageNumbers.push('...');
-      }
-      
-      // Add middle pages
-      for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.push(i);
-      }
-      
-      // Add ellipsis before last page if needed
-      if (endPage < totalPages - 1) {
-        pageNumbers.push('...');
-      }
-      
-      // Always show last page
-      pageNumbers.push(totalPages);
-    }
-    
-    return pageNumbers;
   };
 
   if (isLoading) {
@@ -442,77 +396,13 @@ const OrdersPage = () => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between">
-              <div className="mb-4 sm:mb-0">
-                <p className="text-sm text-gray-700">
-                  Showing{" "}
-                  <span className="font-medium">
-                    {(currentPage - 1) * ordersPerPage + 1}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-medium">
-                    {Math.min(currentPage * ordersPerPage, totalOrders)}
-                  </span>{" "}
-                  of <span className="font-medium">{totalOrders}</span> results
-                </p>
-              </div>
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 border rounded-md ${currentPage === 1
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 border rounded-md ${currentPage === 1
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                >
-                  <FaChevronLeft className="text-xs" />
-                </button>
-                
-                {getPageNumbers().map((pageNum, index) => (
-                  <button
-                    key={index}
-                    onClick={() => pageNum !== '...' && setCurrentPage(pageNum)}
-                    disabled={pageNum === '...'}
-                    className={`px-3 py-1 border rounded-md ${pageNum === currentPage
-                      ? "bg-blue-600 text-white"
-                      : pageNum === '...'
-                        ? "bg-gray-100 text-gray-400 cursor-default"
-                        : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
-                
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 border rounded-md ${currentPage === totalPages
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                >
-                  <FaChevronRight className="text-xs" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 border rounded-md ${currentPage === totalPages
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-50"}`}
-                >
-                  Last
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={derivedTotalPages}
+            onPageChange={setCurrentPage}
+            totalItems={totalOrders || orders.length}
+            itemsPerPage={ordersPerPage}
+          />
         </div>
       </div>
     </div>

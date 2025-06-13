@@ -298,6 +298,8 @@ export const cancelOrder = async (req, res) => {
 
     const order = await Order.findById(orderId);
 
+
+
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -329,8 +331,6 @@ export const cancelOrder = async (req, res) => {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-
-      // Add refund amount to wallet only for non-COD payments
       if (order.paymentMethod !== 'Cash on Delivery') {
         const refundAmount = order.totalPrice;
         user.walletBalance = Number(user.walletBalance) + Number(refundAmount);
@@ -353,13 +353,10 @@ export const cancelOrder = async (req, res) => {
       const product = await Product.findById(item.product);
 
       if (product) {
-        // Find the size object
         const sizeObj = product.sizes.find((s) => s.size === item.size);
 
         if (sizeObj) {
-          // Restore stock
           sizeObj.stock += item.quantity;
-          // Update total stock
           product.totalStock = product.sizes.reduce((total, size) => total + size.stock, 0);
           await product.save();
         }
@@ -380,8 +377,6 @@ export const cancelOrder = async (req, res) => {
     });
   }
 };
-
-// Cancel specific order item
 export const cancelOrderItem = async (req, res) => {
   try {
     const { orderId, itemId } = req.params;
@@ -392,32 +387,22 @@ export const cancelOrderItem = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-
-    // Check if user owns this order
     if (order.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to cancel items in this order' });
     }
-
-    // Check if order can have items cancelled (both Pending and Processing orders)
     if (order.orderStatus !== 'Pending' && order.orderStatus !== 'Processing') {
       return res.status(400).json({
         message: `Items cannot be cancelled in ${order.orderStatus} status`,
       });
     }
-
-    // Find the specific item
     const orderItem = order.orderItems.id(itemId);
 
     if (!orderItem) {
       return res.status(404).json({ message: 'Order item not found' });
     }
-
-    // Check if item is already cancelled
     if (orderItem.status === 'Cancelled') {
       return res.status(400).json({ message: 'Item is already cancelled' });
     }
-
-    // Update item status
     orderItem.status = 'Cancelled';
     orderItem.cancelReason = reason || 'Cancelled by customer';
     orderItem.cancelledAt = new Date();
@@ -426,26 +411,17 @@ export const cancelOrderItem = async (req, res) => {
     if (order.isPaid && order.paymentMethod !== 'Cash on Delivery') {
       const user = await User.findById(order.user);
       if (user) {
-        // Calculate base refund amount for the item
         const itemBaseAmount = orderItem.discountedPrice || (orderItem.price * orderItem.quantity);
 
-        // Calculate tax for this item
         const TAX_RATE = 0.18; // 18% GST
         const taxRefund = Math.round((orderItem.price * orderItem.quantity * TAX_RATE) * 100) / 100;
-
-        // Calculate base refund amount (item price + tax)
         let refundAmount = itemBaseAmount + taxRefund;
 
-        // Handle shipping logic
-        const FREE_SHIPPING_THRESHOLD = 1000; // Define your free shipping threshold
-        const SHIPPING_COST = 100; // Define your standard shipping cost
-
-        // Calculate remaining items value after this cancellation
+        const FREE_SHIPPING_THRESHOLD = 1000; 
+        const SHIPPING_COST = 100; 
         const remainingItemsValue = order.itemsPrice - (orderItem.price * orderItem.quantity);
 
-        // If this is the only item in the order, refund the shipping charge
         if (order.orderItems.length === 1 || remainingItemsValue === 0) {
-          // Refund the shipping charge if it was paid
           if (order.shippingPrice > 0) {
             refundAmount += order.shippingPrice;
             order.shippingPrice = 0;

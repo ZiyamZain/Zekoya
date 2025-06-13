@@ -5,6 +5,7 @@ import { FaEdit, FaTrash, FaPlus, FaSearch, FaFilter, FaSync } from 'react-icons
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import moment from 'moment';
+import Pagination from "../../components/common/Pagination";
 
 const CouponList = () => {
   const dispatch = useDispatch();
@@ -12,6 +13,7 @@ const CouponList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     dispatch(getAllCoupons());
@@ -38,6 +40,7 @@ const CouponList = () => {
 
   const handleRefresh = () => {
     dispatch(getAllCoupons());
+    setCurrentPage(1);
   };
 
   const filteredCoupons = coupons.filter(coupon => {
@@ -58,6 +61,14 @@ const CouponList = () => {
     if (sortBy === 'code') return a.code.localeCompare(b.code);
     return 0;
   });
+
+  // Pagination calculations
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredCoupons.length / itemsPerPage));
+  const displayedCoupons = filteredCoupons.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getStatusBadge = (startDate, endDate) => {
     const now = new Date();
@@ -210,7 +221,7 @@ const CouponList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCoupons.map((coupon) => (
+                {displayedCoupons.map((coupon) => (
                   <tr key={coupon._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 font-mono">{coupon.code}</div>
@@ -259,7 +270,13 @@ const CouponList = () => {
               </tbody>
             </table>
           </div>
-          {/* Pagination can be added here when needed */}
+          {displayedCoupons.length > 0 && (
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={(pageNumber) => setCurrentPage(pageNumber)} 
+            />
+          )}
         </div>
       )}
     </div>

@@ -10,7 +10,7 @@ import {
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import DynamicPage from "../../components/admin/DynamicPage";
-
+import Pagination from "../../components/common/Pagination";
 
 const UsersPage = () => {
   const dispatch = useDispatch();
@@ -146,45 +146,7 @@ const UsersPage = () => {
       isLoading={isLoading}
       isError={isError}
       errorMessage={message}
-      pagination={
-        <div className="flex space-x-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-            className={`px-3 py-1 rounded-md ${
-              page === 1
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-            }`}
-          >
-            Previous
-          </button>
-          {Array.from({ length: Math.ceil(total / 10) }, (_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 rounded-md ${
-                page === i + 1
-                  ? "bg-gradient-to-r from-red-500 to-orange-400 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            disabled={page === Math.ceil(total / 10)}
-            onClick={() => setPage(page + 1)}
-            className={`px-3 py-1 rounded-md ${
-              page === Math.ceil(total / 10)
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-            }`}
-          >
-            Next
-          </button>
-        </div>
-      }
+      pagination={<Pagination currentPage={page} totalPages={Math.ceil(total / 10)} onPageChange={setPage} />}
     />
   );
 };

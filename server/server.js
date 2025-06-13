@@ -22,12 +22,21 @@ import productRoutes from './routes/productRoutes.js';
 import adminOfferRoutes from './routes/adminOfferRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 import helmet from 'helmet';
 
+// Get current file and directory paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+// Load environment variables from .env file
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Debug environment variables
+console.log('Environment:', process.env.NODE_ENV);
+console.log('JWT Secret exists:', !!process.env.JWT_SECRET);
+console.log('MongoDB URI exists:', !!process.env.MONGO_URI);
+console.log('Refresh Token Secret exists:', !!process.env.REFRESH_TOKEN_SECRET);
 
 connectDB();
 
@@ -87,6 +96,8 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/admin/offers', adminOfferRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/admin/reports', reportRoutes);
+app.use('/api/reviews',reviewRoutes);
+
 
 app.use((err, req, res, _next) => {
   const isDevelopment = process.env.NODE_ENV === 'development';

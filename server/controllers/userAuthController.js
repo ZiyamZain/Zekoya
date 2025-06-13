@@ -12,54 +12,76 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 export const refreshToken = async (req, res) => {
   try {
     const { refreshToken: tokenFromRequest } = req.body;
-
-    if (!tokenFromRequest) {
-      return res.status(400).json({ message: 'Refresh token is required' });
+    
+    if (!tokenFromRequest || typeof tokenFromRequest !== 'string' || !tokenFromRequest.trim()) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Refresh token is required and must be a non-empty string' 
+      });
     }
-
-    // Verify the refresh token
+    
     const decoded = verifyRefreshToken(tokenFromRequest);
     if (!decoded) {
-      return res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid or expired session. Please log in again.' 
+      });
     }
-
-    // Find user by ID
+    
     const user = await User.findById(decoded.userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
     }
-
-    // Check token version
-    if ((user.tokenVersion || 0) !== decoded.tokenVersion) {
-      return res.status(401).json({ message: 'Token has been revoked, please login again' });
+    
+    if (user.tokenVersion !== decoded.tokenVersion) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Session expired. Please log in again.' 
+      });
     }
-
-    // Check if refresh token matches and is not expired
-    if (
-      user.refreshToken !== tokenFromRequest
-      || !user.refreshTokenExpiry
-      || new Date(user.refreshTokenExpiry) < new Date()
-    ) {
-      return res.status(401).json({ message: 'Token has been revoked, please login again' });
+    
+    // Verify the refresh token matches the one in the database
+    if (user.refreshToken !== tokenFromRequest || user.refreshTokenExpiry < new Date()) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Session expired. Please log in again.' 
+      });
     }
-
-    // Generate new tokens (rotation)
+    
+    // Increment token version to invalidate old tokens
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    
+    // Generate new tokens with updated version
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
-    const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    // Update refresh token in database
-    user.refreshToken = newRefreshToken;
-    user.refreshTokenExpiry = refreshTokenExpiry;
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    
+    // Update user with new refresh token
+    user.refreshToken = refreshToken;
+    user.refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await user.save();
 
+    // Send response with standardized token field names
     res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      isGoogle: user.isGoogle,
+      isVerified: user.isVerified,
+      profileImage: user.profileImage,
       accessToken,
-      refreshToken: newRefreshToken,
+      refreshToken
     });
+    
   } catch (error) {
-    console.error('Refresh Token Error:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error in refreshToken controller:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during token refresh' 
+    });
   }
 };
 
@@ -195,17 +217,15 @@ export const verifyOTP = async (req, res) => {
         // Get the referrer user
         const referrer = await User.findById(user.referredBy);
         if (referrer) {
-          // Update referral count regardless of active offer
+         
           referrer.referralCount = (referrer.referralCount || 0) + 1;
 
-          // Default rewards if no active offer found
           const referrerReward = activeOffer?.referrerRewardValue || 100;
           const newUserReward = activeOffer?.newUserRewardValue || 50;
 
-          // Add reward to referrer's wallet
+   
           referrer.walletBalance = (referrer.walletBalance || 0) + referrerReward;
 
-          // Add wallet history entry for referrer
           referrer.walletHistory.push({
             type: 'credit',
             amount: referrerReward,
@@ -235,11 +255,11 @@ export const verifyOTP = async (req, res) => {
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // Store refresh token in database
-    user.refreshToken = newRefreshToken;
+    user.refreshToken = refreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();
 
@@ -253,7 +273,7 @@ export const verifyOTP = async (req, res) => {
       walletBalance: user.walletBalance || 0,
       referralCode: user.referralCode,
       accessToken,
-      refreshToken: newRefreshToken,
+      refreshToken,
     });
   } catch (error) {
     console.error('Verify OTP Error:', error.message);
@@ -303,11 +323,11 @@ export const loginUser = async (req, res) => {
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // store refresh token in database
-    user.refreshToken = newRefreshToken;
+    user.refreshToken = refreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
 
     // Ensure profileImage is an object before saving, correcting malformed string data
@@ -327,8 +347,8 @@ export const loginUser = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
-      token: accessToken, // thsi is the access token for backward compoatibility
-      refreshToken: newRefreshToken, // new refresh token
+      accessToken: accessToken,
+      refreshToken: refreshToken
     });
   } catch (error) {
     console.error('Login Error:', error.message);
@@ -376,7 +396,7 @@ export const googleLogin = async (req, res) => {
     }
 
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
-    const newRefreshToken = generateRefreshToken(user._id, user.tokenVersion);
+    const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // Ensure profileImage is an object before saving, correcting malformed string data
@@ -399,7 +419,7 @@ export const googleLogin = async (req, res) => {
     }
 
     // Store refresh token in database
-    user.refreshToken = newRefreshToken;
+    user.refreshToken = refreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();
 
@@ -410,8 +430,8 @@ export const googleLogin = async (req, res) => {
       profileImage: user.profileImage,
       isGoogle: user.isGoogle,
       isVerified: user.isVerified,
-      token: accessToken,
-      refreshToken: newRefreshToken,
+      accessToken: accessToken,
+      refreshToken: refreshToken
     });
   } catch (error) {
     console.error('Google login failed:', error);

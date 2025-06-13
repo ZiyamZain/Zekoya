@@ -13,6 +13,9 @@ const WalletHistory = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     dispatch(getUserProfile());
@@ -48,6 +51,9 @@ const WalletHistory = () => {
     });
     
     setFilteredTransactions(result);
+    
+    // Reset to first page whenever filters/search/sort change
+    setCurrentPage(1);
   }, [filter, searchTerm, sortOrder, transactions]);
 
   const handleFilterChange = (newFilter) => {
@@ -67,6 +73,12 @@ const WalletHistory = () => {
         <FaArrowDown className="text-red-600" />
       </div>;
   };
+
+  // Calculate pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -156,7 +168,7 @@ const WalletHistory = () => {
           </div>
         ) : filteredTransactions.length > 0 ? (
           <div className="divide-y divide-gray-200">
-            {filteredTransactions.map((transaction, index) => (
+            {paginatedTransactions.map((transaction, index) => (
               <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -194,6 +206,35 @@ const WalletHistory = () => {
           </div>
         )}
       </div>
+      
+      {/* Pagination Controls */}
+      {filteredTransactions.length > itemsPerPage && (
+        <div className="flex justify-center items-center mt-6 space-x-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-md border text-sm ${currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+          >
+            Prev
+          </button>
+          {[...Array(totalPages)].map((_, idx) => (
+            <button
+              key={idx + 1}
+              onClick={() => setCurrentPage(idx + 1)}
+              className={`px-3 py-1 rounded-md text-sm ${currentPage === idx + 1 ? 'bg-black text-white' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+            >
+              {idx + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-md border text-sm ${currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-gray-100 text-gray-700'}`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

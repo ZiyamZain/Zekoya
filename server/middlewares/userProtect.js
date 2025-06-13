@@ -1,44 +1,79 @@
-import User from '../models/userModel.js';
 import { verifyAccessToken } from '../utils/generateToken.js';
+import User from '../models/userModel.js';
 
 const protect = async (req, res, next) => {
+  // Skip token check for OPTIONS requests (preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   try {
-    // get token from authorization header
+    // Get token from authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized, no token provided',
+        code: 'NO_TOKEN'
+      });
+    }
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = authHeader.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ message: 'Not authorized, token missing' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized, invalid token format',
+        code: 'INVALID_TOKEN_FORMAT'
+      });
     }
 
-    // verify the access token
-
+    // Verify the access token
     const decoded = verifyAccessToken(token);
-
     if (!decoded) {
-      return res.status(401).json({ message: 'invalid or expired token' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized, token failed',
+        code: 'INVALID_OR_EXPIRED_TOKEN'
+      });
     }
 
+    // Get user from the token
     const user = await User.findById(decoded.userId).select('-password -refreshToken');
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      console.error('User not found for token');
+      return res.status(401).json({ 
+        message: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
-    // verify token version matches (for forced logout)
+    // Verify token version matches (for forced logout)
     if (user.tokenVersion !== decoded.tokenVersion) {
-      return res.status(401).json({ message: ' Token has been revoked , Please login again' });
+      console.error('Token version mismatch');
+      return res.status(401).json({ 
+        message: 'Session expired. Please log in again.',
+        code: 'TOKEN_VERSION_MISMATCH'
+      });
     }
 
     // Check if user is blocked
     if (user.isBlocked) {
-      return res.status(403).json({ message: 'Your account has been blocked. Please contact customer support.' });
+      console.error('User account is blocked');
+      return res.status(403).json({ 
+        message: 'Account is blocked. Please contact support.',
+        code: 'ACCOUNT_BLOCKED'
+      });
     }
 
-    // Attach user to request
+    // Attach user to request object
     req.user = user;
     next();
-  } catch (err) {
-    console.error('Token verification error:', err.message);
-    res.status(401).json({ message: 'Invalid or expired token' });
+  } catch (error) {
+    console.error('Error in protect middleware:', error);
+    res.status(401).json({ 
+      message: 'Not authorized, token failed',
+      code: 'AUTHENTICATION_FAILED'
+    });
   }
 };
 

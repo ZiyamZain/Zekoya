@@ -12,11 +12,7 @@ const defaultOptions = {
 
 // Custom toast with icon and styling
 const customToast = {
-  /**
-   * Success toast notification
-   * @param {string} message - The message to display
-   * @param {object} options - Optional toast configuration options
-   */
+  
   success: (message, options = {}) => {
     return toast.success(message, {
       ...defaultOptions,
@@ -64,11 +60,7 @@ const customToast = {
     });
   },
 
-  /**
-   * Default toast notification
-   * @param {string} message - The message to display
-   * @param {object} options - Optional toast configuration options
-   */
+
   default: (message, options = {}) => {
     return toast(message, {
       ...defaultOptions,

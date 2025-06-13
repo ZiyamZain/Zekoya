@@ -26,9 +26,14 @@ const OrderHistory = () => {
   const [cancelReason, setCancelReason] = useState("");
 
   const { userInfo } = useSelector((state) => state.userAuth);
-  const { orders, isLoading, isError, message, pages, page } = useSelector(
+  const { orders, isLoading, isError, message, pages } = useSelector(
     (state) => state.order
   );
+
+  // Pagination – if backend supplies pages, use them; otherwise derive locally
+  const itemsPerPage = 10;
+  const totalPages = pages || Math.max(1, Math.ceil((orders?.length || 0) / itemsPerPage));
+  const displayedOrders = pages ? orders : orders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   useEffect(() => {
     if (!userInfo) {
@@ -49,7 +54,7 @@ const OrderHistory = () => {
   };
 
   const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= pages) {
+    if (newPage > 0 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
@@ -160,7 +165,7 @@ const OrderHistory = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
+                {displayedOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -209,14 +214,14 @@ const OrderHistory = () => {
             </table>
 
             {/* Pagination */}
-            {pages > 1 && (
+            {displayedOrders.length > 0 && (
               <div className="px-6 py-4 flex justify-center">
                 <nav className="flex items-center">
                   <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
                     className={`mx-1 px-3 py-1 rounded-md ${
-                      page === 1
+                      currentPage === 1
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
@@ -224,12 +229,12 @@ const OrderHistory = () => {
                     <FaChevronLeft size={14} />
                   </button>
 
-                  {[...Array(pages).keys()].map((x) => (
+                  {[...Array(totalPages).keys()].map((x) => (
                     <button
                       key={x + 1}
                       onClick={() => handlePageChange(x + 1)}
                       className={`mx-1 px-3 py-1 rounded-md ${
-                        x + 1 === page
+                        x + 1 === currentPage
                           ? "bg-black text-white"
                           : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                       }`}
@@ -239,10 +244,10 @@ const OrderHistory = () => {
                   ))}
 
                   <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === pages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
                     className={`mx-1 px-3 py-1 rounded-md ${
-                      page === pages
+                      currentPage === totalPages
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}

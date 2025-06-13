@@ -45,11 +45,12 @@ export const adminLogin = async (req, res) => {
     await admin.save();
 
     res.status(200).json({
+      success: true,
       _id: admin._id,
       name: admin.name,
       email: admin.email,
       accessToken,
-      refreshToken,
+      refreshToken
     });
   } catch (error) {
     console.error('Admin Login Error:', error.message);
@@ -99,8 +100,9 @@ export const refreshAdminToken = async (req, res) => {
     // await admin.save();
 
     res.status(200).json({
+      success: true,
       accessToken,
-      // refreshToken: newRefreshToken
+      refreshToken
     });
   } catch (error) {
     console.error('Admin Refresh Token Error:', error.message);

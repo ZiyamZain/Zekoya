@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaTimes } from 'react-icons/fa';
+import Pagination from "../../common/Pagination";
 
 import { 
   getAllProductOffers, 
@@ -28,6 +29,11 @@ const ProductOfferList = () => {
     message,
     totalPages 
   } = useSelector(state => state.productOffer);
+
+  // Pagination – use backend pages if provided; otherwise derive locally
+  const itemsPerPage = 10;
+  const calculatedTotalPages = totalPages || Math.max(1, Math.ceil((productOffers?.length || 0) / itemsPerPage));
+  const displayedOffers = totalPages ? productOffers : (productOffers || []).slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   useEffect(() => {
     setPage(1); // Reset to page 1 when search term changes
@@ -149,8 +155,8 @@ const ProductOfferList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {productOffers && productOffers.length > 0 ? (
-                  productOffers.map((offer) => (
+                {displayedOffers && displayedOffers.length > 0 ? (
+                  displayedOffers.map((offer) => (
                     <tr key={offer._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         {offer.product ? (
@@ -203,34 +209,12 @@ const ProductOfferList = () => {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => handleChangePage(page > 1 ? page - 1 : 1)}
-                  disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleChangePage(i + 1)}
-                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${page === i + 1 ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handleChangePage(page < totalPages ? page + 1 : totalPages)}
-                  disabled={page === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
-            </div>
+          {displayedOffers.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalPages={calculatedTotalPages}
+              onPageChange={handleChangePage}
+            />
           )}
         </>
       )}

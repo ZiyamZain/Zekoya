@@ -5,10 +5,8 @@ const adminAxios = axios.create({
   baseURL: "/api/admin",
 });
 
-// Request interceptor to add access token
 adminAxios.interceptors.request.use(
   async (config) => {
-    // Lazy import store to avoid circular dependency using ES6 dynamic import
     const storeModule = await import("../app/store");
     const store = storeModule.default;
     const adminInfo = store.getState().adminAuth.adminInfo;
@@ -20,12 +18,11 @@ adminAxios.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
 adminAxios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    // Lazy import store to avoid circular dependency using ES6 dynamic import
+    //lazy import to avoid circualr dependency
     const storeModule = await import("../app/store");
     const store = storeModule.default;
     if (
@@ -43,8 +40,8 @@ adminAxios.interceptors.response.use(
           originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
           return adminAxios(originalRequest);
         }
-      } catch { // refreshError removed as it was unused
-        // Refresh failed, force logout
+      } catch { 
+        
         store.dispatch(adminLogout());
       }
     }

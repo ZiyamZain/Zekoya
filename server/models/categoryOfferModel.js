@@ -51,10 +51,46 @@ const categoryOfferSchema = mongoose.Schema(
 );
 
 // Validate that end date is after start date
-categoryOfferSchema.pre('validate', function (next) {
+categoryOfferSchema.pre('validate', async function (next) {
   if (this.startDate && this.endDate && this.startDate >= this.endDate) {
     this.invalidate('endDate', 'End date must be after start date');
   }
+
+  // Validate discount value based on type and category's highest product price
+  if (this.category) {
+    try {
+      // Get the highest price among all products in this category
+      const maxPrice = await mongoose.model('Product').aggregate([
+        { $match: { category: this.category } },
+        { $group: { _id: null, maxPrice: { $max: '$price' } } }
+      ]).then(result => result[0]?.maxPrice || 0);
+
+      if (!maxPrice) {
+        this.invalidate('category', 'No products found in this category');
+        return next();
+      }
+
+      if (this.discountType === 'fixed') {
+        if (this.discountValue > maxPrice) {
+          this.invalidate(
+            'discountValue',
+            `Fixed discount cannot be greater than highest product price in category (${maxPrice})`
+          );
+        }
+      } else if (this.discountType === 'percentage') {
+        if (this.discountValue > 100) {
+          this.invalidate(
+            'discountValue',
+            'Percentage discount cannot be greater than 100%'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error validating category price:', error);
+      this.invalidate('category', 'Error validating category price');
+    }
+  }
+
   next();
 });
 

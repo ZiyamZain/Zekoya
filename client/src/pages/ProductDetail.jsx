@@ -17,6 +17,7 @@ import ImageZoom from "../components/ImageZoom";
 import ProductOffer from "../components/ProductOffer";
 import CategoryOffer from "../components/CategoryOffer";
 import DiscountedPrice from "../components/DiscountedPrice";
+import Reviews from "../components/user/Reviews";
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -24,6 +25,7 @@ const ProductDetail = () => {
   const { product, isLoading, isError } = useSelector(
     (state) => state.products
   );
+  console.log(product)
   const { userInfo } = useSelector((state) => state.userAuth);
   const { wishlist } = useSelector((state) => state.wishlist);
   const { activeOffer, activeCategoryOffer } = useSelector(
@@ -398,6 +400,7 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+      <Reviews productId={product._id}/>
     </div>
   );
 };

@@ -99,27 +99,46 @@ export const refreshUserToken = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const state = thunkAPI.getState();
-      const refreshToken = state.userAuth.userInfo?.refreshToken;
+      const userInfo = state.userAuth.userInfo;
       
-      if (!refreshToken) {
-        return thunkAPI.rejectWithValue("No refresh token available");
+      if (!userInfo) {
+        throw new Error('No user info available');
       }
       
+      const refreshToken = userInfo.refreshToken || userInfo.refresh_token;
+      
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+      
+      // Call the refresh token endpoint
       const data = await userAuthService.refreshToken(refreshToken);
       
-      // Update the user info in localStorage with new tokens
+      if (!data || !data.accessToken) {
+        throw new Error('Invalid response from refresh token endpoint');
+      }
+      
+      // Update the user info with new tokens
       const updatedUserInfo = {
-        ...state.userAuth.userInfo,
+        ...userInfo,
+        token: data.accessToken, // For backward compatibility
         accessToken: data.accessToken,
-        refreshToken: data.refreshToken
+        refreshToken: data.refreshToken || refreshToken, // Use new refresh token if provided, otherwise keep the old one
       };
       
+      // Save to localStorage
       localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
       
       return updatedUserInfo;
     } catch (error) {
-      const message = error.response?.data?.message || error.message || "Token refresh failed";
-      return thunkAPI.rejectWithValue(message);
+      console.error('Refresh token error:', error);
+      // If refresh fails, clear the user info and force re-login
+      localStorage.removeItem("userInfo");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || 
+        error.message || 
+        'Session expired. Please log in again.'
+      );
     }
   }
 );
@@ -303,12 +322,7 @@ const userAuthSlice = createSlice({
         state.error = null;
         state.loading = false;
       })
-      .addCase(refreshUserToken.fulfilled, (state, action) => {
-        state.userInfo = action.payload;
-      })
-      .addCase(refreshUserToken.rejected, (state, action) => {
-        state.error = action.payload;
-      });
+      
   },
 });
 

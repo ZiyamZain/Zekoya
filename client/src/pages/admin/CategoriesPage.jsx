@@ -14,6 +14,7 @@ import AddCategoryModal from "../../components/admin/AddCategoryModal";
 import { toast } from "react-toastify";
 import { createSelector } from "@reduxjs/toolkit";
 import { getBaseImageUrl } from "../../utils/urlUtils"; // Adjust path as needed
+import Pagination from "../../components/common/Pagination";
 
 const CategoriesPage = () => {
   const baseImageUrl = getBaseImageUrl();
@@ -284,53 +285,11 @@ const CategoriesPage = () => {
 
         {/* Pagination */}
         {!isLoading && total > 0 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing <span className="font-medium">{(page - 1) * limit + 1}</span>{" "}
-              to{" "}
-              <span className="font-medium">{Math.min(page * limit, total)}</span>{" "}
-              of <span className="font-medium">{total}</span> categories
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={page === 1}
-                className={`px-3 py-1 rounded-md ${
-                  page === 1
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
-              >
-                <FaChevronLeft />
-              </button>
-              {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setPage(i + 1)}
-                  className={`px-3 py-1 rounded-md ${
-                    page === i + 1
-                      ? "bg-gradient-to-r from-red-500 to-orange-400 text-white"
-                      : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() =>
-                  setPage((prev) => Math.min(Math.ceil(total / limit), prev + 1))
-                }
-                disabled={page === Math.ceil(total / limit)}
-                className={`px-3 py-1 rounded-md ${
-                  page === Math.ceil(total / limit)
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                }`}
-              >
-                <FaChevronRight />
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={Math.ceil(total / limit)}
+            onPageChange={setPage}
+          />
         )}
       </div>
 
