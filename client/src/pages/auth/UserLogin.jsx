@@ -30,19 +30,21 @@ const UserLogin = () => {
     }
   };
 
-  const handleGoogleLogin = useCallback((response) => {
-    dispatch(googleLogin({ token: response.credential }))
-      .then((data) => {
-        // Store the JWT token in localStorage after successful login
-        localStorage.setItem("userInfo", JSON.stringify(data.payload));
-        navigate("/home");
-      })
-      .catch((error) => {
-        console.error("Google login failed:", error);
-      });
-  }, [dispatch, navigate]);
-
-
+  const handleGoogleLogin = useCallback(
+    (response) => {
+      dispatch(googleLogin({ token: response.credential }))
+        .unwrap()
+        .then((data) => {
+          localStorage.setItem("userInfo", JSON.stringify(data));
+          navigate("/home");
+        })
+        .catch((err) => {
+          console.error("Google login failed:", err);
+          alert(err || "Google login failed. Please sign in with your email and password.");
+        });
+    },
+    [dispatch, navigate]
+  );
 
   useEffect(() => {
     /* global google */

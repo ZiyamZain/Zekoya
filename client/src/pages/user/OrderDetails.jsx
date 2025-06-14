@@ -183,14 +183,12 @@ const OrderDetails = () => {
         throw new Error('Invalid payment gateway configuration');
       }
       
-      // 2. Create a new Razorpay order
-      // Note: Backend will handle the conversion to paise
+
       const amount = Math.round(order.totalPrice);
      
       
       let orderResponse;
-      // Generate a shorter receipt ID to stay within Razorpay's 40-char limit
-      // Format: 'ord_' + first 8 chars of order ID + last 4 digits of timestamp
+
       const shortOrderId = order._id.toString().substring(0, 8);
       const timestamp = Date.now().toString().slice(-4);
       const receiptId = `ord_${shortOrderId}${timestamp}`;

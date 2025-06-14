@@ -49,9 +49,9 @@ const cancelOrderItem = async (data) => {
 
 // Request return for item
 const requestReturnItem = async (data) => {
-  const { orderId, itemId, reason } = data;
+  const { orderId, itemId, returnReason } = data;
   // orderAxios will automatically add auth header
-  const response = await orderAxios.post(`/${orderId}/items/${itemId}/return`, { reason });
+  const response = await orderAxios.post(`/${orderId}/items/${itemId}/return`, { reason: returnReason });
   return response.data;
 };
 

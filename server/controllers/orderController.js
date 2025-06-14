@@ -540,6 +540,7 @@ export const requestReturnItem = async (req, res) => {
   try {
     const { orderId, itemId } = req.params;
     const { reason } = req.body;
+    console.log(reason)
 
     if (!reason) {
       return res.status(400).json({ message: 'Return reason is required' });

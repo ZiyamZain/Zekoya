@@ -50,11 +50,16 @@ const ForgotPassword = () => {
   };
 
   // Verify OTP
-  const handleVerifyOtp = (values) => {
-    dispatch(verifyForgotPasswordOtp({ userId: forgotUserId, otp: values.otp }))
-      .then(() => {
-        setStep('reset');
-      });
+  const handleVerifyOtp = async (values, { setSubmitting }) => {
+    try {
+      await dispatch(verifyForgotPasswordOtp({ userId: forgotUserId, otp: values.otp })).unwrap();
+      setStep('reset');
+    } catch (err) {
+      console.error('OTP verification failed:', err);
+      // remain on verify step
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Resend OTP
