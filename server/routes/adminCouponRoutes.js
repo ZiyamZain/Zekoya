@@ -11,7 +11,6 @@ import adminProtect from '../middlewares/adminProtect.js';
 
 const router = express.Router();
 
-// Admin coupon routes with multiple paths to support both old and new frontend calls
 router.post('/', adminProtect, createCoupon);
 router.post('/create', adminProtect, createCoupon);
 

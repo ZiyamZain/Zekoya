@@ -67,7 +67,6 @@ export const verifyPayment = asyncHandler(async (req, res) => {
       order.isPaid = true;
       order.paidAt = Date.now();
       order.paymentResult = {
-        // eslint-disable-next-line camelcase
         id: razorpay_payment_id,
         status: 'completed',
         update_time: Date.now(),
@@ -75,7 +74,6 @@ export const verifyPayment = asyncHandler(async (req, res) => {
       };
       await order.save();
 
-      // Clear the user's cart after successful payment
       const cart = await Cart.findOne({ user: req.user._id });
       if (cart) {
         cart.items = [];

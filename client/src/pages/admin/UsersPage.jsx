@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import DynamicPage from "../../components/admin/DynamicPage";
 import Pagination from "../../components/common/Pagination";
+import { getImageUrl } from "../../utils/imageUtils";
 
 const UsersPage = () => {
   const dispatch = useDispatch();
@@ -77,7 +78,7 @@ const UsersPage = () => {
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
             <img
-              src={user.profileImage || "/default-avatar.png"}
+              src={getImageUrl(user.profileImage, "/default-avatar.png")}
               alt={user.name}
               className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
             />

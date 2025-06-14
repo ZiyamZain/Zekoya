@@ -43,7 +43,6 @@ export const refreshToken = async (req, res) => {
       });
     }
     
-    // Verify the refresh token matches the one in the database
     if (user.refreshToken !== tokenFromRequest || user.refreshTokenExpiry < new Date()) {
       return res.status(401).json({ 
         success: false,
@@ -51,19 +50,15 @@ export const refreshToken = async (req, res) => {
       });
     }
     
-    // Increment token version to invalidate old tokens
     user.tokenVersion = (user.tokenVersion || 0) + 1;
     
-    // Generate new tokens with updated version
     const accessToken = generateAccessToken(user._id, user.tokenVersion);
     const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
     
-    // Update user with new refresh token
     user.refreshToken = refreshToken;
     user.refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await user.save();
 
-    // Send response with standardized token field names
     res.status(200).json({
       _id: user._id,
       name: user.name,
@@ -238,7 +233,6 @@ export const verifyOTP = async (req, res) => {
           // Add reward to new user's wallet
           user.walletBalance = (user.walletBalance || 0) + newUserReward;
 
-          // Add wallet history entry for new user
           user.walletHistory.push({
             type: 'credit',
             amount: newUserReward,
@@ -258,7 +252,6 @@ export const verifyOTP = async (req, res) => {
     const refreshToken = generateRefreshToken(user._id, user.tokenVersion);
     const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Store refresh token in database
     user.refreshToken = refreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
     await user.save();

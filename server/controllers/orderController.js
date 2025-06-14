@@ -158,9 +158,6 @@ export const createOrder = async (req, res) => {
 
       await user.save();
     }
-
-    // Create order with payment status
-    // For Cash on Delivery and Wallet orders, set different initial states
     const isPaidOnCreation = paymentMethod === 'Wallet';
 
     const order = await Order.create({
@@ -205,7 +202,6 @@ export const createOrder = async (req, res) => {
       orderStatus: 'Pending',
     });
 
-    // Update the order ID reference in wallet history if it's a wallet payment
     if (paymentMethod === 'Wallet') {
       const lastHistoryIndex = user.walletHistory.length - 1;
       if (lastHistoryIndex >= 0) {
@@ -249,7 +245,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// Get order by ID
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate({
@@ -290,7 +285,7 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
-// Cancel entire order
+//for entire order
 export const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -318,7 +313,6 @@ export const cancelOrder = async (req, res) => {
     order.cancelReason = reason || 'Cancelled by customer';
     order.cancelledAt = new Date();
 
-    // Add to status history
     order.statusHistory.push({
       status: 'Cancelled',
       date: new Date(),
@@ -335,7 +329,6 @@ export const cancelOrder = async (req, res) => {
         const refundAmount = order.totalPrice;
         user.walletBalance = Number(user.walletBalance) + Number(refundAmount);
 
-        // Add transaction to wallet history
         user.walletHistory.push({
           amount: refundAmount,
           type: 'credit',
