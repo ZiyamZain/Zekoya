@@ -29,14 +29,8 @@ import helmet from 'helmet';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from .env file
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Debug environment variables
-console.log('Environment:', process.env.NODE_ENV);
-console.log('JWT Secret exists:', !!process.env.JWT_SECRET);
-console.log('MongoDB URI exists:', !!process.env.MONGO_URI);
-console.log('Refresh Token Secret exists:', !!process.env.REFRESH_TOKEN_SECRET);
 
 connectDB();
 
