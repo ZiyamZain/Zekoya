@@ -14,7 +14,7 @@ export const generateAccessToken = (userId, tokenVersion = 0) => {
       jti: Math.random().toString(36).substr(2, 9) 
     },
     process.env.JWT_SECRET,
-    { expiresIn: '1m' } // 1 minute for testing
+    { expiresIn: '15m' } // 15 minutes access token
   );
 };
 

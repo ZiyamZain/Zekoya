@@ -78,7 +78,7 @@ const UsersPage = () => {
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
             <img
-              src={getImageUrl(user.profileImage, "/default-avatar.png")}
+              src={getImageUrl(user.profileImage, "/images/default-avatar.jpg")}
               alt={user.name}
               className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
             />
