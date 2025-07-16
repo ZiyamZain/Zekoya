@@ -10,7 +10,7 @@ import {
   getFeaturedProducts,
 } from '../controllers/adminProductController.js';
 import adminProtect from '../middlewares/adminProtect.js';
-import { createCloudinaryUploader, handleUploadError } from '../middlewares/cloudinaryUpload.js';
+import { createCloudinaryUploader } from '../middlewares/cloudinaryUpload.js';
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ const productUploader = createCloudinaryUploader({
   folder: 'zekoya/products',
   transformation: [
     {
-      width: 1000, height: 1000, crop: 'limit', quality: 'auto:good', fetch_format: 'auto',
+      width: 1500, height: 1500, crop: 'limit', quality: 100, fetch_format: 'auto',
     },
   ],
 });
@@ -35,7 +35,6 @@ router.post(
   '/add',
   adminProtect,
   productUploader.array('images', 5),
-  handleUploadError,
   addProduct,
 );
 
@@ -44,7 +43,6 @@ router.put(
   '/:id',
   adminProtect,
   productUploader.array('newImages', 5),
-  handleUploadError,
   updateProduct,
 );
 

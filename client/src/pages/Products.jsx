@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getProducts, getProductsByCategory } from '../features/products/productSlice';
 import { getCategories } from '../features/categories/categorySlice';
 import { getActiveOfferForCategory } from '../features/offers/offerSlice';
+import { getWishlist } from '../features/wishlist/wishlistSlice';
 import ProductCard from '../components/ProductCard';
 import CategoryOffer from '../components/CategoryOffer';
 import { FaChevronDown, FaChevronLeft, FaChevronRight,  FaFilter, FaSearch } from 'react-icons/fa';
@@ -14,6 +15,7 @@ const Products = () => {
   const productsState = useSelector((state) => state.products);
   const categoriesState = useSelector((state) => state.categories);
   const { activeCategoryOffer } = useSelector((state) => state.offer);
+  const { userInfo } = useSelector((state) => state.userAuth);
   
   const products = productsState?.products || [];
   const categories = useMemo(() => Array.isArray(categoriesState?.categories) ? categoriesState.categories : [], [categoriesState?.categories]);
@@ -39,6 +41,12 @@ const Products = () => {
   const [limit] = useState(6);
   const total = productsState?.total || 0;
   const totalPages = Math.ceil(total / limit);
+
+  useEffect(() => {
+    if (userInfo) {
+      dispatch(getWishlist());
+    }
+  }, [dispatch, userInfo]);
 
   useEffect(() => {
  

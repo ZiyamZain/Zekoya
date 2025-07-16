@@ -7,6 +7,12 @@ const adminAxios = axios.create({
 
 adminAxios.interceptors.request.use(
   async (config) => {
+    // Allow certain requests (e.g. refresh-token) to explicitly skip attaching auth headers
+    if (config._skipAuth) {
+      delete config._skipAuth; // clean up flag so it doesn’t leak to backend
+      return config;
+    }
+
     const storeModule = await import("../app/store");
     const store = storeModule.default;
     const adminInfo = store.getState().adminAuth.adminInfo;
@@ -22,6 +28,15 @@ adminAxios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // If the failed request was itself a refresh attempt, do not retry again — just logout
+    if (originalRequest?.url?.includes("/refresh-token")) {
+      const storeModule = await import("../app/store");
+      const store = storeModule.default;
+      store.dispatch(adminLogout());
+      return Promise.reject(error);
+    }
+
     //lazy import to avoid circualr dependency
     const storeModule = await import("../app/store");
     const store = storeModule.default;
@@ -41,7 +56,6 @@ adminAxios.interceptors.response.use(
           return adminAxios(originalRequest);
         }
       } catch { 
-        
         store.dispatch(adminLogout());
       }
     }

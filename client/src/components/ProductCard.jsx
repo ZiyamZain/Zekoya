@@ -123,8 +123,12 @@ const ProductCard = ({ product }) => {
           <div className="text-right">
             {activeOffer ? (
               <>
-                <span className="font-medium text-green-600">{formattedDiscountedPrice}</span>
-                <p className="text-xs text-gray-500 line-through">{formattedOriginalPrice}</p>
+                <span className="font-medium text-green-600">
+                  {formattedDiscountedPrice}
+                </span>
+                <p className="text-xs text-gray-500 line-through">
+                  {formattedOriginalPrice}
+                </p>
               </>
             ) : (
               <span className="font-medium">{formattedOriginalPrice}</span>
@@ -137,9 +141,12 @@ const ProductCard = ({ product }) => {
             className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors border border-gray-200 z-10"
             onClick={handleWishlistToggle}
           >
-            <FaHeart className="w-4 h-4 text-red-500" />
+            {isInWishlist ? (
+              <FaHeart className="w-4 h-4 text-red-500" />
+            ) : (
+              <FaHeart className="w-4 h-4 text-gray-400" />
+            )}
           </button>
-          
         </div>
       </div>
     </Link>

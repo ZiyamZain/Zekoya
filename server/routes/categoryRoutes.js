@@ -17,10 +17,14 @@ const router = express.Router();
 
 // Create a specific uploader for category images
 const categoryUploader = createCloudinaryUploader({
-  folder: 'zekoya/categories',
+  folder: "zekoya/categories",
   transformation: [
     {
-      width: 500, height: 500, crop: 'limit', quality: 'auto:good', fetch_format: 'auto',
+      width: 1500,
+      height: 1500,
+      crop: "limit",
+      quality: 100,
+      fetch_format: "auto",
     },
   ],
 });
@@ -34,8 +38,8 @@ router.get('/all-admin', adminProtect, getAllCategoriesAdmin); // Admin route to
 // Public user route for single category (must be after specific admin GETs if paths could overlap without distinct mounting)
 router.get('/:id', getCategoryByIdUser); // For fetching a single category details by user
 
-router.post('/', adminProtect, categoryUploader.single('image'), handleUploadError, addCategory);
-router.put('/:id', adminProtect, categoryUploader.single('image'), handleUploadError, updateCategory);
+router.post('/', adminProtect, categoryUploader.single('image'), addCategory);
+router.put('/:id', adminProtect, categoryUploader.single('image'), updateCategory);
 router.delete('/:id', adminProtect, deleteCategory);
 router.patch('/:id/toggle-listing', adminProtect, toggleCategoryListing);
 

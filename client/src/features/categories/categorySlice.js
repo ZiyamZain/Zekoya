@@ -14,6 +14,7 @@ export const getCategories = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const data = await categoryService.getAllCategories();
+      console.log(data.categories)
       // Always return the array of categories for state.categories
       if (Array.isArray(data.categories)) {
         return data.categories;

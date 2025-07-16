@@ -31,11 +31,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="space-y-4">
             <Link to="/">
-              <img 
-                src="/assets/logos/logo-white.png" 
-                alt="Zekoya" 
-                className="h-12"
-              />
+              <p>Zekoya</p>
             </Link>
             <p className="text-gray-400">
               Your premier destination for authentic football jerseys and sportswear.
